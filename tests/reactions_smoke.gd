@@ -54,6 +54,7 @@ func _process(delta: float) -> void:
 		0:
 			if scene.has_node("Players/1"):
 				Engine.time_scale = 3.0
+				_r(4).destroyed.connect(func() -> void: _ice4_broke = true)
 				_arrow = ArrowScene.instantiate()
 				scene.add_child(_arrow)
 				var from := Vector3(8, 2.1, 3.13)
@@ -72,7 +73,7 @@ func _process(delta: float) -> void:
 			if _t > 3.0 and not _shot_taken:
 				_shot("02_spreading")
 				_shot_taken = true
-			if _yard(1) == null and _seen_burning.has(2) and _seen_burning.has(3) and _yard(4) == null:
+			if _yard(1) == null and _seen_burning.has(2) and _seen_burning.has(3) and _ice4_broke:
 				print("[react] chain burned: crates 1-3 caught fire, ice block 4 melted (%.1fs)" % _t)
 				_next()
 		3:
@@ -88,7 +89,7 @@ func _process(delta: float) -> void:
 			ice.receive_hit(WorldRules.make_hit(6.0, "blunt"), false)
 			_next()
 		4:
-			if _yard(5) == null:
+			if _r(5).dead and not _yard(5).visible:
 				print("[react] two blunt hits shattered ice block 5")
 				_next()
 			elif _t > 1.0:
@@ -104,9 +105,16 @@ func _process(delta: float) -> void:
 				_done(false, "frost didn't extinguish tree")
 				return
 			print("[react] frost put out the burning tree (hp %.0f)" % tree.hp)
-			_done(true, "reactions OK")
+			_next()
+		6:
+			if not _r(5).dead and _yard(5).visible and _r(5).hp >= 40.0:
+				print("[react] ice block 5 respawned (%.1fs)" % _t)
+				_done(true, "reactions OK")
+			elif _t > 8.0:
+				_done(false, "ice 5 did not respawn")
 
 var _shot_taken := false
+var _ice4_broke := false
 
 
 func _next() -> void:

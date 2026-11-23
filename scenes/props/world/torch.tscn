@@ -1,0 +1,28 @@
+[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://assets/placeholders/torch_stand.tscn" id="1_model"]
+[ext_resource type="Script" path="res://systems/components/reactive.gd" id="2_reactive"]
+[ext_resource type="Script" path="res://scenes/props/world/lock_point.gd" id="3_lock"]
+
+[sub_resource type="CylinderShape3D" id="Shape_torch"]
+height = 1.0
+radius = 0.3
+
+[node name="Torch" type="StaticBody3D"]
+script = ExtResource("3_lock")
+lock_height = 1.15
+metadata/material = "stone"
+
+[node name="Model" parent="." instance=ExtResource("1_model")]
+
+[node name="Shape" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
+shape = SubResource("Shape_torch")
+
+[node name="Reactive" type="Node3D" parent="."]
+script = ExtResource("2_reactive")
+material_id = "stone"
+always_burning = true
+fire_height = 1.02
+fire_size = 0.7
+fire_zone_radius = 0.6

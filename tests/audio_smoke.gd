@@ -82,7 +82,7 @@ func _physics_process(delta: float) -> void:
 			if _t > 1.0:
 				for p in get_tree().get_nodes_in_group("pickups"):
 					if p.item_id == "bow_basic":
-						_player.global_position = p.global_position + Vector3(1.2, 0.2, 0)
+						_player.global_position = p.global_position + Vector3(0, 0.2, -1.0)
 						_player.reset_physics_interpolation()
 						break
 				_next()

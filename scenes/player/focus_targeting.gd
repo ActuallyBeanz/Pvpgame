@@ -12,6 +12,7 @@ extends Node
 signal target_changed(target: Node3D)
 
 const GROUP := "lock_targets"
+const LockReticle := preload("res://scenes/player/lock_reticle.gd")
 
 @export var default_lock_range := 20.0    ## used unless the weapon sets lock_on_range
 @export var max_cone_deg := 70.0          ## candidates must be within this of camera forward
@@ -27,7 +28,6 @@ var free_yaw := 0.0
 
 var _player: CharacterBody3D
 var _reticle: Node3D
-var _reticle_t := 0.0
 
 
 func _ready() -> void:
@@ -116,51 +116,13 @@ func _set_target(t: Node3D) -> void:
 	if t == target:
 		return
 	target = t
-	_reticle_t = 0.0
 	if _reticle == null and t:
-		_reticle = _build_reticle()
+		_reticle = LockReticle.create(get_tree().current_scene, reticle_color)
+		_reticle.height = reticle_height
+		_reticle.close_time = reticle_close_time
 	if _reticle:
-		_reticle.visible = t != null
+		_reticle.follow(t)
 	target_changed.emit(t)
-
-
-# ---------------------------------------------------------------- reticle (local only)
-func _process(delta: float) -> void:
-	if _reticle == null or not _reticle.visible or not is_instance_valid(target):
-		return
-	_reticle_t += delta
-	var close := clampf(_reticle_t / reticle_close_time, 0.0, 1.0)
-	var radius := lerpf(1.1, 0.32, close * close * (3.0 - 2.0 * close))
-	_reticle.global_position = target.get_lock_point() + Vector3.UP * (reticle_height + sin(_reticle_t * 4.0) * 0.05)
-	_reticle.rotation.y += delta * 2.5
-	for i in _reticle.get_child_count():
-		var a := TAU * i / _reticle.get_child_count()
-		(_reticle.get_child(i) as Node3D).position = Vector3(cos(a), 0.0, sin(a)) * radius
-
-
-func _build_reticle() -> Node3D:
-	var root := Node3D.new()
-	root.name = "LockReticle"
-	root.top_level = true
-	var mat := StandardMaterial3D.new()
-	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	mat.albedo_color = reticle_color
-	mat.no_depth_test = true
-	mat.render_priority = 10
-	var mesh := PrismMesh.new()
-	mesh.size = Vector3(0.22, 0.26, 0.05)
-	for i in 3:
-		var tri := MeshInstance3D.new()
-		tri.mesh = mesh
-		tri.material_override = mat
-		tri.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-		var holder := Node3D.new()
-		holder.add_child(tri)
-		tri.rotation = Vector3(0.0, 0.0, PI)          # point down at the target
-		holder.rotation.y = -TAU * i / 3.0 + PI * 0.5  # face outward
-		root.add_child(holder)
-	get_tree().current_scene.add_child(root)
-	return root
 
 
 func _exit_tree() -> void:

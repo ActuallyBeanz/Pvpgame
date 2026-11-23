@@ -13,11 +13,15 @@ const GROUP := "pickups"
 @export var bob_speed := 2.0
 @export var spin_speed := 1.2
 @export var glow_color := Color(1.0, 0.82, 0.35)
+@export var infinite := false              ## test stands: never runs out, can be taken again and again
+@export var show_label := false            ## floating item name (test area)
+@export var retake_delay := 0.5            ## infinite: seconds before the same peer can take again
 
 var item: Resource
 var taken := false
 var _t := 0.0
 var _visual: Node3D
+var _last_take: Dictionary = {}            ## peer -> time (infinite stands)
 
 
 func _ready() -> void:
@@ -52,6 +56,16 @@ func _ready() -> void:
 	ring.position.y = 0.03
 	ring.scale.y = 0.3
 	add_child(ring)
+	if show_label:
+		var label := Label3D.new()
+		label.text = item.display_name + ("  ∞" if infinite else "")
+		label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+		label.font_size = 36
+		label.outline_size = 8
+		label.pixel_size = 0.0022
+		label.position.y = 1.2
+		label.modulate = Color(1, 0.95, 0.8)
+		add_child(label)
 
 
 func _process(delta: float) -> void:
@@ -90,12 +104,17 @@ func rpc_request_take() -> void:
 	var player := get_tree().current_scene.get_node_or_null("Players/%d" % peer) as Node3D
 	if player == null or player.global_position.distance_to(global_position) > interact_radius + 1.0:
 		return  # too far: ignore (anti-cheat-lite)
+	if infinite:
+		var now := Time.get_ticks_msec() / 1000.0
+		if now - float(_last_take.get(peer, -99.0)) < retake_delay:
+			return
+		_last_take[peer] = now
 	rpc_taken.rpc(peer)
 
 
 @rpc("authority", "call_local", "reliable")
 func rpc_taken(peer: int) -> void:
-	taken = true
+	taken = not infinite
 	if peer == multiplayer.get_unique_id():
 		Audio.play("item.ammo" if item and item.kind == "ammo" else "item.get")
 	else:
@@ -104,4 +123,10 @@ func rpc_taken(peer: int) -> void:
 		var player := get_tree().current_scene.get_node_or_null("Players/%d" % peer)
 		if player and player.has_node("Equipment"):
 			player.get_node("Equipment").receive_item(item_id, give_amount())
+	if infinite:
+		if _visual:  # little "pop" so you can see it worked
+			var tw := create_tween()
+			_visual.scale = Vector3.ONE * 1.35
+			tw.tween_property(_visual, "scale", Vector3.ONE, 0.25)
+		return
 	queue_free()

@@ -12,6 +12,7 @@ extends Node3D
 
 signal state_changed(hp: float, burning: bool)
 signal destroyed
+signal respawned
 
 const FX := preload("res://systems/components/element_fx.gd")
 
@@ -22,6 +23,7 @@ const FX := preload("res://systems/components/element_fx.gd")
 @export var fire_size := 1.0
 @export var fire_zone_radius := 0.0          ## > 0: arrows flying through here catch fire
 @export var sync_interval := 0.25            ## host -> clients while state is changing
+@export var respawn_time := 0.0              ## > 0: comes back this many seconds after breaking (test area)
 
 var mat: Resource
 var max_hp := 0.0
@@ -38,6 +40,7 @@ var _overlay: StandardMaterial3D
 var _sync_t := 0.0
 var _spread_t := 0.0
 var _dirty := false
+var _broken := false
 
 
 func _ready() -> void:
@@ -235,6 +238,9 @@ func _apply_overlay(on: bool) -> void:
 
 
 func _break() -> void:
+	if _broken:
+		return
+	_broken = true
 	dead = true
 	var pos := center()
 	var scene := get_tree().current_scene
@@ -252,7 +258,43 @@ func _break() -> void:
 			Audio.play_at(mat.break_sound, pos)
 	print("[reactive] %s destroyed" % _root.name)
 	destroyed.emit()
-	_root.queue_free()
+	if respawn_time <= 0.0:
+		_root.queue_free()
+		return
+	_set_present(false)
+	if multiplayer.is_server():
+		get_tree().create_timer(respawn_time).timeout.connect(func() -> void:
+			if is_inside_tree():
+				_respawn.rpc())
+
+
+@rpc("authority", "call_local", "reliable")
+func _respawn() -> void:
+	dead = false
+	_broken = false
+	burning = false
+	heat = 0.0
+	hp = max_hp
+	_dirty = false
+	_root.scale = _base_scale
+	_set_burning_visual(always_burning)
+	burning = always_burning
+	_update_damage_visual()
+	_apply_overlay(false)
+	_set_present(true)
+	FX.smoke_puff(center(), get_tree().current_scene, 0.6)
+	print("[reactive] %s respawned" % _root.name)
+	respawned.emit()
+
+
+## Hide / show the prop and switch its collision off / on (used by respawning props).
+func _set_present(on: bool) -> void:
+	_root.visible = on
+	for cs in _root.find_children("*", "CollisionShape3D", true, false):
+		(cs as CollisionShape3D).set_deferred("disabled", not on)
+	if not on and _flames:
+		_flames.queue_free()
+		_flames = null
 
 
 func _tag_bodies(n: Node) -> void:
@@ -277,4 +319,4 @@ func _make_fire_zone() -> void:
 	cs.shape = sph
 	a.add_child(cs)
 	add_child(a)
-	a.position = Vector3.UP * (fire_height + fire_zone_radius * 0.4)
+	a.position = Vector3.UP * (fire_height + fire_zone_radius * 0.15)

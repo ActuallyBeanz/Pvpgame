@@ -55,6 +55,9 @@ properties/12/replication_mode = 2
 properties/13/path = NodePath(".:sync_action_seq")
 properties/13/spawn = false
 properties/13/replication_mode = 2
+properties/14/path = NodePath("Equipment:sync_arrow_element")
+properties/14/spawn = false
+properties/14/replication_mode = 2
 
 [node name="Player" type="CharacterBody3D"]
 collision_layer = 2

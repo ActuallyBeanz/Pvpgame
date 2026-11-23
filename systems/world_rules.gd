@@ -29,6 +29,8 @@ func get_material(id: String) -> Resource:
 ## hit: { damage, action, element, heat, dir }
 func make_hit(damage: float, action: String, element := "", dir := Vector3.ZERO) -> Dictionary:
 	var heat: float = rules.fire_hit_heat if element == "fire" else 0.0
+	if element != "" and damage > 0.0:
+		damage += rules.element_bonus_damage
 	return { "damage": damage, "action": action, "element": element, "heat": heat, "dir": dir }
 
 
@@ -74,7 +76,10 @@ func reactive_of(col: Object) -> Node:
 ## Called by projectiles on every peer. cosmetic = remote copy (feedback only).
 func deliver_hit(col: Object, hit: Dictionary, cosmetic: bool) -> bool:
 	var handled := false
-	if col and col.has_method("react_to_hit"):
+	if col and col.has_method("react_to_hit_info"):
+		col.react_to_hit_info(hit, cosmetic)
+		handled = true
+	elif col and col.has_method("react_to_hit"):
 		col.react_to_hit(float(hit.damage), hit.dir, cosmetic)
 		handled = true
 	var r := reactive_of(col)
@@ -92,3 +97,16 @@ func fire_zone_on_segment(world: World3D, from: Vector3, to: Vector3) -> bool:
 	q.hit_from_inside = true
 	var res := world.direct_space_state.intersect_ray(q)
 	return not res.is_empty() and (res.collider as Node).has_meta("fire_zone")
+
+
+## Is this point inside a fire zone (brazier / torch flame)? Used to light a drawn arrow.
+func fire_zone_at(world: World3D, point: Vector3) -> bool:
+	var q := PhysicsPointQueryParameters3D.new()
+	q.position = point
+	q.collision_mask = FIRE_ZONE_LAYER
+	q.collide_with_areas = true
+	q.collide_with_bodies = false
+	for r in world.direct_space_state.intersect_point(q, 4):
+		if (r.collider as Node).has_meta("fire_zone"):
+			return true
+	return false

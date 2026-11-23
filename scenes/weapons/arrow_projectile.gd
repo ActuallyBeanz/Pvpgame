@@ -81,7 +81,7 @@ func _physics_process(delta: float) -> void:
 	if shooter_rid.is_valid():
 		q.exclude = [shooter_rid]
 	var res := get_world_3d().direct_space_state.intersect_ray(q)
-	if element != "fire" and WorldRules.fire_zone_on_segment(get_world_3d(), from, to if res.is_empty() else res.position):
+	if element != "fire" and WorldRules.rules.arrows_light_in_flight and WorldRules.fire_zone_on_segment(get_world_3d(), from, to if res.is_empty() else res.position):
 		set_element("fire")
 	if res.is_empty():
 		global_position = to

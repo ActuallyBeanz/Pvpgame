@@ -11,17 +11,22 @@ signal changed
 
 const ArrowScene := preload("res://scenes/weapons/arrow_projectile.tscn")
 const BoomerangScene := preload("res://scenes/weapons/boomerang_projectile.tscn")
+const BoomerangAim := preload("res://scenes/player/boomerang_aim.gd")
 const Motor := preload("res://scenes/player/movement_motor.gd")
+const FX := preload("res://systems/components/element_fx.gd")
 
 @export var pickup_radius := 2.2
 @export var holster_swap_delay := 0.25     ## when the model moves hand <-> back during the anim
 @export var max_weapon_slots := 3
+@export var lit_arrow_burn_time := 8.0     ## a lit nocked arrow burns out after this (OoT deku-stick style)
+@export var nock_forward := 0.62           ## nocked arrow tip distance in front of the bow hand
 
 # Synced to everyone through player.tscn > Sync.
 var sync_weapon_id := ""
 var sync_drawn := false
 var sync_aiming := false
 var sync_thrown := false                   ## boomerang is out of your hand
+var sync_arrow_element := ""               ## nocked arrow lit by holding it in a fire ("fire")
 
 var weapons: Array[String] = []            ## owned weapon ids, slot order (owner only)
 var ammo: Dictionary = {}                  ## ammo item id -> count (owner only)
@@ -38,10 +43,21 @@ var _swap_timer := -1.0
 var _drawing := false
 var _boomerang: Node3D
 var _need_redraw := false                  ## a roll cancelled the bow draw: release LMB first
+var _nock_vis: Node3D                      ## arrow shown on the string while aiming
+var _nock_flames: Node3D
+var _lit_timer := 0.0
+
+
+var _boom_aim: Node
+var _boom_aiming := false
 
 
 func _ready() -> void:
 	_player = get_parent()
+	_boom_aim = BoomerangAim.new()
+	_boom_aim.name = "BoomerangAim"
+	add_child(_boom_aim)
+	_boom_aim.setup(_player)
 
 
 func is_local() -> bool:
@@ -68,7 +84,7 @@ func ammo_count() -> int:
 
 
 func is_aiming() -> bool:
-	return sync_aiming
+	return sync_aiming and weapon_type() in ["shoot", "throw"]
 
 
 func move_speed_mult() -> float:
@@ -136,6 +152,7 @@ func _process(delta: float) -> void:
 		if _swap_timer < 0.0:
 			_applied = ""  # force visual refresh now
 	_refresh_visuals()
+	_update_nock(delta)
 	if _model:
 		var w := weapon()
 		_model.set_aiming(sync_aiming and sync_drawn, w.aim_anim if w else &"", w.shoot_anim if w else &"")
@@ -147,6 +164,7 @@ func _local_update(delta: float) -> void:
 	_update_nearest_pickup()
 	if not can_act:
 		_release(false)
+		_cancel_boomerang_aim()
 		sync_aiming = false
 		_player.camera_rig.set_aim(false)
 		return
@@ -170,11 +188,7 @@ func _local_update(delta: float) -> void:
 		"shoot":
 			_update_bow(delta)
 		"throw":
-			sync_aiming = false
-			_player.camera_rig.set_aim(false)
-			if Input.is_action_just_pressed("attack") and sync_drawn and not sync_thrown \
-					and _cooldown <= 0.0 and _swap_timer < 0.0:
-				_throw()
+			_update_boomerang()
 
 
 func _update_bow(delta: float) -> void:
@@ -255,6 +269,64 @@ func _projectiles_root() -> Node:
 	return parent
 
 
+# ---------------------------------------------------------------- nocked arrow
+## Shows the arrow on the string while aiming. Owner: if its tip is inside a fire
+## (brazier / torch flame) it catches fire; the next shot is a fire arrow.
+## Remote peers just draw it (and its flames) from the synced state.
+func _update_nock(delta: float) -> void:
+	var show := weapon_type() == "shoot" and sync_drawn and sync_aiming and _swap_timer < 0.0 \
+		and (not is_local() or ammo_count() > 0)
+	if is_local() and sync_arrow_element != "":
+		_lit_timer -= delta
+		if _lit_timer <= 0.0 or weapon_type() != "shoot" or not sync_drawn:
+			_extinguish_nock()
+	if not show:
+		if _nock_vis:
+			_nock_vis.queue_free()
+			_nock_vis = null
+			_nock_flames = null
+		return
+	if _nock_vis == null:
+		_nock_vis = Node3D.new()
+		_nock_vis.name = "NockedArrow"
+		_nock_vis.top_level = true
+		_nock_vis.add_child(AssetRegistry.instantiate("weapon.arrow.basic"))
+		add_child(_nock_vis)
+	var hand := _hand_origin()
+	var dir: Vector3
+	if is_local() and _player.camera_rig:
+		dir = (_crosshair_point(hand, 1000.0) - hand).normalized()
+	else:
+		dir = -_player.model_root.global_basis.z
+	var tip := hand + dir * nock_forward
+	_nock_vis.global_position = tip
+	var up := Vector3.UP if absf(dir.y) < 0.99 else Vector3.FORWARD
+	_nock_vis.look_at(tip + dir, up)
+	if is_local() and sync_arrow_element == "" and (WorldRules.fire_zone_at(_player.get_world_3d(), tip) \
+			or WorldRules.fire_zone_on_segment(_player.get_world_3d(), hand + dir * 0.3, tip + dir * 0.15)):
+		sync_arrow_element = "fire"
+		_lit_timer = lit_arrow_burn_time
+		print("[bow] nocked arrow lit")
+	var lit := sync_arrow_element == "fire"
+	if lit and _nock_flames == null:
+		_nock_flames = FX.flames(0.35, true)
+		_nock_vis.add_child(_nock_flames)
+		_nock_flames.position = Vector3(0, 0, 0.05)
+		Audio.play_at("fire.ignite", tip, -6.0, 1.3)
+	elif not lit and _nock_flames:
+		_nock_flames.queue_free()
+		_nock_flames = null
+
+
+func _extinguish_nock() -> void:
+	if sync_arrow_element == "":
+		return
+	sync_arrow_element = ""
+	_lit_timer = 0.0
+	if _nock_vis:
+		FX.smoke_puff(_nock_vis.global_position, get_tree().current_scene, 0.4)
+
+
 # ---------------------------------------------------------------- bow
 func _fire() -> void:
 	var w := weapon()
@@ -268,26 +340,30 @@ func _fire() -> void:
 	var dmg: float = s.damage(charge)
 	ammo[w.ammo_item_id] = ammo_count() - 1
 	_cooldown = s.fire_cooldown
-	_spawn_arrow(origin, vel, dmg, false)
+	var element := sync_arrow_element
+	sync_arrow_element = ""
+	_lit_timer = 0.0
+	_spawn_arrow(origin, vel, dmg, false, element)
 	Audio.play_at("bow.fire", origin)
 	if _model:
 		_model.play_shoot()
-	rpc_fire.rpc(origin, vel)
+	rpc_fire.rpc(origin, vel, element)
 	print("[bow] fired charge %.2f speed %.1f m/s dmg %.0f ammo left %d" % [charge, vel.length(), dmg, ammo_count()])
 	changed.emit()
 
 
 @rpc("authority", "call_remote", "unreliable_ordered")
-func rpc_fire(origin: Vector3, vel: Vector3) -> void:
-	_spawn_arrow(origin, vel, 0.0, true)
+func rpc_fire(origin: Vector3, vel: Vector3, element: String) -> void:
+	_spawn_arrow(origin, vel, 0.0, true, element)
 	Audio.play_at("bow.fire", origin)
 	if _model:
 		_model.play_shoot()
 
 
-func _spawn_arrow(origin: Vector3, vel: Vector3, dmg: float, cosmetic: bool) -> void:
+func _spawn_arrow(origin: Vector3, vel: Vector3, dmg: float, cosmetic: bool, element := "") -> void:
 	var arrow := ArrowScene.instantiate()
 	arrow.cosmetic = cosmetic
+	arrow.element = element
 	_projectiles_root().add_child(arrow)
 	arrow.launch(origin, vel, stats(), dmg, _player.get_rid())
 
@@ -305,44 +381,86 @@ func _apply_spread(dir: Vector3, deg: float) -> Vector3:
 
 
 # ---------------------------------------------------------------- boomerang
-func _throw() -> void:
+## Hold LMB: aim + sweep the crosshair over targets to pick them (red triangles).
+## Release: throw. A quick tap while focus-locked throws straight at the lock target.
+func _update_boomerang() -> void:
+	var s := stats()
+	var holding := Input.is_action_pressed("attack")
+	var ready_to_throw := sync_drawn and not sync_thrown and _cooldown <= 0.0 and _swap_timer < 0.0
+	if holding and ready_to_throw and (_boom_aiming or Input.is_action_just_pressed("attack")):
+		if not _boom_aiming:
+			_boom_aiming = true
+			var homing: bool = "homes_on_lock" in s and s.homes_on_lock
+			_boom_aim.begin(_player.focus.target if _player.focus.active and homing else null)
+		sync_aiming = true
+		_boom_aim.update(s.lock_on_range, s.max_targets)
+		_player.camera_rig.set_aim(true, s)
+		return
+	if _boom_aiming and not holding:
+		var picked: Array[Node3D] = _boom_aim.end()
+		_boom_aiming = false
+		sync_aiming = false
+		_player.camera_rig.set_aim(false, s)
+		if ready_to_throw:
+			_throw(picked)
+		return
+	if not holding:
+		_cancel_boomerang_aim()
+	sync_aiming = false
+	_player.camera_rig.set_aim(false, s)
+
+
+func _cancel_boomerang_aim() -> void:
+	if _boom_aiming:
+		_boom_aim.end()
+		_boom_aiming = false
+
+
+func boomerang_selection() -> Array[Node3D]:
+	return _boom_aim.selected if _boom_aiming else ([] as Array[Node3D])
+
+
+func _throw(picked: Array[Node3D] = []) -> void:
 	var w := weapon()
 	var s := stats()
 	var origin := _hand_origin()
-	var homing: bool = "homes_on_lock" in s and s.homes_on_lock
-	var target: Node3D = _player.focus.target if _player.focus.active and homing else null
 	var aim: Vector3
-	if target:
-		aim = target.get_lock_point()
+	if not picked.is_empty():
+		aim = picked[0].get_lock_point()
 	else:
 		aim = _crosshair_point(origin, s.speed * s.out_time)
 	sync_thrown = true
 	_cooldown = s.cooldown
 	_applied = ""
-	_spawn_boomerang(origin, aim, target, false)
+	_spawn_boomerang(origin, aim, picked, false)
 	if _model:
 		_model.play_action(w.shoot_anim)
-	var path := get_tree().current_scene.get_path_to(target) if target else NodePath()
-	rpc_throw.rpc(origin, aim, path)
-	print("[boomerang] thrown %s" % ("-> locked on %s" % target.name if target else "free aim (%.1fm)" % origin.distance_to(aim)))
+	var paths := PackedStringArray()
+	for t in picked:
+		paths.append(str(get_tree().current_scene.get_path_to(t)))
+	rpc_throw.rpc(origin, aim, paths)
+	print("[boomerang] thrown %s" % ("-> %s" % ", ".join(picked.map(func(t: Node) -> String: return t.name)) \
+		if not picked.is_empty() else "free aim (%.1fm)" % origin.distance_to(aim)))
 
 
 @rpc("authority", "call_remote", "reliable")
-func rpc_throw(origin: Vector3, aim: Vector3, target_path: NodePath) -> void:
-	var target: Node3D = null
-	if not target_path.is_empty():
-		target = get_tree().current_scene.get_node_or_null(target_path) as Node3D
-	_spawn_boomerang(origin, aim, target, true)
+func rpc_throw(origin: Vector3, aim: Vector3, target_paths: PackedStringArray) -> void:
+	var picked: Array[Node3D] = []
+	for p in target_paths:
+		var t := get_tree().current_scene.get_node_or_null(NodePath(p)) as Node3D
+		if t:
+			picked.append(t)
+	_spawn_boomerang(origin, aim, picked, true)
 	var w := weapon()
 	if _model and w:
 		_model.play_action(w.shoot_anim)
 
 
-func _spawn_boomerang(origin: Vector3, aim: Vector3, target: Node3D, cosmetic: bool) -> void:
+func _spawn_boomerang(origin: Vector3, aim: Vector3, picked: Array[Node3D], cosmetic: bool) -> void:
 	var b := BoomerangScene.instantiate()
 	b.cosmetic = cosmetic
 	_projectiles_root().add_child(b)
-	b.launch(origin, aim, target, stats(), _player)
+	b.launch(origin, aim, picked, stats(), _player)
 	if not cosmetic:
 		_boomerang = b
 		b.caught.connect(_on_boomerang_caught)

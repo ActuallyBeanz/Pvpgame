@@ -23,6 +23,7 @@
 [ext_resource type="PackedScene" path="res://assets/models/weapons/boomerang_basic.glb" id="20_boom"]
 [ext_resource type="PackedScene" path="res://scenes/props/world/ice_block.tscn" id="21_ice"]
 [ext_resource type="PackedScene" path="res://scenes/props/world/brazier.tscn" id="22_brazier"]
+[ext_resource type="PackedScene" path="res://scenes/props/world/torch.tscn" id="23_torch"]
 
 [resource]
 script = ExtResource("12_ckosp")
@@ -42,6 +43,7 @@ models = Dictionary[String, PackedScene]({
 "prop.brazier.stone": ExtResource("22_brazier"),
 "prop.crate.wood": ExtResource("3_c8d8u"),
 "prop.ice.block": ExtResource("21_ice"),
+"prop.torch.stone": ExtResource("23_torch"),
 "prop.target.archery": ExtResource("18_arch"),
 "prop.target.board": ExtResource("17_nfvwf"),
 "prop.target.dummy": ExtResource("19_dummy"),

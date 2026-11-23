@@ -48,7 +48,7 @@ func _process(delta: float) -> void:
 				if bow == null:
 					_done(false, "no bow pickup spawned")
 					return
-				_player.global_position = bow.global_position + Vector3(1.2, 0.2, 0)
+				_player.global_position = bow.global_position + Vector3(0, 0.2, -1.0)
 				_player.reset_physics_interpolation()
 				_next()
 		1:

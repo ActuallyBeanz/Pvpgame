@@ -103,6 +103,27 @@ static func smoke_puff(at: Vector3, parent: Node, size := 1.0) -> void:
 	p.get_tree().create_timer(2.0).timeout.connect(p.queue_free)
 
 
+## Floating damage number (attacker's screen). Colour by element.
+static func damage_number(at: Vector3, parent: Node, amount: float, color := Color.WHITE) -> void:
+	var l := Label3D.new()
+	l.text = str(roundi(amount))
+	l.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	l.no_depth_test = true
+	l.fixed_size = true
+	l.pixel_size = 0.0011
+	l.font_size = 56
+	l.outline_size = 14
+	l.modulate = color
+	l.outline_modulate = Color(0.1, 0.05, 0.0, 0.9)
+	l.render_priority = 20
+	parent.add_child(l)
+	l.global_position = at + Vector3(randf_range(-0.2, 0.2), 0.0, randf_range(-0.2, 0.2))
+	var tw := l.create_tween().set_parallel()
+	tw.tween_property(l, "global_position:y", l.global_position.y + 0.9, 0.8).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+	tw.tween_property(l, "modulate:a", 0.0, 0.35).set_delay(0.45)
+	tw.chain().tween_callback(l.queue_free)
+
+
 static func _glow_mat() -> StandardMaterial3D:
 	var mat := StandardMaterial3D.new()
 	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED

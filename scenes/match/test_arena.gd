@@ -17,16 +17,31 @@ const PLAYER_SCENE := preload("res://scenes/player/player.tscn")
 	{ "id": "prop.crate.wood", "pos": Vector3(16.0, 0, 6.0) },
 	{ "id": "prop.crate.wood", "pos": Vector3(17.6, 0, 6.5) },
 	{ "id": "prop.crate.wood", "pos": Vector3(19.2, 0, 7.0) },
-	{ "id": "prop.ice.block", "pos": Vector3(19.0, 0, 9.4) },
-	{ "id": "prop.ice.block", "pos": Vector3(13.5, 0, 11.5) },
+	{ "id": "prop.ice.block", "pos": Vector3(19.0, 0, 9.4), "respawn": 5.0 },
+	{ "id": "prop.ice.block", "pos": Vector3(13.5, 0, 11.5), "respawn": 5.0 },
 ]
 
-@export_group("Pickups")
+@export_group("Weapon lane")
+## In front of the item stands: a torch and three slightly offset dummies, to try the
+## boomerang's multi-target throw (pick the torch first for fire hits) and the sword.
+@export var lane_items: Array[Dictionary] = [
+	{ "id": "prop.torch.stone", "pos": Vector3(-3.5, 0, 10.0) },
+	{ "id": "prop.target.dummy", "pos": Vector3(-1.5, 0, 14.0) },
+	{ "id": "prop.target.dummy", "pos": Vector3(1.2, 0, 15.3) },
+	{ "id": "prop.target.dummy", "pos": Vector3(4.0, 0, 13.6) },
+]
+@export var lane_face_point := Vector3(0, 0, 3.5)
+
+@export_group("Item stands")
 const PickupScene := preload("res://scenes/items/pickup.tscn")
-@export var pickup_counts: Dictionary[String, int] = { "bow_basic": 4, "arrows": 8, "boomerang_basic": 4 }
-@export var pickup_seed := 7
-@export var pickup_ring := Vector2(4.0, 20.0)    ## min / max distance from centre
-@export var pickup_spacing := 3.0
+## Test area: one of every item on the ground, never runs out (take again for more ammo).
+@export var item_stands: Array[Dictionary] = [
+	{ "id": "bow_basic", "pos": Vector3(-5.0, 0, 3.5) },
+	{ "id": "arrows", "pos": Vector3(-2.5, 0, 3.5) },
+	{ "id": "boomerang_basic", "pos": Vector3(0.0, 0, 3.5) },
+	{ "id": "sword_dawnsteel", "pos": Vector3(2.5, 0, 3.5) },
+	{ "id": "shield_gildcrest", "pos": Vector3(5.0, 0, 3.5) },
+]
 
 @export_group("Targets")
 @export var target_id := "prop.target.archery"
@@ -63,6 +78,7 @@ func _ready() -> void:
 	overview_camera.look_at_from_position(Vector3(0, 22, 26), Vector3.ZERO)
 	_place_demo_props()
 	_place_reaction_yard()
+	_place_weapon_lane()
 	_place_targets()
 	_place_dummies()
 	_place_pickups()
@@ -176,7 +192,20 @@ func _place_reaction_yard() -> void:
 		prop.name = "Yard_%d" % i
 		prop.position = item.pos
 		prop.rotation.y = float(item.get("rot", 0.0))
+		if item.has("respawn") and prop.has_node("Reactive"):
+			prop.get_node("Reactive").respawn_time = float(item.respawn)
 		$Props.add_child(prop)
+
+
+func _place_weapon_lane() -> void:
+	for i in lane_items.size():
+		var item: Dictionary = lane_items[i]
+		var prop := AssetRegistry.instantiate(str(item.id))
+		prop.name = "Lane_%d" % i
+		$Props.add_child(prop)
+		prop.position = item.pos
+		var look := Vector3(lane_face_point.x, prop.position.y, lane_face_point.z)
+		prop.look_at(look, Vector3.UP)  # dummies face (-Z) the stands
 
 
 func _place_targets() -> void:
@@ -201,39 +230,19 @@ func _place_dummies() -> void:
 			d.look_at(look, Vector3.UP)  # face (-Z) the arena centre
 
 
-# Same seed on every peer -> same pickups with the same node names (RPC paths match).
+# Fixed infinite stands; same names on every peer so pickup RPC paths match.
 func _place_pickups() -> void:
 	var root := Node3D.new()
 	root.name = "Pickups"
 	add_child(root)
-	var rng := RandomNumberGenerator.new()
-	rng.seed = pickup_seed
-	var taken: Array[Vector3] = []
-	for p in $Props.get_children():
-		taken.append((p as Node3D).position)
-	for c in $Course.get_children():
-		taken.append(Vector3((c as Node3D).position.x, 0.0, (c as Node3D).position.z))
-	var ids := pickup_counts.keys()
-	ids.sort()
-	var n := 0
-	for id: String in ids:
-		for i in pickup_counts[id]:
-			for attempt in 40:
-				var a := rng.randf() * TAU
-				var r := rng.randf_range(pickup_ring.x, pickup_ring.y)
-				var pos := Vector3(cos(a) * r, 0.0, sin(a) * r)
-				var ok := true
-				for t in taken:
-					if Vector2(t.x - pos.x, t.z - pos.z).length() < pickup_spacing:
-						ok = false
-						break
-				if not ok:
-					continue
-				taken.append(pos)
-				var pu := PickupScene.instantiate()
-				pu.name = "Pickup_%d" % n
-				pu.item_id = id
-				pu.position = pos
-				root.add_child(pu)
-				n += 1
-				break
+	for i in item_stands.size():
+		var st: Dictionary = item_stands[i]
+		if not ItemDB.has_item(str(st.id)):
+			continue
+		var pu := PickupScene.instantiate()
+		pu.name = "Pickup_%d" % i
+		pu.item_id = str(st.id)
+		pu.infinite = true
+		pu.show_label = true
+		pu.position = st.pos
+		root.add_child(pu)

@@ -6,6 +6,8 @@ extends StaticBody3D
 
 signal was_hit(damage: float, total_hits: int)
 
+const FX := preload("res://systems/components/element_fx.gd")
+
 @export var lockable := true
 @export var lock_height := 1.15            ## lock point above the base (chest)
 @export var wobble_per_damage := 0.04      ## radians of kick per point of damage
@@ -13,6 +15,12 @@ signal was_hit(damage: float, total_hits: int)
 @export var wobble_stiffness := 70.0
 @export var wobble_damping := 7.0
 @export var puff_color := Color(0.95, 0.8, 0.4)
+@export var show_damage_numbers := true
+@export var burn_show_time := 1.6          ## fire hits: flames flicker on it this long (visual only)
+
+var total_damage := 0.0
+var _flames: Node3D
+var _burn_left := 0.0
 
 var hits := 0
 var _tilt := Vector2.ZERO                  ## x = pitch, y = roll (radians)
@@ -35,6 +43,24 @@ func is_lockable() -> bool:
 	return lockable
 
 
+## Hit with tags (WorldRules.make_hit). Damage numbers show on the attacker's screen.
+func react_to_hit_info(hit: Dictionary, cosmetic: bool) -> void:
+	var dmg := float(hit.get("damage", 0.0))
+	var element := str(hit.get("element", ""))
+	react_to_hit(maxf(dmg, 4.0), hit.get("dir", Vector3.FORWARD), cosmetic)
+	if element == "fire":
+		_burn_left = burn_show_time
+		if _flames == null:
+			_flames = FX.flames(0.8, true)
+			add_child(_flames)
+			_flames.position = Vector3.UP * lock_height * 0.8
+	if not cosmetic:
+		total_damage += dmg
+		if show_damage_numbers and dmg > 0.0:
+			var c := WorldRules.element_color(element) if element != "" else Color(1, 1, 1)
+			FX.damage_number(get_lock_point() + Vector3.UP * 0.5, get_tree().current_scene, dmg, c)
+
+
 ## Called by arrows / boomerangs on every peer. cosmetic = remote copy (no gameplay).
 func react_to_hit(damage: float, dir: Vector3, cosmetic: bool) -> void:
 	hits += 1
@@ -45,6 +71,14 @@ func react_to_hit(damage: float, dir: Vector3, cosmetic: bool) -> void:
 	Audio.play_at("target.hit", get_lock_point(), clampf(damage / 10.0 - 4.0, -6.0, 2.0))
 	if not cosmetic:
 		was_hit.emit(damage, hits)
+
+
+func _process(delta: float) -> void:
+	if _flames:
+		_burn_left -= delta
+		if _burn_left <= 0.0:
+			_flames.queue_free()
+			_flames = null
 
 
 func _physics_process(delta: float) -> void:
