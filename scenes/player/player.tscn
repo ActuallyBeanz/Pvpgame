@@ -58,6 +58,12 @@ properties/13/replication_mode = 2
 properties/14/path = NodePath("Equipment:sync_arrow_element")
 properties/14/spawn = false
 properties/14/replication_mode = 2
+properties/15/path = NodePath("Equipment:sync_shield_id")
+properties/15/spawn = true
+properties/15/replication_mode = 2
+properties/16/path = NodePath("Equipment:sync_blocking")
+properties/16/spawn = false
+properties/16/replication_mode = 2
 
 [node name="Player" type="CharacterBody3D"]
 collision_layer = 2

@@ -91,6 +91,10 @@ func _physics_process(delta: float) -> void:
 
 
 func _stick(res: Dictionary) -> void:
+	var col0: Object = res.collider
+	if col0 and col0.has_method("blocks_hit") and col0.blocks_hit(velocity.normalized()):
+		_deflect(res)
+		return
 	_stuck = true
 	_age = 0.0
 	var dir := velocity.normalized()
@@ -113,6 +117,22 @@ func _stick(res: Dictionary) -> void:
 		hit.emit(col, res.position, damage)
 		print("[arrow] hit %s at %.1fm from origin, dmg %.0f" % [
 			(col as Node).name if col is Node else "?", res.position.length(), damage])
+
+
+## Bounced off a raised shield: tumble away, can't hurt anyone any more.
+func _deflect(res: Dictionary) -> void:
+	res.collider.on_blocked(res.position)
+	var n: Vector3 = res.normal if res.has("normal") else -velocity.normalized()
+	velocity = velocity.bounce(n) * 0.3 + Vector3.UP * 2.5
+	global_position = res.position + n * 0.05
+	collision_mask = 1         # world only from now on
+	damage = 0.0
+	element = ""
+	if _flames:
+		_flames.queue_free()
+		_flames = null
+	if not cosmetic:
+		print("[arrow] blocked by %s's shield" % (res.collider as Node).name)
 
 
 func _face(dir: Vector3) -> void:

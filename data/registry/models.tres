@@ -24,6 +24,8 @@
 [ext_resource type="PackedScene" path="res://scenes/props/world/ice_block.tscn" id="21_ice"]
 [ext_resource type="PackedScene" path="res://scenes/props/world/brazier.tscn" id="22_brazier"]
 [ext_resource type="PackedScene" path="res://scenes/props/world/torch.tscn" id="23_torch"]
+[ext_resource type="PackedScene" path="res://assets/models/weapons/sword_dawnsteel.glb" id="24_sword"]
+[ext_resource type="PackedScene" path="res://assets/models/weapons/shield_gildcrest.glb" id="25_shield"]
 
 [resource]
 script = ExtResource("12_ckosp")
@@ -50,5 +52,7 @@ models = Dictionary[String, PackedScene]({
 "weapon.arrow.basic": ExtResource("14_dd1ba"),
 "weapon.boomerang.basic": ExtResource("20_boom"),
 "weapon.bow.basic": ExtResource("13_8nbfg"),
-"weapon.quiver.basic": ExtResource("15_nnf8h")
+"weapon.quiver.basic": ExtResource("15_nnf8h"),
+"weapon.shield.gildcrest": ExtResource("25_shield"),
+"weapon.sword.dawnsteel": ExtResource("24_sword")
 })

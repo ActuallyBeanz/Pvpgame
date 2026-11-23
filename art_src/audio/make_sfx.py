@@ -565,6 +565,66 @@ def fire_extinguish(v):
     return finish(x, peak=0.5, hi=10000, verb=0.08)
 
 
+
+# ---------------------------------------------------------------- sword & shield
+def sword_swing(v):
+    d = 0.32
+    x = svf_sweep(noise(d), 600 + 150 * v, 3200, q=3.0) * env_ad(int(d * SR), 0.03, 0.22, 3)
+    return finish(x, peak=0.55, hi=10000, verb=0.04)
+
+
+def sword_hit(v):
+    d = 0.45
+    x = silence(d)
+    place(x, fft_filter(noise(0.05), lo=2000, hi=9000) * env_ad(int(0.05 * SR), 0.0005, 0.03), 0, 0.7)
+    place(x, thump(180, 90, 0.12), 0, 0.6)
+    place(x, bell(hz("A5") * (1 + 0.05 * v), 0.3, bright=0.6, decay=0.07), 0.005, 0.18)
+    return finish(x, peak=0.7, hi=9500, verb=0.08)
+
+
+def sword_spin(v):
+    d = 0.8
+    x = silence(d)
+    for k in range(3):
+        seg = svf_sweep(noise(0.3), 500, 3500, q=3.0) * env_ad(int(0.3 * SR), 0.04, 0.2, 3)
+        place(x, seg, k * 0.18, 0.8 - 0.15 * k)
+    place(x, bell(hz("E6"), 0.6, bright=1.2, decay=0.2), 0.0, 0.25)
+    return finish(x, peak=0.7, hi=11000, verb=0.12)
+
+
+def sword_charge(v):
+    d = 0.8
+    t = t_axis(d)
+    f = 400 + 900 * t / d
+    x = np.sin(2 * np.pi * np.cumsum(f) / SR) * 0.25 * env_ad(int(d * SR), 0.2, 0.7, 1.5)
+    x += fft_filter(noise(d), lo=3000) * 0.08 * (t / d)
+    return finish(x, peak=0.45, hi=10000, verb=0.1)
+
+
+def sword_charged(v):
+    d = 0.6
+    x = silence(d)
+    place(x, bell(hz("B6"), 0.55, bright=1.5, decay=0.18), 0, 0.5)
+    place(x, bell(hz("E7"), 0.45, bright=1.5, decay=0.14), 0.05, 0.35)
+    return finish(x, peak=0.5, hi=12000, verb=0.2)
+
+
+def shield_block(v):
+    d = 0.5
+    x = silence(d)
+    place(x, modal([520 + 30 * v, 1180, 2050, 3100], 0.45, [0.12, 0.08, 0.05, 0.03], [1, 0.6, 0.4, 0.25]), 0, 0.7)
+    place(x, fft_filter(noise(0.03), lo=1500) * env_ad(int(0.03 * SR), 0.0005, 0.02), 0, 0.6)
+    return finish(x, peak=0.7, hi=11000, verb=0.12)
+
+
+def shield_bash(v):
+    d = 0.35
+    x = silence(d)
+    place(x, thump(140, 60, 0.2), 0, 0.9)
+    place(x, modal([300, 690], 0.2, [0.05, 0.03]), 0, 0.4)
+    return finish(x, peak=0.65, hi=7000, verb=0.06)
+
+
 CATALOGUE = [
     ("player.footstep.grass", "player", "step_grass", footstep_grass, 4, dict(volume_db=-6, pitch=(0.9, 1.1), max_distance=30, max_voices=6)),
     ("player.footstep.stone", "player", "step_stone", footstep_stone, 4, dict(volume_db=-6, pitch=(0.92, 1.08), max_distance=30, max_voices=6)),
@@ -605,6 +665,13 @@ CATALOGUE = [
     ("fire.ignite", "world", "fire_ignite", fire_ignite, 1, dict(volume_db=-3, pitch=(0.9, 1.1), max_distance=40, max_voices=6)),
     ("fire.loop", "world", "fire_loop", fire_loop, 1, dict(volume_db=-9, pitch=(1.0, 1.0), max_distance=20, max_voices=8, loop=True)),
     ("fire.extinguish", "world", "fire_extinguish", fire_extinguish, 1, dict(volume_db=-4, pitch=(0.95, 1.05), max_distance=35)),
+    ("sword.swing", "weapons", "sword_swing", sword_swing, 3, dict(volume_db=-4, pitch=(0.94, 1.06), max_distance=35, max_voices=6)),
+    ("sword.hit", "weapons", "sword_hit", sword_hit, 2, dict(volume_db=-2, pitch=(0.93, 1.07), max_distance=45, max_voices=8)),
+    ("sword.spin", "weapons", "sword_spin", sword_spin, 1, dict(volume_db=-2, pitch=(0.97, 1.03), max_distance=45)),
+    ("sword.charge", "weapons", "sword_charge", sword_charge, 1, dict(volume_db=-6, pitch=(1.0, 1.0), max_distance=25)),
+    ("sword.charged", "weapons", "sword_charged", sword_charged, 1, dict(volume_db=-5, pitch=(1.0, 1.0), max_distance=25)),
+    ("shield.block", "weapons", "shield_block", shield_block, 2, dict(volume_db=-2, pitch=(0.95, 1.05), max_distance=45, max_voices=6)),
+    ("shield.bash", "weapons", "shield_bash", shield_bash, 1, dict(volume_db=-3, pitch=(0.95, 1.05), max_distance=35)),
 ]
 
 

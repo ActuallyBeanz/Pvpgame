@@ -1,0 +1,18 @@
+[gd_resource type="Resource" format=3]
+
+[ext_resource type="Script" path="res://data/items/item_def.gd" id="1_item"]
+[ext_resource type="Resource" path="res://data/items/shield_gildcrest_stats.tres" id="2_stats"]
+
+[resource]
+script = ExtResource("1_item")
+id = "shield_gildcrest"
+display_name = "Gildcrest Shield"
+kind = "shield"
+model_id = "weapon.shield.gildcrest"
+stats = ExtResource("2_stats")
+hand_slot = "handslot_l"
+hand_position = Vector3(0, 0.02, 0.06)
+back_position = Vector3(0, 0.15, -0.5)
+back_rotation_deg = Vector3(0, 180, 0)
+material = "wood"
+action_tag = "block"

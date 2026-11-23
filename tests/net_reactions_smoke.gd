@@ -55,7 +55,8 @@ func _process(delta: float) -> void:
 		scene.get_node("Props/Yard_1/Reactive").receive_hit(WorldRules.make_hit(0.0, "", "fire"), false)
 		print("[net-react] client sent hits")
 	var crate := scene.get_node_or_null("Props/Yard_1/Reactive")
-	if not scene.has_node("Props/Yard_5") and crate and crate.burning:
+	var ice := scene.get_node_or_null("Props/Yard_5")
+	if (ice == null or not ice.visible) and crate and crate.burning:
 		_finish(true, "%s sees ice shattered + crate burning" % _role)
 
 

@@ -5,7 +5,7 @@ extends Resource
 
 @export var id := ""
 @export var display_name := ""
-@export_enum("weapon", "ammo") var kind := "weapon"
+@export_enum("weapon", "ammo", "shield") var kind := "weapon"   ## shield: worn on the off hand, separate from weapon slots
 @export var model_id := ""                 ## AssetRegistry id used in hands / on back
 @export var pickup_model_id := ""          ## AssetRegistry id shown on the ground (blank = model_id)
 

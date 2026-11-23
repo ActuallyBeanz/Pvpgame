@@ -196,6 +196,10 @@ func _strike_collider(col: Object, point: Vector3) -> void:
 	if col == null or _hit_ids.has(col.get_instance_id()):
 		return
 	_hit_ids[col.get_instance_id()] = true
+	if col.has_method("blocks_hit") and col.blocks_hit(velocity.normalized()):
+		col.on_blocked(point)
+		_begin_return()
+		return
 	var hit_info := WorldRules.make_hit(stats.damage, "blunt", element, velocity.normalized())
 	if not WorldRules.deliver_hit(col, hit_info, cosmetic):
 		Audio.play_at("arrow.hit", point, -3.0, 1.3)

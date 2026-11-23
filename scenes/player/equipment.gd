@@ -12,6 +12,7 @@ signal changed
 const ArrowScene := preload("res://scenes/weapons/arrow_projectile.tscn")
 const BoomerangScene := preload("res://scenes/weapons/boomerang_projectile.tscn")
 const BoomerangAim := preload("res://scenes/player/boomerang_aim.gd")
+const Melee := preload("res://scenes/player/melee.gd")
 const Motor := preload("res://scenes/player/movement_motor.gd")
 const FX := preload("res://systems/components/element_fx.gd")
 
@@ -27,6 +28,8 @@ var sync_drawn := false
 var sync_aiming := false
 var sync_thrown := false                   ## boomerang is out of your hand
 var sync_arrow_element := ""               ## nocked arrow lit by holding it in a fire ("fire")
+var sync_shield_id := ""                   ## shield worn on the off hand (separate from weapon slots)
+var sync_blocking := false                 ## shield raised (F)
 
 var weapons: Array[String] = []            ## owned weapon ids, slot order (owner only)
 var ammo: Dictionary = {}                  ## ammo item id -> count (owner only)
@@ -50,6 +53,8 @@ var _lit_timer := 0.0
 
 var _boom_aim: Node
 var _boom_aiming := false
+var melee: Node
+var _shield_vis: Node3D
 
 
 func _ready() -> void:
@@ -58,6 +63,10 @@ func _ready() -> void:
 	_boom_aim.name = "BoomerangAim"
 	add_child(_boom_aim)
 	_boom_aim.setup(_player)
+	melee = Melee.new()
+	melee.name = "Melee"
+	add_child(melee)
+	melee.setup(self, _player)
 
 
 func is_local() -> bool:
@@ -89,7 +98,18 @@ func is_aiming() -> bool:
 
 func move_speed_mult() -> float:
 	var s := stats()
-	return s.aim_move_speed_mult if sync_aiming and s and "aim_move_speed_mult" in s else 1.0
+	var m: float = s.aim_move_speed_mult if is_aiming() and s and "aim_move_speed_mult" in s else 1.0
+	return m * melee.move_mult()
+
+
+func shield_item() -> Resource:
+	return ItemDB.get_item(sync_shield_id) if sync_shield_id != "" else null
+
+
+## Sword swings / spin charge / raised shield: face where the camera looks
+## (unless focus-locked, which faces the target).
+func wants_face_camera() -> bool:
+	return melee.busy() or sync_blocking
 
 
 ## Weapon-specific lock-on range (0 = use the focus default). Every weapon can lock on;
@@ -116,6 +136,9 @@ func receive_item(item_id: String, amount: int) -> void:
 			_add_ammo(it.ammo_item_id, it.starting_ammo)  # duplicate weapon -> its ammo
 	elif it.kind == "ammo":
 		_add_ammo(item_id, amount)
+	elif it.kind == "shield":
+		sync_shield_id = item_id
+		_applied = ""
 	print("[equipment] got %s x%d | weapons %s | ammo %s" % [item_id, amount, weapons, ammo])
 	changed.emit()
 
@@ -130,6 +153,7 @@ func _add_ammo(ammo_id: String, n: int) -> void:
 
 ## Switch to a weapon you own and draw it.
 func _equip(item_id: String) -> void:
+	melee.cancel()
 	if item_id == sync_weapon_id:
 		_set_drawn(not sync_drawn)
 		return
@@ -155,7 +179,11 @@ func _process(delta: float) -> void:
 	_update_nock(delta)
 	if _model:
 		var w := weapon()
-		_model.set_aiming(sync_aiming and sync_drawn, w.aim_anim if w else &"", w.shoot_anim if w else &"")
+		var sh := shield_item()
+		if sync_blocking and sh:
+			_model.set_aiming(true, sh.stats.block_anim, &"")
+		else:
+			_model.set_aiming(sync_aiming and sync_drawn, w.aim_anim if w else &"", w.shoot_anim if w else &"")
 
 
 func _local_update(delta: float) -> void:
@@ -165,6 +193,7 @@ func _local_update(delta: float) -> void:
 	if not can_act:
 		_release(false)
 		_cancel_boomerang_aim()
+		melee.cancel()
 		sync_aiming = false
 		_player.camera_rig.set_aim(false)
 		return
@@ -175,14 +204,17 @@ func _local_update(delta: float) -> void:
 			_equip(weapons[i])
 	if Input.is_action_just_pressed("cycle_weapon") and weapons.size() > 1:
 		_equip(weapons[(weapons.find(sync_weapon_id) + 1) % weapons.size()])
+	melee.update(delta)
 	var w := weapon()
 	if w == null:
 		return
-	if Input.is_action_just_pressed("toggle_weapon"):
+	if Input.is_action_just_pressed("toggle_weapon") and not melee.busy():
 		_release(false)
 		_set_drawn(not sync_drawn)
-	if Input.is_action_just_pressed("attack") and not sync_drawn:
+	if Input.is_action_just_pressed("attack") and not sync_drawn and not sync_blocking:
 		_set_drawn(true)
+		if w.action_tag == "slash":
+			melee.queue_draw_slash()
 		return
 	match w.action_tag:
 		"shoot":
@@ -228,6 +260,8 @@ func _release(fire: bool) -> void:
 func _set_drawn(on: bool) -> void:
 	if on == sync_drawn:
 		return
+	if not on:
+		melee.cancel()
 	sync_drawn = on
 	sync_aiming = false
 	_swap_timer = holster_swap_delay
@@ -496,15 +530,23 @@ func _find_model() -> void:
 func _refresh_visuals() -> void:
 	if _model == null:
 		return
-	var state := "%s|%s|%s" % [sync_weapon_id, sync_drawn, sync_thrown]
-	if state == _applied or _swap_timer >= 0.0:
+	var shield_in_hand := sync_blocking or (sync_drawn and weapon_type() == "slash")
+	var state := "%s|%s|%s|%s|%s" % [sync_weapon_id, sync_drawn, sync_thrown, sync_shield_id, shield_in_hand]
+	if state == _applied or (_swap_timer >= 0.0 and not sync_blocking):
 		return
 	_applied = state
-	for v in [_weapon_vis, _worn_vis]:
+	for v in [_weapon_vis, _worn_vis, _shield_vis]:
 		if is_instance_valid(v):
 			v.queue_free()
 	_weapon_vis = null
 	_worn_vis = null
+	_shield_vis = null
+	var sh := shield_item()
+	if sh:
+		if shield_in_hand:
+			_shield_vis = _attach(sh.model_id, sh.hand_slot, sh.hand_position, sh.hand_rotation_deg)
+		else:
+			_shield_vis = _attach(sh.model_id, "chest", sh.back_position, sh.back_rotation_deg)
 	var w := weapon()
 	if w == null:
 		return

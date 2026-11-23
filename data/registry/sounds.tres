@@ -1,4 +1,4 @@
-[gd_resource type="Resource" load_steps=110 format=3]
+[gd_resource type="Resource" load_steps=128 format=3]
 
 [ext_resource type="Script" path="res://data/registry/sound_registry.gd" id="1_reg"]
 [ext_resource type="Script" path="res://data/audio/sound_def.gd" id="2_def"]
@@ -71,6 +71,17 @@
 [ext_resource type="AudioStream" path="res://assets/audio/sfx/world/fire_ignite.wav" id="69_snd"]
 [ext_resource type="AudioStream" path="res://assets/audio/sfx/world/fire_loop.wav" id="70_snd"]
 [ext_resource type="AudioStream" path="res://assets/audio/sfx/world/fire_extinguish.wav" id="71_snd"]
+[ext_resource type="AudioStream" path="res://assets/audio/sfx/weapons/sword_swing_1.wav" id="72_snd"]
+[ext_resource type="AudioStream" path="res://assets/audio/sfx/weapons/sword_swing_2.wav" id="73_snd"]
+[ext_resource type="AudioStream" path="res://assets/audio/sfx/weapons/sword_swing_3.wav" id="74_snd"]
+[ext_resource type="AudioStream" path="res://assets/audio/sfx/weapons/sword_hit_1.wav" id="75_snd"]
+[ext_resource type="AudioStream" path="res://assets/audio/sfx/weapons/sword_hit_2.wav" id="76_snd"]
+[ext_resource type="AudioStream" path="res://assets/audio/sfx/weapons/sword_spin.wav" id="77_snd"]
+[ext_resource type="AudioStream" path="res://assets/audio/sfx/weapons/sword_charge.wav" id="78_snd"]
+[ext_resource type="AudioStream" path="res://assets/audio/sfx/weapons/sword_charged.wav" id="79_snd"]
+[ext_resource type="AudioStream" path="res://assets/audio/sfx/weapons/shield_block_1.wav" id="80_snd"]
+[ext_resource type="AudioStream" path="res://assets/audio/sfx/weapons/shield_block_2.wav" id="81_snd"]
+[ext_resource type="AudioStream" path="res://assets/audio/sfx/weapons/shield_bash.wav" id="82_snd"]
 
 [sub_resource type="Resource" id="sd_0"]
 script = ExtResource("2_def")
@@ -528,6 +539,90 @@ max_distance = 35.0
 max_voices = 4
 loop = false
 
+[sub_resource type="Resource" id="sd_38"]
+script = ExtResource("2_def")
+streams = Array[AudioStream]([ExtResource("72_snd"), ExtResource("73_snd"), ExtResource("74_snd")])
+volume_db = -4.0
+pitch_min = 0.94
+pitch_max = 1.06
+bus = &"SFX"
+spatial = true
+max_distance = 35.0
+max_voices = 6
+loop = false
+
+[sub_resource type="Resource" id="sd_39"]
+script = ExtResource("2_def")
+streams = Array[AudioStream]([ExtResource("75_snd"), ExtResource("76_snd")])
+volume_db = -2.0
+pitch_min = 0.93
+pitch_max = 1.07
+bus = &"SFX"
+spatial = true
+max_distance = 45.0
+max_voices = 8
+loop = false
+
+[sub_resource type="Resource" id="sd_40"]
+script = ExtResource("2_def")
+streams = Array[AudioStream]([ExtResource("77_snd")])
+volume_db = -2.0
+pitch_min = 0.97
+pitch_max = 1.03
+bus = &"SFX"
+spatial = true
+max_distance = 45.0
+max_voices = 4
+loop = false
+
+[sub_resource type="Resource" id="sd_41"]
+script = ExtResource("2_def")
+streams = Array[AudioStream]([ExtResource("78_snd")])
+volume_db = -6.0
+pitch_min = 1.0
+pitch_max = 1.0
+bus = &"SFX"
+spatial = true
+max_distance = 25.0
+max_voices = 4
+loop = false
+
+[sub_resource type="Resource" id="sd_42"]
+script = ExtResource("2_def")
+streams = Array[AudioStream]([ExtResource("79_snd")])
+volume_db = -5.0
+pitch_min = 1.0
+pitch_max = 1.0
+bus = &"SFX"
+spatial = true
+max_distance = 25.0
+max_voices = 4
+loop = false
+
+[sub_resource type="Resource" id="sd_43"]
+script = ExtResource("2_def")
+streams = Array[AudioStream]([ExtResource("80_snd"), ExtResource("81_snd")])
+volume_db = -2.0
+pitch_min = 0.95
+pitch_max = 1.05
+bus = &"SFX"
+spatial = true
+max_distance = 45.0
+max_voices = 6
+loop = false
+
+[sub_resource type="Resource" id="sd_44"]
+script = ExtResource("2_def")
+streams = Array[AudioStream]([ExtResource("82_snd")])
+volume_db = -3.0
+pitch_min = 0.95
+pitch_max = 1.05
+bus = &"SFX"
+spatial = true
+max_distance = 35.0
+max_voices = 4
+loop = false
+
 [resource]
 script = ExtResource("1_reg")
 sounds = Dictionary[String, Resource]({
@@ -568,5 +663,12 @@ sounds = Dictionary[String, Resource]({
 "ice.shatter": SubResource("sd_34"),
 "fire.ignite": SubResource("sd_35"),
 "fire.loop": SubResource("sd_36"),
-"fire.extinguish": SubResource("sd_37")
+"fire.extinguish": SubResource("sd_37"),
+"sword.swing": SubResource("sd_38"),
+"sword.hit": SubResource("sd_39"),
+"sword.spin": SubResource("sd_40"),
+"sword.charge": SubResource("sd_41"),
+"sword.charged": SubResource("sd_42"),
+"shield.block": SubResource("sd_43"),
+"shield.bash": SubResource("sd_44")
 })

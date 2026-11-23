@@ -44,7 +44,7 @@ func _process(delta: float) -> void:
 	var drawn: bool = _equipment.sync_drawn and w != null
 	var locked: bool = _player.focus.target != null
 	# Homing throws don't need a crosshair while locked; the bow always aims by hand.
-	crosshair.visible = drawn and not (kind == "throw" and (locked or _equipment.sync_thrown))
+	crosshair.visible = drawn and kind != "slash" and not (kind == "throw" and (_equipment.sync_thrown or (locked and not _equipment.sync_aiming)))
 	var power := 0.0
 	if kind == "shoot":
 		power = _equipment.stats().charge_to_power(_equipment.charge)
@@ -76,8 +76,12 @@ func _weapon_line(w: Resource, kind: String) -> String:
 		"shoot":
 			status = "Arrows %d" % _equipment.ammo_count()
 		"throw":
-			status = "returning..." if _equipment.sync_thrown else "ready  ·  hold RMB to lock on"
-	return "%s   ·   %s   [Q] %s" % ["  ".join(slots), status, "holster" if _equipment.sync_drawn else "draw"]
+			status = "returning..." if _equipment.sync_thrown else "hold LMB: sweep to pick targets"
+		"slash":
+			status = "charged! release" if _equipment.melee.charged else ("charging..." if _equipment.melee.charging else "LMB combo · hold: spin")
+	var sh: Resource = _equipment.shield_item()
+	var shield := "   ·   [F] %s" % sh.display_name if sh else ""
+	return "%s   ·   %s%s   [Q] %s" % ["  ".join(slots), status, shield, "holster" if _equipment.sync_drawn else "draw"]
 
 
 func _update_bars(delta: float) -> void:

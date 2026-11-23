@@ -116,13 +116,16 @@ func play_shoot() -> void:
 		tree.set("parameters/shoot/request", AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
 
 
-## Upper-body one-off (draw/holster, pick up, use item...).
-func play_action(anim_name: StringName) -> void:
+## Upper-body one-off (draw/holster, pick up, use item, sword swings...).
+## duration > 0 time-scales the clip to last that long.
+func play_action(anim_name: StringName, duration: float = 0.0) -> void:
 	if tree == null or not anim.has_animation(anim_name):
 		return
 	_action_node.animation = anim_name
+	var length := anim.get_animation(anim_name).length
+	tree.set("parameters/action_speed/scale", length / duration if duration > 0.0 else 1.0)
 	tree.set("parameters/action/request", AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
-	_action_left = anim.get_animation(anim_name).length * 0.8
+	_action_left = duration * 0.95 if duration > 0.0 else length * 0.8
 
 
 ## Full-body one-shot (dodge roll, bonk), scaled to last `duration` seconds.
@@ -258,7 +261,9 @@ func _build_tree() -> void:
 	bt.connect_node("shoot", 0, "aim_pose")
 	bt.connect_node("shoot", 1, "shoot_anim")
 	bt.connect_node("action", 0, "shoot")
-	bt.connect_node("action", 1, "action_anim")
+	bt.add_node("action_speed", AnimationNodeTimeScale.new())
+	bt.connect_node("action_speed", 0, "action_anim")
+	bt.connect_node("action", 1, "action_speed")
 	bt.connect_node("upper", 0, "ground_air")
 	bt.connect_node("upper", 1, "action")
 	_full_node = _clip(anim_dodge[0])
