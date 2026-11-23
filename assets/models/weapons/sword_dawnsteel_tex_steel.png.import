@@ -3,9 +3,10 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://44j8ecygqi1l"
-path="res://.godot/imported/sword_dawnsteel_tex_steel.png-a87962bba3e284752b576cf922b07f71.ctex"
+path.s3tc="res://.godot/imported/sword_dawnsteel_tex_steel.png-a87962bba3e284752b576cf922b07f71.s3tc.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "a0a31a14425787867b544ca390ab3a22"
@@ -14,11 +15,11 @@ generator_parameters={
 [deps]
 
 source_file="res://assets/models/weapons/sword_dawnsteel_tex_steel.png"
-dest_files=["res://.godot/imported/sword_dawnsteel_tex_steel.png-a87962bba3e284752b576cf922b07f71.ctex"]
+dest_files=["res://.godot/imported/sword_dawnsteel_tex_steel.png-a87962bba3e284752b576cf922b07f71.s3tc.ctex"]
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0
@@ -40,4 +41,4 @@ process/normal_map_invert_y=false
 process/hdr_as_srgb=false
 process/hdr_clamp_exposure=false
 process/size_limit=0
-detect_3d/compress_to=1
+detect_3d/compress_to=0

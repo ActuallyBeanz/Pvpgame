@@ -11,3 +11,6 @@ model_id = "weapon.arrow.basic"
 pickup_model_id = "pickup.arrows.bundle"
 amount = 5
 action_tag = "ammo"
+icon_model_id = "weapon.arrow.basic"
+icon_rotation_deg = Vector3(0, -90, 0)
+icon_roll_deg = 45.0

@@ -18,3 +18,5 @@ back_rotation_deg = Vector3(0, 90, 35)
 worn_model_id = "weapon.quiver.basic"
 worn_position = Vector3(0.2, 0.25, -0.5)
 worn_rotation_deg = Vector3(0, 0, -25)
+icon_rotation_deg = Vector3(0, 90, 0)
+icon_roll_deg = -45.0

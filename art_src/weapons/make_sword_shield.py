@@ -149,16 +149,17 @@ def octagon(z, r):
     return [Vector((math.cos(i / 8 * math.tau) * r, math.sin(i / 8 * math.tau) * r, z)) for i in range(8)]
 
 
-# ======================= DAWNSTEEL BLADE (~1.55 units; character scale 0.8 -> ~1.25 m) =====
+# ======================= DAWNSTEEL BLADE (~2.1 units; character scale 0.8 -> ~1.7 m) ========
 s = Builder()
 # blade: flared base, slim waist, leaf swell, point
-prof = [(0.07, 0.085), (0.14, 0.072), (0.40, 0.062), (0.78, 0.068), (1.02, 0.058), (1.14, 0.04)]
+BLADE = 1.72                                  # tip height (keep in sync with SwordStats.blade_length)
+prof = [(0.07, 0.085), (0.16, 0.074), (0.52, 0.064), (1.02, 0.070), (1.36, 0.060), (1.52, 0.042)]
 s.rings("steel", [diamond(z, w, 0.026) for z, w in prof], True, False)
-s.cone_tip("steel", diamond(1.14, 0.04, 0.026), (0, 0, 1.30))
+s.cone_tip("steel", diamond(1.52, 0.042, 0.026), (0, 0, BLADE))
 # glowing rune strip down both faces
 for side in (-1, 1):
-    s.box("rune", (0, side * 0.024, 0.58), (0.022, 0.008, 0.78))
-    for z in (0.25, 0.48, 0.71, 0.94):                                  # rune "glyph" ticks
+    s.box("rune", (0, side * 0.024, 0.76), (0.022, 0.008, 1.12))
+    for z in (0.25, 0.5, 0.75, 1.0, 1.25):                              # rune "glyph" ticks
         s.box("rune", (0, side * 0.025, z), (0.05, 0.006, 0.012))
 # crossguard: centre block + swept wings rising to points
 s.box("gold", (0, 0, 0.03), (0.16, 0.075, 0.08))

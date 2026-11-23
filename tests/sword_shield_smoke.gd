@@ -88,7 +88,10 @@ func _process(delta: float) -> void:
 				_next()
 		3:
 			if _eq.sync_weapon_id == "sword_dawnsteel" and _eq.sync_shield_id == "shield_gildcrest" and _t > 0.8:
-				print("[blade] picked up sword + shield (drawn=%s)" % _eq.sync_drawn)
+				print("[blade] picked up sword + shield (drawn=%s) hotbar=%s" % [_eq.sync_drawn, _eq.inventory])
+				if _eq.inventory[0] != "sword_dawnsteel" or _eq.inventory[1] != "shield_gildcrest" or _eq.inventory.size() != 9:
+					_done(false, "hotbar should hold sword, shield in slots 1-2 of 9")
+					return
 				_shot("01_sword_shield")
 				# stand 1.4m in front of dummy 1
 				var front: Vector3 = _d1.global_position + (Vector3(0, 0, 3.5) - _d1.global_position).normalized() * 1.4
@@ -161,7 +164,31 @@ func _process(delta: float) -> void:
 				if _arrow.get("_stuck") or (is_instance_valid(_arrow) and _arrow.get_parent() == _player):
 					_done(false, "arrow stuck in the player instead of bouncing off the shield")
 					return
-				_done(true, "sword combo + spin + shield block OK")
+				_next()
+		9:  # focus (RMB) raises the shield on its own
+			if _t > 0.2 and not Input.is_action_pressed("focus"):
+				Input.action_press("focus")
+			if _t > 0.6:
+				if not (_eq.sync_blocking and _eq.melee.focus_guard):
+					_done(false, "holding focus should raise the shield")
+					return
+				print("[blade] focus raised the shield")
+				_shot("06_focus_guard")
+				Input.action_press("attack")
+				_next()
+		10:  # ...and LMB still attacks from behind it, then the shield comes back up
+			if _t > 0.08:
+				Input.action_release("attack")
+			if _t > 0.12 and _t < 0.3 and _eq.melee.swinging and _eq.sync_blocking:
+				_done(false, "shield should drop while swinging")
+				return
+			if _t > 1.0:
+				Input.action_release("focus")
+				if not _eq.sync_blocking:
+					_done(false, "shield didn't come back up after the swing")
+					return
+				print("[blade] swung from behind the focus shield, shield back up")
+				_done(true, "sword combo + spin + shield block + focus shield + hotbar OK")
 
 
 func _next() -> void:
@@ -179,6 +206,7 @@ func _shot(tag: String) -> void:
 
 
 func _done(ok: bool, msg: String) -> void:
+	Input.action_release("focus")
 	Input.action_release("attack")
 	Input.action_release("block")
 	print("[blade] %s %s" % ["PASS" if ok else "FAIL", msg])

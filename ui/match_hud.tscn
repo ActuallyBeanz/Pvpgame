@@ -11,7 +11,7 @@ offset_left = 16.0
 offset_top = 12.0
 offset_right = 640.0
 offset_bottom = 40.0
-text = "WASD move · Shift sprint · Space jump · Mouse look · Wheel zoom · V camera · 1-3 weapon · LMB attack (hold: aim / charge) · RMB focus · F shield · E pick up · Esc menu"
+text = "WASD move · Shift sprint · Space jump · V camera · 1-9 hotbar · LMB attack (hold: aim/charge) · RMB focus + shield · F shield · E pick up · Esc menu"
 
 [node name="PausePanel" type="ColorRect" parent="."]
 unique_name_in_owner = true

@@ -5,7 +5,8 @@ extends Node
 ##   action_tag "throw" (boomerang): LMB throws; homes in on your focus lock target
 ## Owner-authoritative for its own state (synced via the player's $Sync);
 ## pickups are granted by the host (see scenes/items/pickup.gd).
-## Controls: 1/2/3 pick weapon · Q draw/holster · LMB use · E pick up
+## Inventory: 9 hotbar slots (weapons, shield, ammo), keys 1-9 equip the weapon in a slot.
+## Controls: 1-9 pick weapon · Q draw/holster · LMB use · E pick up
 
 signal changed
 
@@ -18,7 +19,7 @@ const FX := preload("res://systems/components/element_fx.gd")
 
 @export var pickup_radius := 2.2
 @export var holster_swap_delay := 0.25     ## when the model moves hand <-> back during the anim
-@export var max_weapon_slots := 3
+@export var inventory_size := 9             ## hotbar slots (keys 1-9)
 @export var lit_arrow_burn_time := 8.0     ## a lit nocked arrow burns out after this (OoT deku-stick style)
 @export var nock_forward := 0.62           ## nocked arrow tip distance in front of the bow hand
 
@@ -31,7 +32,8 @@ var sync_arrow_element := ""               ## nocked arrow lit by holding it in 
 var sync_shield_id := ""                   ## shield worn on the off hand (separate from weapon slots)
 var sync_blocking := false                 ## shield raised (F)
 
-var weapons: Array[String] = []            ## owned weapon ids, slot order (owner only)
+var weapons: Array[String] = []            ## owned weapon ids, hotbar order (owner only)
+var inventory: Array[String] = []          ## hotbar: item id per slot, "" = empty (owner only)
 var ammo: Dictionary = {}                  ## ammo item id -> count (owner only)
 var charge := 0.0                          ## 0..1 bow draw progress
 var nearest_pickup: Node3D
@@ -59,6 +61,8 @@ var _shield_vis: Node3D
 
 func _ready() -> void:
 	_player = get_parent()
+	inventory.resize(inventory_size)
+	inventory.fill("")
 	_boom_aim = BoomerangAim.new()
 	_boom_aim.name = "BoomerangAim"
 	add_child(_boom_aim)
@@ -127,8 +131,9 @@ func receive_item(item_id: String, amount: int) -> void:
 		return
 	if it.kind == "weapon":
 		if not weapons.has(item_id):
-			if weapons.size() < max_weapon_slots:
-				weapons.append(item_id)
+			if not _store(item_id):
+				print("[equipment] hotbar full, can't carry %s" % item_id)
+				return
 			_add_ammo(it.ammo_item_id, it.starting_ammo)
 			if sync_weapon_id == "":
 				_equip(item_id)
@@ -137,14 +142,31 @@ func receive_item(item_id: String, amount: int) -> void:
 	elif it.kind == "ammo":
 		_add_ammo(item_id, amount)
 	elif it.kind == "shield":
-		sync_shield_id = item_id
-		_applied = ""
-	print("[equipment] got %s x%d | weapons %s | ammo %s" % [item_id, amount, weapons, ammo])
+		if _store(item_id):
+			sync_shield_id = item_id
+			_applied = ""
+	print("[equipment] got %s x%d | hotbar %s | ammo %s" % [item_id, amount, inventory, ammo])
 	changed.emit()
 
 
+## Put an item in the first free hotbar slot (no-op if already there). false = full.
+func _store(item_id: String) -> bool:
+	if inventory.has(item_id):
+		return true
+	var free := inventory.find("")
+	if free < 0:
+		return false
+	inventory[free] = item_id
+	weapons.clear()
+	for id in inventory:
+		var it := ItemDB.get_item(id) if id != "" else null
+		if it and it.kind == "weapon":
+			weapons.append(id)
+	return true
+
+
 func _add_ammo(ammo_id: String, n: int) -> void:
-	if ammo_id == "" or n <= 0:
+	if ammo_id == "" or n <= 0 or not _store(ammo_id):
 		return
 	var it := ItemDB.get_item(ammo_id)
 	var cap: int = it.max_carry if it else 99
@@ -199,9 +221,11 @@ func _local_update(delta: float) -> void:
 		return
 	if Input.is_action_just_pressed("interact") and nearest_pickup:
 		nearest_pickup.request_take()
-	for i in max_weapon_slots:
-		if Input.is_action_just_pressed("weapon_%d" % (i + 1)) and i < weapons.size():
-			_equip(weapons[i])
+	for i in inventory_size:
+		if Input.is_action_just_pressed("weapon_%d" % (i + 1)) and inventory[i] != "":
+			var slot_item := ItemDB.get_item(inventory[i])
+			if slot_item and slot_item.kind == "weapon":
+				_equip(inventory[i])
 	if Input.is_action_just_pressed("cycle_weapon") and weapons.size() > 1:
 		_equip(weapons[(weapons.find(sync_weapon_id) + 1) % weapons.size()])
 	melee.update(delta)
@@ -211,7 +235,7 @@ func _local_update(delta: float) -> void:
 	if Input.is_action_just_pressed("toggle_weapon") and not melee.busy():
 		_release(false)
 		_set_drawn(not sync_drawn)
-	if Input.is_action_just_pressed("attack") and not sync_drawn and not sync_blocking:
+	if Input.is_action_just_pressed("attack") and not sync_drawn and (not sync_blocking or melee.focus_guard):
 		_set_drawn(true)
 		if w.action_tag == "slash":
 			melee.queue_draw_slash()

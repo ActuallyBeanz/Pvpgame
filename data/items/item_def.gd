@@ -9,6 +9,12 @@ extends Resource
 @export var model_id := ""                 ## AssetRegistry id used in hands / on back
 @export var pickup_model_id := ""          ## AssetRegistry id shown on the ground (blank = model_id)
 
+@export_group("Hotbar icon")
+@export var icon: Texture2D                ## optional hand-made icon; blank = rendered from the model
+@export var icon_model_id := ""            ## model to photograph (blank = pickup model, then model_id)
+@export var icon_rotation_deg := Vector3(0, 0, 0)  ## pose for the photo (camera looks down -Z)
+@export var icon_roll_deg := 0.0           ## then tilt in the picture (-45 = long items diagonal)
+
 @export_group("Weapon")
 @export var stats: Resource                ## e.g. BowStats (data/items/bow_stats.gd)
 @export var ammo_item_id := ""             ## which ammo item this weapon uses

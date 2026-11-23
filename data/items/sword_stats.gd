@@ -9,7 +9,7 @@ extends Resource
 @export var combo_duration: PackedFloat32Array = [0.42, 0.42, 0.55]  ## seconds per swing
 @export var hit_window := Vector2(0.22, 0.62)   ## part of a swing (0-1) that can hit
 @export var combo_window := 0.35                ## press again within this after a swing to chain
-@export var reach := 2.0                        ## metres from your chest
+@export var reach := 2.4                        ## metres from your chest
 @export var arc_deg := 150.0                    ## swing arc in front of you
 @export var swing_move_mult := 0.35             ## movement speed while swinging
 
@@ -17,7 +17,7 @@ extends Resource
 @export var stab_anim := &"1H_Melee_Attack_Stab"
 @export var stab_damage := 16.0
 @export var stab_duration := 0.5
-@export var stab_reach := 2.5
+@export var stab_reach := 2.9
 @export var stab_arc_deg := 50.0
 
 @export_group("Spin attack (hold LMB)")
@@ -26,7 +26,7 @@ extends Resource
 @export var charge_move_mult := 0.45
 @export var spin_anim := &"2H_Melee_Attack_Spin"
 @export var spin_damage := 28.0
-@export var spin_radius := 2.9
+@export var spin_radius := 3.2
 @export var spin_duration := 0.7
 
 @export_group("Hit")
@@ -34,3 +34,4 @@ extends Resource
 @export var stab_action := "pierce"
 @export var lock_on_range := 15.0
 @export var trail_color := Color(0.55, 0.95, 1.0, 0.85)
+@export var blade_length := 1.72                ## model units, guard -> tip (trail + charge sparkles)

@@ -16,3 +16,4 @@ back_position = Vector3(0, 0.15, -0.5)
 back_rotation_deg = Vector3(0, 180, 0)
 material = "wood"
 action_tag = "block"
+icon_rotation_deg = Vector3(0, -15, 0)

@@ -17,3 +17,4 @@ back_position = Vector3(0.12, 0.05, -0.32)
 back_rotation_deg = Vector3(0, 0, 90)
 material = "wood"
 action_tag = "throw"
+icon_rotation_deg = Vector3(90, 0, 0)

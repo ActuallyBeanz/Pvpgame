@@ -19,7 +19,20 @@ var _bars: Array[ColorRect] = []
 var _bar := 0.0
 
 
+const Hotbar := preload("res://ui/hotbar.gd")
+
+var _hotbar: Control
+
+
 func _ready() -> void:
+	_hotbar = Hotbar.new()
+	_hotbar.name = "Hotbar"
+	add_child(_hotbar)
+	_hotbar.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM)
+	_hotbar.alignment = BoxContainer.ALIGNMENT_CENTER
+	_hotbar.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	_hotbar.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	_hotbar.offset_bottom = -14
 	for top in [true, false]:
 		var r := ColorRect.new()
 		r.color = Color(0, 0, 0, 0.92)
@@ -34,6 +47,7 @@ func _process(delta: float) -> void:
 	if not is_instance_valid(_equipment):
 		_player = _find_local_player()
 		_equipment = _player.get_node_or_null("Equipment") if _player else null
+		_hotbar.equipment = _equipment
 		if _equipment == null:
 			visible = false
 			return
@@ -66,22 +80,17 @@ func _process(delta: float) -> void:
 func _weapon_line(w: Resource, kind: String) -> String:
 	if w == null:
 		return ""
-	var slots := PackedStringArray()
-	for i in _equipment.weapons.size():
-		var it: Resource = ItemDB.get_item(_equipment.weapons[i])
-		var mark := ">" if _equipment.weapons[i] == _equipment.sync_weapon_id else " "
-		slots.append("%s[%d] %s" % [mark, i + 1, it.display_name if it else "?"])
 	var status := ""
 	match kind:
 		"shoot":
-			status = "Arrows %d" % _equipment.ammo_count()
+			status = "fire arrow!" if _equipment.sync_arrow_element == "fire" else "hold LMB to draw"
 		"throw":
 			status = "returning..." if _equipment.sync_thrown else "hold LMB: sweep to pick targets"
 		"slash":
 			status = "charged! release" if _equipment.melee.charged else ("charging..." if _equipment.melee.charging else "LMB combo · hold: spin")
 	var sh: Resource = _equipment.shield_item()
-	var shield := "   ·   [F] %s" % sh.display_name if sh else ""
-	return "%s   ·   %s%s   [Q] %s" % ["  ".join(slots), status, shield, "holster" if _equipment.sync_drawn else "draw"]
+	var shield := "   ·   RMB/F shield" if sh and (kind == "slash" or not _equipment.sync_drawn) else ""
+	return "%s   ·   %s%s   ·   [Q] %s" % [w.display_name, status, shield, "holster" if _equipment.sync_drawn else "draw"]
 
 
 func _update_bars(delta: float) -> void:

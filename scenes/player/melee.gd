@@ -4,8 +4,8 @@ extends Node
 ##   Sword drawn:  tap LMB = 3-hit combo · focus-locked (RMB) = thrust
 ##                 keep holding LMB after a swing = charge, release when it sparkles = spin attack
 ##                 LMB with the sword away = draw + slash in one (like OoT's B button)
-##   Shield owned: hold F = raise it (blocks frontal arrows / boomerangs / sword hits)
-##                 LMB while blocking = shield bash
+##   Shield owned: hold RMB (focus) or F = shield up (blocks frontal arrows / boomerangs /
+##                 sword hits). Focus + LMB still attacks; F + LMB = shield bash
 ## Hits go through WorldRules (slash / pierce / blunt tags), so wood, ice, dummies and
 ## future enemies all react with no extra code.
 
@@ -18,6 +18,7 @@ enum Kind { SLASH_1, SLASH_2, SLASH_3, STAB, SPIN, BASH }
 var swinging := false
 var charging := false
 var charged := false
+var focus_guard := false          ## shield is up because focus (RMB) is held, not F
 
 var _eq: Node
 var _player: CharacterBody3D
@@ -74,7 +75,7 @@ func move_mult() -> float:
 	if charging and s:
 		return s.charge_move_mult
 	if _eq.sync_blocking and shield_stats():
-		return shield_stats().block_move_mult
+		return shield_stats().focus_guard_move_mult if focus_guard else shield_stats().block_move_mult
 	return 1.0
 
 
@@ -100,7 +101,8 @@ func update(delta: float) -> void:
 		_tick_swing(delta)
 	_update_block(delta)
 	var s := sword_stats()
-	var ready: bool = s != null and _eq.sync_drawn and _eq._swap_timer < 0.0 and not _eq.sync_blocking
+	var ready: bool = s != null and _eq.sync_drawn and _eq._swap_timer < 0.0 \
+		and (not _eq.sync_blocking or focus_guard)
 	var rolling: bool = _player.motor.state == Motor.State.ROLL
 	if not ready or rolling:
 		_stop_charge()
@@ -161,6 +163,9 @@ func _spin(s: Resource) -> void:
 func _start(kind: int, anim_name: StringName, dur: float, dmg: float, reach: float, arc: float,
 		action: String, window: Vector2, full_body: bool) -> void:
 	swinging = true
+	if kind != Kind.BASH:
+		_eq.sync_blocking = false   # the shield drops for the swing, comes back after
+		_block_t = 0.0
 	_kind = kind
 	_t = 0.0
 	_dur = dur
@@ -193,6 +198,7 @@ func _play(kind: int, anim_name: StringName, dur: float, full_body: bool) -> voi
 	var s := sword_stats()
 	if s and kind != Kind.BASH:
 		_trail.color = s.trail_color
+		_trail.tip_local = Vector3(0, s.blade_length, 0)
 		_trail.follow = _eq._weapon_vis
 
 
@@ -208,6 +214,9 @@ func _process(delta: float) -> void:
 		return
 	_remote_trail_left = maxf(0.0, _remote_trail_left - delta)  # remotes: trail for the whole swing
 	_trail.follow = _eq._weapon_vis
+	var s := sword_stats()
+	if s:
+		_trail.tip_local = Vector3(0, s.blade_length, 0)
 	_trail.active = _remote_trail_left > 0.0
 
 
@@ -284,15 +293,18 @@ func _update_block(delta: float) -> void:
 	var can: bool = sh != null and not swinging and not charging \
 		and (w == null or w.action_tag == "slash" or not _eq.sync_drawn) \
 		and _player.motor.state != Motor.State.ROLL
-	if can and Input.is_action_pressed("block"):
+	var by_key: bool = can and Input.is_action_pressed("block")
+	var by_focus: bool = can and sh.raise_on_focus and _player.focus.active
+	if by_key or by_focus:
 		_block_t += delta
 	else:
 		_block_t = 0.0
+	focus_guard = by_focus and not by_key
 	var was: bool = _eq.sync_blocking
 	_eq.sync_blocking = sh != null and _block_t >= sh.raise_time
 	if _eq.sync_blocking and not was:
 		_eq._applied = ""   # shield moves to the hand
-	if _eq.sync_blocking and Input.is_action_just_pressed("attack") and _bash_cd <= 0.0:
+	if _eq.sync_blocking and not focus_guard and Input.is_action_just_pressed("attack") and _bash_cd <= 0.0:
 		_bash_cd = sh.bash_cooldown
 		_eq.sync_blocking = false
 		_block_t = -sh.bash_duration   # stay lowered for the bash
@@ -308,7 +320,8 @@ func _update_charge_fx() -> void:
 	if _charge_fx == null:
 		_charge_fx = _sparkles()
 		tip_parent.add_child(_charge_fx)
-		_charge_fx.position = Vector3(0, 1.1, 0)
+		var s := sword_stats()
+		_charge_fx.position = Vector3(0, s.blade_length * 0.7 if s else 1.1, 0)
 	var p := _charge_fx as CPUParticles3D
 	p.amount = 24 if charged else 8
 	p.scale_amount_max = 1.6 if charged else 0.8
