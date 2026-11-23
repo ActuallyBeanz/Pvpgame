@@ -1,4 +1,4 @@
-[gd_resource type="Resource" load_steps=94 format=3]
+[gd_resource type="Resource" load_steps=110 format=3]
 
 [ext_resource type="Script" path="res://data/registry/sound_registry.gd" id="1_reg"]
 [ext_resource type="Script" path="res://data/audio/sound_def.gd" id="2_def"]
@@ -62,6 +62,15 @@
 [ext_resource type="AudioStream" path="res://assets/audio/sfx/ui/error.wav" id="60_snd"]
 [ext_resource type="AudioStream" path="res://assets/audio/sfx/ui/match_start.wav" id="61_snd"]
 [ext_resource type="AudioStream" path="res://assets/audio/sfx/ambience/field_loop.wav" id="62_snd"]
+[ext_resource type="AudioStream" path="res://assets/audio/sfx/world/wood_hit_1.wav" id="63_snd"]
+[ext_resource type="AudioStream" path="res://assets/audio/sfx/world/wood_hit_2.wav" id="64_snd"]
+[ext_resource type="AudioStream" path="res://assets/audio/sfx/world/wood_break.wav" id="65_snd"]
+[ext_resource type="AudioStream" path="res://assets/audio/sfx/world/ice_hit_1.wav" id="66_snd"]
+[ext_resource type="AudioStream" path="res://assets/audio/sfx/world/ice_hit_2.wav" id="67_snd"]
+[ext_resource type="AudioStream" path="res://assets/audio/sfx/world/ice_shatter.wav" id="68_snd"]
+[ext_resource type="AudioStream" path="res://assets/audio/sfx/world/fire_ignite.wav" id="69_snd"]
+[ext_resource type="AudioStream" path="res://assets/audio/sfx/world/fire_loop.wav" id="70_snd"]
+[ext_resource type="AudioStream" path="res://assets/audio/sfx/world/fire_extinguish.wav" id="71_snd"]
 
 [sub_resource type="Resource" id="sd_0"]
 script = ExtResource("2_def")
@@ -435,6 +444,90 @@ max_distance = 40.0
 max_voices = 4
 loop = true
 
+[sub_resource type="Resource" id="sd_31"]
+script = ExtResource("2_def")
+streams = Array[AudioStream]([ExtResource("63_snd"), ExtResource("64_snd")])
+volume_db = -3.0
+pitch_min = 0.92
+pitch_max = 1.08
+bus = &"SFX"
+spatial = true
+max_distance = 45.0
+max_voices = 6
+loop = false
+
+[sub_resource type="Resource" id="sd_32"]
+script = ExtResource("2_def")
+streams = Array[AudioStream]([ExtResource("65_snd")])
+volume_db = -1.0
+pitch_min = 0.92
+pitch_max = 1.05
+bus = &"SFX"
+spatial = true
+max_distance = 60.0
+max_voices = 4
+loop = false
+
+[sub_resource type="Resource" id="sd_33"]
+script = ExtResource("2_def")
+streams = Array[AudioStream]([ExtResource("66_snd"), ExtResource("67_snd")])
+volume_db = -4.0
+pitch_min = 0.95
+pitch_max = 1.05
+bus = &"SFX"
+spatial = true
+max_distance = 45.0
+max_voices = 6
+loop = false
+
+[sub_resource type="Resource" id="sd_34"]
+script = ExtResource("2_def")
+streams = Array[AudioStream]([ExtResource("68_snd")])
+volume_db = -1.0
+pitch_min = 0.95
+pitch_max = 1.05
+bus = &"SFX"
+spatial = true
+max_distance = 60.0
+max_voices = 4
+loop = false
+
+[sub_resource type="Resource" id="sd_35"]
+script = ExtResource("2_def")
+streams = Array[AudioStream]([ExtResource("69_snd")])
+volume_db = -3.0
+pitch_min = 0.9
+pitch_max = 1.1
+bus = &"SFX"
+spatial = true
+max_distance = 40.0
+max_voices = 6
+loop = false
+
+[sub_resource type="Resource" id="sd_36"]
+script = ExtResource("2_def")
+streams = Array[AudioStream]([ExtResource("70_snd")])
+volume_db = -9.0
+pitch_min = 1.0
+pitch_max = 1.0
+bus = &"SFX"
+spatial = true
+max_distance = 20.0
+max_voices = 8
+loop = true
+
+[sub_resource type="Resource" id="sd_37"]
+script = ExtResource("2_def")
+streams = Array[AudioStream]([ExtResource("71_snd")])
+volume_db = -4.0
+pitch_min = 0.95
+pitch_max = 1.05
+bus = &"SFX"
+spatial = true
+max_distance = 35.0
+max_voices = 4
+loop = false
+
 [resource]
 script = ExtResource("1_reg")
 sounds = Dictionary[String, Resource]({
@@ -468,5 +561,12 @@ sounds = Dictionary[String, Resource]({
 "ui.back": SubResource("sd_27"),
 "ui.error": SubResource("sd_28"),
 "ui.match_start": SubResource("sd_29"),
-"amb.field": SubResource("sd_30")
+"amb.field": SubResource("sd_30"),
+"wood.hit": SubResource("sd_31"),
+"wood.break": SubResource("sd_32"),
+"ice.hit": SubResource("sd_33"),
+"ice.shatter": SubResource("sd_34"),
+"fire.ignite": SubResource("sd_35"),
+"fire.loop": SubResource("sd_36"),
+"fire.extinguish": SubResource("sd_37")
 })

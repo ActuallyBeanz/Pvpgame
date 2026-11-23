@@ -1,0 +1,21 @@
+[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://assets/placeholders/ice_block.tscn" id="1_model"]
+[ext_resource type="Script" path="res://systems/components/reactive.gd" id="2_reactive"]
+
+[sub_resource type="BoxShape3D" id="Shape_ice"]
+size = Vector3(1.6, 1.8, 1.6)
+
+[node name="IceBlock" type="StaticBody3D"]
+metadata/material = "ice"
+
+[node name="Model" parent="." instance=ExtResource("1_model")]
+
+[node name="Shape" type="CollisionShape3D" parent="."]
+transform = Transform3D(0.96, 0, 0.28, 0, 1, 0, -0.28, 0, 0.96, 0, 0.9, 0)
+shape = SubResource("Shape_ice")
+
+[node name="Reactive" type="Node3D" parent="."]
+script = ExtResource("2_reactive")
+material_id = "ice"
+fire_height = 0.9

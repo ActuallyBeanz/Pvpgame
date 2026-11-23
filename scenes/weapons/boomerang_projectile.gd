@@ -134,10 +134,9 @@ func _on_hit(col: Object, point: Vector3) -> void:
 	if col == null or _hit_ids.has(col.get_instance_id()):
 		return
 	_hit_ids[col.get_instance_id()] = true
-	if not col.has_method("react_to_hit"):
+	var hit_info := WorldRules.make_hit(stats.damage, "blunt", "", velocity.normalized())
+	if not WorldRules.deliver_hit(col, hit_info, cosmetic):
 		Audio.play_at("arrow.hit", point, -3.0, 1.3)
-	if col.has_method("react_to_hit"):
-		col.react_to_hit(stats.damage, velocity.normalized(), cosmetic)
 	if not cosmetic:
 		hit.emit(col, point, stats.damage)
 		print("[boomerang] hit %s" % ((col as Node).name if col is Node else "?"))

@@ -9,6 +9,18 @@ const PLAYER_SCENE := preload("res://scenes/player/player.tscn")
 ]
 @export var demo_prop_radius := 22.0
 
+@export_group("Reaction yard")
+## Brazier + crate chain + ice: shoot through the brazier to light arrows, burn the
+## crates, watch fire spread and melt the ice. Boomerang the lone ice block to shatter it.
+@export var yard_items: Array[Dictionary] = [
+	{ "id": "prop.brazier.stone", "pos": Vector3(12, 0, 4.6) },
+	{ "id": "prop.crate.wood", "pos": Vector3(16.0, 0, 6.0) },
+	{ "id": "prop.crate.wood", "pos": Vector3(17.6, 0, 6.5) },
+	{ "id": "prop.crate.wood", "pos": Vector3(19.2, 0, 7.0) },
+	{ "id": "prop.ice.block", "pos": Vector3(19.0, 0, 9.4) },
+	{ "id": "prop.ice.block", "pos": Vector3(13.5, 0, 11.5) },
+]
+
 @export_group("Pickups")
 const PickupScene := preload("res://scenes/items/pickup.tscn")
 @export var pickup_counts: Dictionary[String, int] = { "bow_basic": 4, "arrows": 8, "boomerang_basic": 4 }
@@ -50,6 +62,7 @@ func _ready() -> void:
 	spawner.spawn_function = _build_player
 	overview_camera.look_at_from_position(Vector3(0, 22, 26), Vector3.ZERO)
 	_place_demo_props()
+	_place_reaction_yard()
 	_place_targets()
 	_place_dummies()
 	_place_pickups()
@@ -102,6 +115,7 @@ func _place_demo_props() -> void:
 	var count := demo_prop_ids.size() * 3
 	for i in count:
 		var prop := AssetRegistry.instantiate(demo_prop_ids[i % demo_prop_ids.size()])
+		prop.name = "Prop_%d" % i  # fixed names: Reactive props sync by node path
 		var angle := TAU * (i + 0.5) / count
 		prop.position = Vector3(cos(angle), 0.0, sin(angle)) * demo_prop_radius
 		prop.rotation.y = -angle
@@ -134,8 +148,10 @@ func _place_trees() -> void:
 		var r := sqrt(rng.randf()) * grove_radius
 		_try_spot(grove_center + Vector3(cos(a) * r, 0.0, sin(a) * r), taken, grove, grove_count)
 	spots.append_array(grove)
-	for pos in spots:
+	for i in spots.size():
+		var pos := spots[i]
 		var tree := AssetRegistry.instantiate(tree_id)
+		tree.name = "Tree_%d" % i
 		tree.position = pos
 		tree.rotation.y = rng.randf() * TAU
 		tree.scale = Vector3.ONE * rng.randf_range(tree_scale_range.x, tree_scale_range.y)
@@ -150,6 +166,17 @@ func _try_spot(pos: Vector3, taken: Array[Vector3], out: Array[Vector3], limit: 
 			return
 	taken.append(pos)
 	out.append(pos)
+
+
+# Local scenery with fixed names (Reactive state syncs by node path).
+func _place_reaction_yard() -> void:
+	for i in yard_items.size():
+		var item: Dictionary = yard_items[i]
+		var prop := AssetRegistry.instantiate(str(item.id))
+		prop.name = "Yard_%d" % i
+		prop.position = item.pos
+		prop.rotation.y = float(item.get("rot", 0.0))
+		$Props.add_child(prop)
 
 
 func _place_targets() -> void:

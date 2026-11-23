@@ -1,0 +1,25 @@
+[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://assets/placeholders/brazier.tscn" id="1_model"]
+[ext_resource type="Script" path="res://systems/components/reactive.gd" id="2_reactive"]
+
+[sub_resource type="CylinderShape3D" id="Shape_brazier"]
+height = 1.25
+radius = 0.45
+
+[node name="Brazier" type="StaticBody3D"]
+metadata/material = "stone"
+
+[node name="Model" parent="." instance=ExtResource("1_model")]
+
+[node name="Shape" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.625, 0)
+shape = SubResource("Shape_brazier")
+
+[node name="Reactive" type="Node3D" parent="."]
+script = ExtResource("2_reactive")
+material_id = "stone"
+always_burning = true
+fire_height = 1.3
+fire_size = 1.1
+fire_zone_radius = 0.9

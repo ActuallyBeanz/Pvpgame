@@ -21,6 +21,7 @@ DebugLog="*res://systems/debug_log.gd"
 GameConfig="*res://systems/game_config.gd"
 AssetRegistry="*res://systems/asset_registry.gd"
 Audio="*res://systems/audio.gd"
+WorldRules="*res://systems/world_rules.gd"
 ItemDB="*res://systems/item_db.gd"
 NetworkManager="*res://systems/network_manager.gd"
 Lobby="*res://systems/lobby.gd"
@@ -29,6 +30,12 @@ Lobby="*res://systems/lobby.gd"
 
 window/stretch/mode="canvas_items"
 window/stretch/aspect="expand"
+
+[layer_names]
+
+3d_physics/layer_1="world"
+3d_physics/layer_2="players"
+3d_physics/layer_4="fire_zones"
 
 [physics]
 

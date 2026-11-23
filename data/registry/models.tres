@@ -2,7 +2,7 @@
 
 [ext_resource type="PackedScene" path="res://assets/placeholders/missing.tscn" id="1_ut6gy"]
 [ext_resource type="PackedScene" path="res://assets/placeholders/player_capsule.tscn" id="2_dolo4"]
-[ext_resource type="PackedScene" path="res://assets/placeholders/crate_wood.tscn" id="3_c8d8u"]
+[ext_resource type="PackedScene" path="res://scenes/props/world/crate_wood.tscn" id="3_c8d8u"]
 [ext_resource type="PackedScene" path="res://assets/placeholders/tree_basic.tscn" id="4_1iksr"]
 [ext_resource type="PackedScene" path="res://assets/placeholders/rock_basic.tscn" id="5_25x7b"]
 [ext_resource type="PackedScene" path="res://assets/placeholders/wall_cracked.tscn" id="6_gkh24"]
@@ -21,6 +21,8 @@
 [ext_resource type="PackedScene" path="res://scenes/props/targets/archery_target.tscn" id="18_arch"]
 [ext_resource type="PackedScene" path="res://scenes/props/targets/target_dummy.tscn" id="19_dummy"]
 [ext_resource type="PackedScene" path="res://assets/models/weapons/boomerang_basic.glb" id="20_boom"]
+[ext_resource type="PackedScene" path="res://scenes/props/world/ice_block.tscn" id="21_ice"]
+[ext_resource type="PackedScene" path="res://scenes/props/world/brazier.tscn" id="22_brazier"]
 
 [resource]
 script = ExtResource("12_ckosp")
@@ -37,7 +39,9 @@ models = Dictionary[String, PackedScene]({
 "player.adventurer.rogue": ExtResource("10_4ieu8"),
 "player.adventurer.rogue_hooded": ExtResource("11_nfvwf"),
 "player.body.capsule": ExtResource("2_dolo4"),
+"prop.brazier.stone": ExtResource("22_brazier"),
 "prop.crate.wood": ExtResource("3_c8d8u"),
+"prop.ice.block": ExtResource("21_ice"),
 "prop.target.archery": ExtResource("18_arch"),
 "prop.target.board": ExtResource("17_nfvwf"),
 "prop.target.dummy": ExtResource("19_dummy"),

@@ -1,0 +1,87 @@
+[gd_resource type="Resource" load_steps=18 format=3]
+
+[ext_resource type="Script" path="res://data/world/world_rules_def.gd" id="1_rules"]
+[ext_resource type="Script" path="res://data/world/material_def.gd" id="2_mat"]
+[ext_resource type="Script" path="res://data/world/reaction_def.gd" id="3_rx"]
+
+[sub_resource type="Resource" id="mat_wood"]
+script = ExtResource("2_mat")
+id = "wood"
+max_hp = 60.0
+flammable = true
+ignite_heat = 10.0
+cool_per_sec = 2.0
+burn_dps = 6.0
+spread_radius = 3.0
+spread_heat_per_sec = 5.0
+break_style = "splinter"
+debris_color = Color(0.55, 0.36, 0.2, 1)
+hit_sound = "wood.hit"
+break_sound = "wood.break"
+
+[sub_resource type="Resource" id="mat_ice"]
+script = ExtResource("2_mat")
+id = "ice"
+max_hp = 40.0
+melts_from_heat = true
+melt_per_heat = 1.5
+break_style = "shatter"
+debris_color = Color(0.7, 0.9, 1, 0.85)
+hit_sound = "ice.hit"
+break_sound = "ice.shatter"
+
+[sub_resource type="Resource" id="mat_stone"]
+script = ExtResource("2_mat")
+id = "stone"
+max_hp = 0.0
+break_style = "crumble"
+debris_color = Color(0.5, 0.5, 0.52, 1)
+hit_sound = "arrow.hit"
+
+[sub_resource type="Resource" id="rx_wood_pierce"]
+script = ExtResource("3_rx")
+material = "wood"
+tag = "pierce"
+damage_mult = 0.35
+
+[sub_resource type="Resource" id="rx_wood_slash"]
+script = ExtResource("3_rx")
+material = "wood"
+tag = "slash"
+damage_mult = 1.2
+
+[sub_resource type="Resource" id="rx_wood_frost"]
+script = ExtResource("3_rx")
+material = "wood"
+tag = "frost"
+effect = "extinguish"
+
+[sub_resource type="Resource" id="rx_ice_pierce"]
+script = ExtResource("3_rx")
+material = "ice"
+tag = "pierce"
+damage_mult = 0.25
+
+[sub_resource type="Resource" id="rx_ice_blunt"]
+script = ExtResource("3_rx")
+material = "ice"
+tag = "blunt"
+damage_mult = 4.0
+
+[sub_resource type="Resource" id="rx_ice_fire"]
+script = ExtResource("3_rx")
+material = "ice"
+tag = "fire"
+damage_mult = 2.0
+
+[sub_resource type="Resource" id="rx_ice_frost"]
+script = ExtResource("3_rx")
+material = "ice"
+tag = "frost"
+damage_mult = 0.0
+
+[resource]
+script = ExtResource("1_rules")
+materials = Array[Resource]([SubResource("mat_wood"), SubResource("mat_ice"), SubResource("mat_stone")])
+reactions = Array[Resource]([SubResource("rx_wood_pierce"), SubResource("rx_wood_slash"), SubResource("rx_wood_frost"), SubResource("rx_ice_pierce"), SubResource("rx_ice_blunt"), SubResource("rx_ice_fire"), SubResource("rx_ice_frost")])
+fire_hit_heat = 30.0

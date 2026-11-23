@@ -17,13 +17,38 @@ var stick_time := 12.0
 var damage := 0.0
 var shooter_rid := RID()
 var cosmetic := false                      ## remote copies: visuals only, no damage
+var element := ""                          ## "fire" etc. Set by special ammo, or by flying through a fire zone
 
 var _age := 0.0
 var _stuck := false
 
 
+const FX := preload("res://systems/components/element_fx.gd")
+
+var _flames: Node3D
+
+
 func _ready() -> void:
 	add_child(AssetRegistry.instantiate(model_id))
+	if element != "":
+		_show_element()
+
+
+## Light the arrow (fire zone, or fire ammo). Every peer does this from its own copy.
+func set_element(e: String) -> void:
+	if element == e:
+		return
+	element = e
+	_show_element()
+	if e == "fire":
+		Audio.play_at("fire.ignite", global_position, -6.0, 1.3)
+
+
+func _show_element() -> void:
+	if element == "fire" and _flames == null and is_inside_tree():
+		_flames = FX.flames(0.35, true)
+		add_child(_flames)
+		_flames.position = Vector3(0, 0, 0.05)
 
 
 func launch(from: Vector3, vel: Vector3, stats: Resource, dmg: float, shooter: RID) -> void:
@@ -56,6 +81,8 @@ func _physics_process(delta: float) -> void:
 	if shooter_rid.is_valid():
 		q.exclude = [shooter_rid]
 	var res := get_world_3d().direct_space_state.intersect_ray(q)
+	if element != "fire" and WorldRules.fire_zone_on_segment(get_world_3d(), from, to if res.is_empty() else res.position):
+		set_element("fire")
 	if res.is_empty():
 		global_position = to
 		_face(velocity)
@@ -72,10 +99,16 @@ func _stick(res: Dictionary) -> void:
 	var col: Object = res.collider
 	if col is Node3D and not (col is StaticBody3D):
 		reparent(col)  # ride along with moving things (players, props)
-	if not (col and col.has_method("react_to_hit")):
+	var hit_info := WorldRules.make_hit(maxf(damage, 8.0), "pierce", element, dir)
+	if not WorldRules.deliver_hit(col, hit_info, cosmetic):
 		Audio.play_at("arrow.hit", res.position)
-	if col and col.has_method("react_to_hit"):
-		col.react_to_hit(maxf(damage, 8.0), dir, cosmetic)
+	var r := WorldRules.reactive_of(col)
+	if r:
+		r.destroyed.connect(queue_free)  # don't float in the air when the prop breaks
+	if _flames:
+		get_tree().create_timer(2.5).timeout.connect(func() -> void:
+			if is_instance_valid(_flames):
+				_flames.queue_free())
 	if not cosmetic:
 		hit.emit(col, res.position, damage)
 		print("[arrow] hit %s at %.1fm from origin, dmg %.0f" % [

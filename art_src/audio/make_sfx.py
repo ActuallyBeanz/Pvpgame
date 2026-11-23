@@ -495,6 +495,76 @@ def amb_field():
 # id: (folder, filename stem, generator, variants, settings)
 # settings: bus, volume_db, pitch (min,max), max_distance, max_voices, loop, spatial
 SFX = 1
+
+# ---------------------------------------------------------------- world / elements
+def wood_hit(v):
+    d = 0.3
+    x = silence(d)
+    place(x, modal([210 + 15 * v, 470, 880], 0.2, [0.06, 0.03, 0.015], [1, 0.45, 0.2]), 0, 0.9)
+    place(x, fft_filter(noise(0.03), lo=900, hi=5000) * env_ad(int(0.03 * SR), 0.0005, 0.02), 0, 0.5)
+    return finish(x, peak=0.6, hi=7500, verb=0.08)
+
+
+def wood_break(v):
+    d = 0.8
+    x = silence(d)
+    place(x, thump(160, 60, 0.3), 0, 0.8)
+    for i in range(9):
+        at = RNG.uniform(0.0, 0.35)
+        place(x, modal([RNG.uniform(250, 600), RNG.uniform(700, 1300)], 0.12, [0.03, 0.015]), at, RNG.uniform(0.3, 0.6))
+    place(x, fft_filter(noise(0.5), lo=500, hi=4000) * env_ad(int(0.5 * SR), 0.003, 0.25, 3), 0, 0.5)
+    return finish(x, peak=0.75, hi=8000, verb=0.14)
+
+
+def ice_hit(v):
+    d = 0.5
+    x = silence(d)
+    place(x, bell(hz("E6") * (1 + 0.04 * v), 0.4, bright=1.4, decay=0.12), 0, 0.5)
+    place(x, fft_filter(noise(0.02), lo=3000) * env_ad(int(0.02 * SR), 0.0003, 0.01), 0, 0.6)
+    return finish(x, peak=0.55, hi=11000, verb=0.15)
+
+
+def ice_shatter(v):
+    d = 1.1
+    x = silence(d)
+    place(x, fft_filter(noise(0.6), lo=2500) * env_ad(int(0.6 * SR), 0.001, 0.25, 4), 0, 0.7)
+    for i in range(14):
+        at = RNG.uniform(0.0, 0.5)
+        place(x, bell(RNG.uniform(1800, 4200), 0.35, bright=1.6, decay=0.08), at, RNG.uniform(0.15, 0.35))
+    place(x, thump(220, 120, 0.15), 0, 0.4)
+    return finish(x, peak=0.75, hi=12000, verb=0.2, verb_len=0.7)
+
+
+def fire_ignite(v):
+    d = 0.7
+    x = svf_sweep(noise(d), 300, 1600, q=1.5) * env_ad(int(d * SR), 0.06, 0.5, 3)
+    place(x, thump(110, 60, 0.3), 0, 0.4)
+    return finish(x, peak=0.6, hi=7000, verb=0.1)
+
+
+def fire_loop(v):
+    """4 s seamless crackle loop."""
+    d = 4.0
+    n = int(d * SR)
+    base = fft_filter(noise(d), lo=150, hi=1200) * 0.18
+    x = base.copy()
+    for i in range(70):
+        at = RNG.uniform(0, d - 0.03)
+        pop = fft_filter(noise(0.012), lo=1500, hi=7000) * env_ad(int(0.012 * SR), 0.0003, 0.008)
+        place(x, pop, at, RNG.uniform(0.15, 0.6))
+    fade = int(0.25 * SR)
+    ramp = np.linspace(0, 1, fade)
+    x[:fade] = x[:fade] * ramp + x[n - fade:] * (1 - ramp)
+    x = x[:n - fade]
+    return finish(x, peak=0.5, hi=8000, verb=0.0, tail_fade=0.0)
+
+
+def fire_extinguish(v):
+    d = 0.9
+    x = fft_filter(noise(d), lo=2500, hi=9000) * env_ad(int(d * SR), 0.02, 0.6, 2)
+    return finish(x, peak=0.5, hi=10000, verb=0.08)
+
+
 CATALOGUE = [
     ("player.footstep.grass", "player", "step_grass", footstep_grass, 4, dict(volume_db=-6, pitch=(0.9, 1.1), max_distance=30, max_voices=6)),
     ("player.footstep.stone", "player", "step_stone", footstep_stone, 4, dict(volume_db=-6, pitch=(0.92, 1.08), max_distance=30, max_voices=6)),
@@ -527,6 +597,14 @@ CATALOGUE = [
     ("ui.error", "ui", "error", lambda v: ui_error(), 1, dict(bus="UI", volume_db=-8, spatial=False)),
     ("ui.match_start", "ui", "match_start", lambda v: ui_match_start(), 1, dict(bus="UI", volume_db=-5, spatial=False)),
     ("amb.field", "ambience", "field_loop", lambda v: amb_field(), 1, dict(bus="Ambience", volume_db=-10, spatial=False, loop=True)),
+    # world / elements (keep new sounds at the end so the shared RNG leaves older sounds unchanged)
+    ("wood.hit", "world", "wood_hit", wood_hit, 2, dict(volume_db=-3, pitch=(0.92, 1.08), max_distance=45, max_voices=6)),
+    ("wood.break", "world", "wood_break", wood_break, 1, dict(volume_db=-1, pitch=(0.92, 1.05), max_distance=60)),
+    ("ice.hit", "world", "ice_hit", ice_hit, 2, dict(volume_db=-4, pitch=(0.95, 1.05), max_distance=45, max_voices=6)),
+    ("ice.shatter", "world", "ice_shatter", ice_shatter, 1, dict(volume_db=-1, pitch=(0.95, 1.05), max_distance=60)),
+    ("fire.ignite", "world", "fire_ignite", fire_ignite, 1, dict(volume_db=-3, pitch=(0.9, 1.1), max_distance=40, max_voices=6)),
+    ("fire.loop", "world", "fire_loop", fire_loop, 1, dict(volume_db=-9, pitch=(1.0, 1.0), max_distance=20, max_voices=8, loop=True)),
+    ("fire.extinguish", "world", "fire_extinguish", fire_extinguish, 1, dict(volume_db=-4, pitch=(0.95, 1.05), max_distance=35)),
 ]
 
 
