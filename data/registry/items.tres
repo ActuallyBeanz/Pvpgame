@@ -1,0 +1,14 @@
+[gd_resource type="Resource" format=3]
+
+[ext_resource type="Resource" path="res://data/items/bow_basic.tres" id="1_8sg2i"]
+[ext_resource type="Resource" path="res://data/items/arrows.tres" id="2_3gb1h"]
+[ext_resource type="Script" path="res://data/registry/item_registry.gd" id="3_f3wow"]
+[ext_resource type="Resource" path="res://data/items/boomerang_basic.tres" id="4_boom"]
+
+[resource]
+script = ExtResource("3_f3wow")
+items = Dictionary[String, Resource]({
+"arrows": ExtResource("2_3gb1h"),
+"boomerang_basic": ExtResource("4_boom"),
+"bow_basic": ExtResource("1_8sg2i")
+})

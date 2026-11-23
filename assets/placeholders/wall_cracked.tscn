@@ -1,0 +1,35 @@
+[gd_scene format=3]
+
+[sub_resource type="BoxMesh" id="BoxMesh_wall"]
+size = Vector3(4, 3, 0.6)
+
+[sub_resource type="StandardMaterial3D" id="Mat_cracked"]
+albedo_color = Color(0.62, 0.55, 0.45, 1)
+roughness = 1.0
+
+[sub_resource type="BoxMesh" id="BoxMesh_crack"]
+size = Vector3(0.12, 2.2, 0.62)
+
+[sub_resource type="StandardMaterial3D" id="Mat_crack"]
+albedo_color = Color(0.15, 0.12, 0.1, 1)
+
+[sub_resource type="BoxShape3D" id="Shape_col"]
+size = Vector3(4, 3, 0.6)
+
+[node name="WallCracked" type="Node3D"]
+
+[node name="Wall" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, 0)
+mesh = SubResource("BoxMesh_wall")
+surface_material_override/0 = SubResource("Mat_cracked")
+
+[node name="Crack" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.94, -0.34, 0, 0.34, 0.94, 0, 0, 0, 1, 0.3, 1.5, 0)
+mesh = SubResource("BoxMesh_crack")
+surface_material_override/0 = SubResource("Mat_crack")
+
+[node name="Collision" type="StaticBody3D" parent="."]
+
+[node name="Shape" type="CollisionShape3D" parent="Collision"]
+position = Vector3(0, 1.5, 0)
+shape = SubResource("Shape_col")

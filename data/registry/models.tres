@@ -1,0 +1,48 @@
+[gd_resource type="Resource" format=3]
+
+[ext_resource type="PackedScene" path="res://assets/placeholders/missing.tscn" id="1_ut6gy"]
+[ext_resource type="PackedScene" path="res://assets/placeholders/player_capsule.tscn" id="2_dolo4"]
+[ext_resource type="PackedScene" path="res://assets/placeholders/crate_wood.tscn" id="3_c8d8u"]
+[ext_resource type="PackedScene" path="res://assets/placeholders/tree_basic.tscn" id="4_1iksr"]
+[ext_resource type="PackedScene" path="res://assets/placeholders/rock_basic.tscn" id="5_25x7b"]
+[ext_resource type="PackedScene" path="res://assets/placeholders/wall_cracked.tscn" id="6_gkh24"]
+[ext_resource type="PackedScene" path="res://scenes/player/models/knight.tscn" id="7_8nbfg"]
+[ext_resource type="PackedScene" path="res://scenes/player/models/barbarian.tscn" id="8_dd1ba"]
+[ext_resource type="PackedScene" path="res://scenes/player/models/mage.tscn" id="9_nnf8h"]
+[ext_resource type="PackedScene" path="res://scenes/player/models/rogue.tscn" id="10_4ieu8"]
+[ext_resource type="PackedScene" path="res://scenes/player/models/rogue_hooded.tscn" id="11_nfvwf"]
+[ext_resource type="Script" path="res://data/registry/model_registry.gd" id="12_ckosp"]
+[ext_resource type="PackedScene" path="res://scenes/props/env/tree_oak_a.tscn" id="12_dolo4"]
+[ext_resource type="PackedScene" path="res://assets/models/weapons/bow_basic.glb" id="13_8nbfg"]
+[ext_resource type="PackedScene" path="res://assets/models/weapons/arrow_basic.glb" id="14_dd1ba"]
+[ext_resource type="PackedScene" path="res://assets/models/weapons/quiver_basic.glb" id="15_nnf8h"]
+[ext_resource type="PackedScene" path="res://scenes/items/arrow_bundle.tscn" id="16_4ieu8"]
+[ext_resource type="PackedScene" path="res://assets/placeholders/target_board.tscn" id="17_nfvwf"]
+[ext_resource type="PackedScene" path="res://scenes/props/targets/archery_target.tscn" id="18_arch"]
+[ext_resource type="PackedScene" path="res://scenes/props/targets/target_dummy.tscn" id="19_dummy"]
+[ext_resource type="PackedScene" path="res://assets/models/weapons/boomerang_basic.glb" id="20_boom"]
+
+[resource]
+script = ExtResource("12_ckosp")
+models = Dictionary[String, PackedScene]({
+"debug.missing": ExtResource("1_ut6gy"),
+"env.rock.basic": ExtResource("5_25x7b"),
+"env.tree.basic": ExtResource("4_1iksr"),
+"env.tree.oak_a": ExtResource("12_dolo4"),
+"env.wall.cracked": ExtResource("6_gkh24"),
+"pickup.arrows.bundle": ExtResource("16_4ieu8"),
+"player.adventurer.barbarian": ExtResource("8_dd1ba"),
+"player.adventurer.knight": ExtResource("7_8nbfg"),
+"player.adventurer.mage": ExtResource("9_nnf8h"),
+"player.adventurer.rogue": ExtResource("10_4ieu8"),
+"player.adventurer.rogue_hooded": ExtResource("11_nfvwf"),
+"player.body.capsule": ExtResource("2_dolo4"),
+"prop.crate.wood": ExtResource("3_c8d8u"),
+"prop.target.archery": ExtResource("18_arch"),
+"prop.target.board": ExtResource("17_nfvwf"),
+"prop.target.dummy": ExtResource("19_dummy"),
+"weapon.arrow.basic": ExtResource("14_dd1ba"),
+"weapon.boomerang.basic": ExtResource("20_boom"),
+"weapon.bow.basic": ExtResource("13_8nbfg"),
+"weapon.quiver.basic": ExtResource("15_nnf8h")
+})

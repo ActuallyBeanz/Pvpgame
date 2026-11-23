@@ -1,0 +1,60 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://ui/match_hud.gd" id="1_hud"]
+
+[node name="MatchHud" type="CanvasLayer"]
+script = ExtResource("1_hud")
+
+[node name="Hint" type="Label" parent="."]
+modulate = Color(1, 1, 1, 0.75)
+offset_left = 16.0
+offset_top = 12.0
+offset_right = 640.0
+offset_bottom = 40.0
+text = "WASD move · Shift sprint · Space jump · Mouse look · Wheel zoom · V camera · 1 bow · LMB draw/shoot · RMB aim · E pick up · Esc menu"
+
+[node name="PausePanel" type="ColorRect" parent="."]
+unique_name_in_owner = true
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.55)
+
+[node name="Center" type="CenterContainer" parent="PausePanel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBox" type="VBoxContainer" parent="PausePanel/Center"]
+custom_minimum_size = Vector2(260, 0)
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Title" type="Label" parent="PausePanel/Center/VBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 28
+text = "Paused"
+horizontal_alignment = 1
+
+[node name="Note" type="Label" parent="PausePanel/Center/VBox"]
+modulate = Color(1, 1, 1, 0.6)
+layout_mode = 2
+text = "(the match keeps running)"
+horizontal_alignment = 1
+
+[node name="ResumeButton" type="Button" parent="PausePanel/Center/VBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 44)
+layout_mode = 2
+text = "Resume"
+
+[node name="LeaveButton" type="Button" parent="PausePanel/Center/VBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 44)
+layout_mode = 2
+text = "Leave Match"

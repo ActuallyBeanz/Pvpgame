@@ -1,0 +1,43 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scenes/props/targets/hit_target.gd" id="1_tgt"]
+[ext_resource type="PackedScene" path="res://assets/models/targets/archery_target.glb" id="2_glb"]
+
+[sub_resource type="CylinderShape3D" id="Shape_face"]
+height = 0.24
+radius = 0.62
+
+[sub_resource type="BoxShape3D" id="Shape_leg"]
+size = Vector3(0.08, 1.9, 0.08)
+
+[sub_resource type="BoxShape3D" id="Shape_shelf"]
+size = Vector3(0.9, 0.08, 0.08)
+
+[node name="ArcheryTarget" type="StaticBody3D"]
+script = ExtResource("1_tgt")
+lockable = false
+lock_height = 1.25
+wobble_per_damage = 0.006
+max_kick = 0.12
+metadata/material = "straw"
+
+[node name="Visual" type="Node3D" parent="."]
+
+[node name="Model" parent="Visual" instance=ExtResource("2_glb")]
+transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, 0, 0, 0)
+
+[node name="Face" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, -1, 0, 1, -4.371139e-08, 0, 1.25, 0)
+shape = SubResource("Shape_face")
+
+[node name="LegL" type="CollisionShape3D" parent="."]
+transform = Transform3D(0.992, 0.125, 0, -0.125, 0.992, 0, 0, 0, 1, -0.3, 0.95, -0.08)
+shape = SubResource("Shape_leg")
+
+[node name="LegR" type="CollisionShape3D" parent="."]
+transform = Transform3D(0.992, -0.125, 0, 0.125, 0.992, 0, 0, 0, 1, 0.3, 0.95, -0.08)
+shape = SubResource("Shape_leg")
+
+[node name="Shelf" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.55, 0)
+shape = SubResource("Shape_shelf")

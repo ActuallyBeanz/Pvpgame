@@ -1,0 +1,472 @@
+[gd_resource type="Resource" load_steps=94 format=3]
+
+[ext_resource type="Script" path="res://data/registry/sound_registry.gd" id="1_reg"]
+[ext_resource type="Script" path="res://data/audio/sound_def.gd" id="2_def"]
+[ext_resource type="AudioStream" path="res://assets/audio/sfx/player/step_grass_1.wav" id="3_snd"]
+[ext_resource type="AudioStream" path="res://assets/audio/sfx/player/step_grass_2.wav" id="4_snd"]
+[ext_resource type="AudioStream" path="res://assets/audio/sfx/player/step_grass_3.wav" id="5_snd"]
+[ext_resource type="AudioStream" path="res://assets/audio/sfx/player/step_grass_4.wav" id="6_snd"]
+[ext_resource type="AudioStream" path="res://assets/audio/sfx/player/step_stone_1.wav" id="7_snd"]
+[ext_resource type="AudioStream" path="res://assets/audio/sfx/player/step_stone_2.wav" id="8_snd"]
+[ext_resource type="AudioStream" path="res://assets/audio/sfx/player/step_stone_3.wav" id="9_snd"]
+[ext_resource type="AudioStream" path="res://assets/audio/sfx/player/step_stone_4.wav" id="10_snd"]
+[ext_resource type="AudioStream" path="res://assets/audio/sfx/player/step_wood_1.wav" id="11_snd"]
+[ext_resource type="AudioStream" path="res://assets/audio/sfx/player/step_wood_2.wav" id="12_snd"]
+[ext_resource type="AudioStream" path="res://assets/audio/sfx/player/step_wood_3.wav" id="13_snd"]
+[ext_resource type="AudioStream" path="res://assets/audio/sfx/player/step_wood_4.wav" id="14_snd"]
+[ext_resource type="AudioStream" path="res://assets/audio/sfx/player/step_straw_1.wav" id="15_snd"]
+[ext_resource type="AudioStream" path="res://assets/audio/sfx/player/step_straw_2.wav" id="16_snd"]
+[ext_resource type="AudioStream" path="res://assets/audio/sfx/player/step_straw_3.wav" id="17_snd"]
+[ext_resource type="AudioStream" path="res://assets/audio/sfx/player/jump_1.wav" id="18_snd"]
+[ext_resource type="AudioStream" path="res://assets/audio/sfx/player/jump_2.wav" id="19_snd"]
+[ext_resource type="AudioStream" path="res://assets/audio/sfx/player/land_1.wav" id="20_snd"]
+[ext_resource type="AudioStream" path="res://assets/audio/sfx/player/land_2.wav" id="21_snd"]
+[ext_resource type="AudioStream" path="res://assets/audio/sfx/player/land_heavy_1.wav" id="22_snd"]
+[ext_resource type="AudioStream" path="res://assets/audio/sfx/player/land_heavy_2.wav" id="23_snd"]
+[ext_resource type="AudioStream" path="res://assets/audio/sfx/player/roll_1.wav" id="24_snd"]
+[ext_resource type="AudioStream" path="res://assets/audio/sfx/player/roll_2.wav" id="25_snd"]
+[ext_resource type="AudioStream" path="res://assets/audio/sfx/player/sidehop_1.wav" id="26_snd"]
+[ext_resource type="AudioStream" path="res://assets/audio/sfx/player/sidehop_2.wav" id="27_snd"]
+[ext_resource type="AudioStream" path="res://assets/audio/sfx/player/backflip.wav" id="28_snd"]
+[ext_resource type="AudioStream" path="res://assets/audio/sfx/player/ledge_grab_1.wav" id="29_snd"]
+[ext_resource type="AudioStream" path="res://assets/audio/sfx/player/ledge_grab_2.wav" id="30_snd"]
+[ext_resource type="AudioStream" path="res://assets/audio/sfx/player/climb_1.wav" id="31_snd"]
+[ext_resource type="AudioStream" path="res://assets/audio/sfx/player/climb_2.wav" id="32_snd"]
+[ext_resource type="AudioStream" path="res://assets/audio/sfx/player/bonk.wav" id="33_snd"]
+[ext_resource type="AudioStream" path="res://assets/audio/sfx/weapons/draw_1.wav" id="34_snd"]
+[ext_resource type="AudioStream" path="res://assets/audio/sfx/weapons/draw_2.wav" id="35_snd"]
+[ext_resource type="AudioStream" path="res://assets/audio/sfx/weapons/holster_1.wav" id="36_snd"]
+[ext_resource type="AudioStream" path="res://assets/audio/sfx/weapons/holster_2.wav" id="37_snd"]
+[ext_resource type="AudioStream" path="res://assets/audio/sfx/weapons/bow_draw_1.wav" id="38_snd"]
+[ext_resource type="AudioStream" path="res://assets/audio/sfx/weapons/bow_draw_2.wav" id="39_snd"]
+[ext_resource type="AudioStream" path="res://assets/audio/sfx/weapons/bow_fire_1.wav" id="40_snd"]
+[ext_resource type="AudioStream" path="res://assets/audio/sfx/weapons/bow_fire_2.wav" id="41_snd"]
+[ext_resource type="AudioStream" path="res://assets/audio/sfx/weapons/bow_fire_3.wav" id="42_snd"]
+[ext_resource type="AudioStream" path="res://assets/audio/sfx/weapons/arrow_hit_1.wav" id="43_snd"]
+[ext_resource type="AudioStream" path="res://assets/audio/sfx/weapons/arrow_hit_2.wav" id="44_snd"]
+[ext_resource type="AudioStream" path="res://assets/audio/sfx/weapons/arrow_hit_3.wav" id="45_snd"]
+[ext_resource type="AudioStream" path="res://assets/audio/sfx/weapons/boomerang_throw_1.wav" id="46_snd"]
+[ext_resource type="AudioStream" path="res://assets/audio/sfx/weapons/boomerang_throw_2.wav" id="47_snd"]
+[ext_resource type="AudioStream" path="res://assets/audio/sfx/weapons/boomerang_spin.wav" id="48_snd"]
+[ext_resource type="AudioStream" path="res://assets/audio/sfx/weapons/boomerang_catch.wav" id="49_snd"]
+[ext_resource type="AudioStream" path="res://assets/audio/sfx/world/target_hit_1.wav" id="50_snd"]
+[ext_resource type="AudioStream" path="res://assets/audio/sfx/world/target_hit_2.wav" id="51_snd"]
+[ext_resource type="AudioStream" path="res://assets/audio/sfx/world/target_hit_3.wav" id="52_snd"]
+[ext_resource type="AudioStream" path="res://assets/audio/sfx/items/item_get.wav" id="53_snd"]
+[ext_resource type="AudioStream" path="res://assets/audio/sfx/items/item_ammo.wav" id="54_snd"]
+[ext_resource type="AudioStream" path="res://assets/audio/sfx/items/item_pickup_far.wav" id="55_snd"]
+[ext_resource type="AudioStream" path="res://assets/audio/sfx/ui/hover_1.wav" id="56_snd"]
+[ext_resource type="AudioStream" path="res://assets/audio/sfx/ui/hover_2.wav" id="57_snd"]
+[ext_resource type="AudioStream" path="res://assets/audio/sfx/ui/select.wav" id="58_snd"]
+[ext_resource type="AudioStream" path="res://assets/audio/sfx/ui/back.wav" id="59_snd"]
+[ext_resource type="AudioStream" path="res://assets/audio/sfx/ui/error.wav" id="60_snd"]
+[ext_resource type="AudioStream" path="res://assets/audio/sfx/ui/match_start.wav" id="61_snd"]
+[ext_resource type="AudioStream" path="res://assets/audio/sfx/ambience/field_loop.wav" id="62_snd"]
+
+[sub_resource type="Resource" id="sd_0"]
+script = ExtResource("2_def")
+streams = Array[AudioStream]([ExtResource("3_snd"), ExtResource("4_snd"), ExtResource("5_snd"), ExtResource("6_snd")])
+volume_db = -6.0
+pitch_min = 0.9
+pitch_max = 1.1
+bus = &"SFX"
+spatial = true
+max_distance = 30.0
+max_voices = 6
+loop = false
+
+[sub_resource type="Resource" id="sd_1"]
+script = ExtResource("2_def")
+streams = Array[AudioStream]([ExtResource("7_snd"), ExtResource("8_snd"), ExtResource("9_snd"), ExtResource("10_snd")])
+volume_db = -6.0
+pitch_min = 0.92
+pitch_max = 1.08
+bus = &"SFX"
+spatial = true
+max_distance = 30.0
+max_voices = 6
+loop = false
+
+[sub_resource type="Resource" id="sd_2"]
+script = ExtResource("2_def")
+streams = Array[AudioStream]([ExtResource("11_snd"), ExtResource("12_snd"), ExtResource("13_snd"), ExtResource("14_snd")])
+volume_db = -5.0
+pitch_min = 0.92
+pitch_max = 1.08
+bus = &"SFX"
+spatial = true
+max_distance = 30.0
+max_voices = 6
+loop = false
+
+[sub_resource type="Resource" id="sd_3"]
+script = ExtResource("2_def")
+streams = Array[AudioStream]([ExtResource("15_snd"), ExtResource("16_snd"), ExtResource("17_snd")])
+volume_db = -6.0
+pitch_min = 0.9
+pitch_max = 1.1
+bus = &"SFX"
+spatial = true
+max_distance = 30.0
+max_voices = 6
+loop = false
+
+[sub_resource type="Resource" id="sd_4"]
+script = ExtResource("2_def")
+streams = Array[AudioStream]([ExtResource("18_snd"), ExtResource("19_snd")])
+volume_db = -6.0
+pitch_min = 0.95
+pitch_max = 1.08
+bus = &"SFX"
+spatial = true
+max_distance = 35.0
+max_voices = 4
+loop = false
+
+[sub_resource type="Resource" id="sd_5"]
+script = ExtResource("2_def")
+streams = Array[AudioStream]([ExtResource("20_snd"), ExtResource("21_snd")])
+volume_db = -4.0
+pitch_min = 0.92
+pitch_max = 1.05
+bus = &"SFX"
+spatial = true
+max_distance = 35.0
+max_voices = 4
+loop = false
+
+[sub_resource type="Resource" id="sd_6"]
+script = ExtResource("2_def")
+streams = Array[AudioStream]([ExtResource("22_snd"), ExtResource("23_snd")])
+volume_db = -1.0
+pitch_min = 0.92
+pitch_max = 1.03
+bus = &"SFX"
+spatial = true
+max_distance = 50.0
+max_voices = 4
+loop = false
+
+[sub_resource type="Resource" id="sd_7"]
+script = ExtResource("2_def")
+streams = Array[AudioStream]([ExtResource("24_snd"), ExtResource("25_snd")])
+volume_db = -4.0
+pitch_min = 0.93
+pitch_max = 1.07
+bus = &"SFX"
+spatial = true
+max_distance = 35.0
+max_voices = 4
+loop = false
+
+[sub_resource type="Resource" id="sd_8"]
+script = ExtResource("2_def")
+streams = Array[AudioStream]([ExtResource("26_snd"), ExtResource("27_snd")])
+volume_db = -5.0
+pitch_min = 0.95
+pitch_max = 1.1
+bus = &"SFX"
+spatial = true
+max_distance = 30.0
+max_voices = 4
+loop = false
+
+[sub_resource type="Resource" id="sd_9"]
+script = ExtResource("2_def")
+streams = Array[AudioStream]([ExtResource("28_snd")])
+volume_db = -4.0
+pitch_min = 0.95
+pitch_max = 1.05
+bus = &"SFX"
+spatial = true
+max_distance = 30.0
+max_voices = 4
+loop = false
+
+[sub_resource type="Resource" id="sd_10"]
+script = ExtResource("2_def")
+streams = Array[AudioStream]([ExtResource("29_snd"), ExtResource("30_snd")])
+volume_db = -4.0
+pitch_min = 0.93
+pitch_max = 1.07
+bus = &"SFX"
+spatial = true
+max_distance = 30.0
+max_voices = 4
+loop = false
+
+[sub_resource type="Resource" id="sd_11"]
+script = ExtResource("2_def")
+streams = Array[AudioStream]([ExtResource("31_snd"), ExtResource("32_snd")])
+volume_db = -5.0
+pitch_min = 0.93
+pitch_max = 1.07
+bus = &"SFX"
+spatial = true
+max_distance = 30.0
+max_voices = 4
+loop = false
+
+[sub_resource type="Resource" id="sd_12"]
+script = ExtResource("2_def")
+streams = Array[AudioStream]([ExtResource("33_snd")])
+volume_db = -2.0
+pitch_min = 0.97
+pitch_max = 1.03
+bus = &"SFX"
+spatial = true
+max_distance = 40.0
+max_voices = 4
+loop = false
+
+[sub_resource type="Resource" id="sd_13"]
+script = ExtResource("2_def")
+streams = Array[AudioStream]([ExtResource("34_snd"), ExtResource("35_snd")])
+volume_db = -6.0
+pitch_min = 0.95
+pitch_max = 1.05
+bus = &"SFX"
+spatial = true
+max_distance = 25.0
+max_voices = 4
+loop = false
+
+[sub_resource type="Resource" id="sd_14"]
+script = ExtResource("2_def")
+streams = Array[AudioStream]([ExtResource("36_snd"), ExtResource("37_snd")])
+volume_db = -7.0
+pitch_min = 0.95
+pitch_max = 1.05
+bus = &"SFX"
+spatial = true
+max_distance = 25.0
+max_voices = 4
+loop = false
+
+[sub_resource type="Resource" id="sd_15"]
+script = ExtResource("2_def")
+streams = Array[AudioStream]([ExtResource("38_snd"), ExtResource("39_snd")])
+volume_db = -5.0
+pitch_min = 0.96
+pitch_max = 1.04
+bus = &"SFX"
+spatial = true
+max_distance = 30.0
+max_voices = 4
+loop = false
+
+[sub_resource type="Resource" id="sd_16"]
+script = ExtResource("2_def")
+streams = Array[AudioStream]([ExtResource("40_snd"), ExtResource("41_snd"), ExtResource("42_snd")])
+volume_db = -2.0
+pitch_min = 0.95
+pitch_max = 1.05
+bus = &"SFX"
+spatial = true
+max_distance = 60.0
+max_voices = 6
+loop = false
+
+[sub_resource type="Resource" id="sd_17"]
+script = ExtResource("2_def")
+streams = Array[AudioStream]([ExtResource("43_snd"), ExtResource("44_snd"), ExtResource("45_snd")])
+volume_db = -3.0
+pitch_min = 0.92
+pitch_max = 1.08
+bus = &"SFX"
+spatial = true
+max_distance = 50.0
+max_voices = 8
+loop = false
+
+[sub_resource type="Resource" id="sd_18"]
+script = ExtResource("2_def")
+streams = Array[AudioStream]([ExtResource("46_snd"), ExtResource("47_snd")])
+volume_db = -4.0
+pitch_min = 0.95
+pitch_max = 1.05
+bus = &"SFX"
+spatial = true
+max_distance = 40.0
+max_voices = 4
+loop = false
+
+[sub_resource type="Resource" id="sd_19"]
+script = ExtResource("2_def")
+streams = Array[AudioStream]([ExtResource("48_snd")])
+volume_db = -8.0
+pitch_min = 1.0
+pitch_max = 1.0
+bus = &"SFX"
+spatial = true
+max_distance = 35.0
+max_voices = 4
+loop = true
+
+[sub_resource type="Resource" id="sd_20"]
+script = ExtResource("2_def")
+streams = Array[AudioStream]([ExtResource("49_snd")])
+volume_db = -4.0
+pitch_min = 0.96
+pitch_max = 1.04
+bus = &"SFX"
+spatial = true
+max_distance = 30.0
+max_voices = 4
+loop = false
+
+[sub_resource type="Resource" id="sd_21"]
+script = ExtResource("2_def")
+streams = Array[AudioStream]([ExtResource("50_snd"), ExtResource("51_snd"), ExtResource("52_snd")])
+volume_db = -2.0
+pitch_min = 0.9
+pitch_max = 1.1
+bus = &"SFX"
+spatial = true
+max_distance = 50.0
+max_voices = 8
+loop = false
+
+[sub_resource type="Resource" id="sd_22"]
+script = ExtResource("2_def")
+streams = Array[AudioStream]([ExtResource("53_snd")])
+volume_db = -4.0
+pitch_min = 0.95
+pitch_max = 1.05
+bus = &"UI"
+spatial = false
+max_distance = 40.0
+max_voices = 4
+loop = false
+
+[sub_resource type="Resource" id="sd_23"]
+script = ExtResource("2_def")
+streams = Array[AudioStream]([ExtResource("54_snd")])
+volume_db = -5.0
+pitch_min = 0.95
+pitch_max = 1.05
+bus = &"UI"
+spatial = false
+max_distance = 40.0
+max_voices = 4
+loop = false
+
+[sub_resource type="Resource" id="sd_24"]
+script = ExtResource("2_def")
+streams = Array[AudioStream]([ExtResource("55_snd")])
+volume_db = -8.0
+pitch_min = 0.95
+pitch_max = 1.05
+bus = &"SFX"
+spatial = true
+max_distance = 25.0
+max_voices = 4
+loop = false
+
+[sub_resource type="Resource" id="sd_25"]
+script = ExtResource("2_def")
+streams = Array[AudioStream]([ExtResource("56_snd"), ExtResource("57_snd")])
+volume_db = -10.0
+pitch_min = 0.99
+pitch_max = 1.01
+bus = &"UI"
+spatial = false
+max_distance = 40.0
+max_voices = 2
+loop = false
+
+[sub_resource type="Resource" id="sd_26"]
+script = ExtResource("2_def")
+streams = Array[AudioStream]([ExtResource("58_snd")])
+volume_db = -6.0
+pitch_min = 0.95
+pitch_max = 1.05
+bus = &"UI"
+spatial = false
+max_distance = 40.0
+max_voices = 4
+loop = false
+
+[sub_resource type="Resource" id="sd_27"]
+script = ExtResource("2_def")
+streams = Array[AudioStream]([ExtResource("59_snd")])
+volume_db = -6.0
+pitch_min = 0.95
+pitch_max = 1.05
+bus = &"UI"
+spatial = false
+max_distance = 40.0
+max_voices = 4
+loop = false
+
+[sub_resource type="Resource" id="sd_28"]
+script = ExtResource("2_def")
+streams = Array[AudioStream]([ExtResource("60_snd")])
+volume_db = -8.0
+pitch_min = 0.95
+pitch_max = 1.05
+bus = &"UI"
+spatial = false
+max_distance = 40.0
+max_voices = 4
+loop = false
+
+[sub_resource type="Resource" id="sd_29"]
+script = ExtResource("2_def")
+streams = Array[AudioStream]([ExtResource("61_snd")])
+volume_db = -5.0
+pitch_min = 0.95
+pitch_max = 1.05
+bus = &"UI"
+spatial = false
+max_distance = 40.0
+max_voices = 4
+loop = false
+
+[sub_resource type="Resource" id="sd_30"]
+script = ExtResource("2_def")
+streams = Array[AudioStream]([ExtResource("62_snd")])
+volume_db = -10.0
+pitch_min = 0.95
+pitch_max = 1.05
+bus = &"Ambience"
+spatial = false
+max_distance = 40.0
+max_voices = 4
+loop = true
+
+[resource]
+script = ExtResource("1_reg")
+sounds = Dictionary[String, Resource]({
+"player.footstep.grass": SubResource("sd_0"),
+"player.footstep.stone": SubResource("sd_1"),
+"player.footstep.wood": SubResource("sd_2"),
+"player.footstep.straw": SubResource("sd_3"),
+"player.jump": SubResource("sd_4"),
+"player.land": SubResource("sd_5"),
+"player.land_heavy": SubResource("sd_6"),
+"player.roll": SubResource("sd_7"),
+"player.sidehop": SubResource("sd_8"),
+"player.backflip": SubResource("sd_9"),
+"player.ledge_grab": SubResource("sd_10"),
+"player.climb": SubResource("sd_11"),
+"player.bonk": SubResource("sd_12"),
+"weapon.draw": SubResource("sd_13"),
+"weapon.holster": SubResource("sd_14"),
+"bow.draw": SubResource("sd_15"),
+"bow.fire": SubResource("sd_16"),
+"arrow.hit": SubResource("sd_17"),
+"boomerang.throw": SubResource("sd_18"),
+"boomerang.spin": SubResource("sd_19"),
+"boomerang.catch": SubResource("sd_20"),
+"target.hit": SubResource("sd_21"),
+"item.get": SubResource("sd_22"),
+"item.ammo": SubResource("sd_23"),
+"item.pickup_far": SubResource("sd_24"),
+"ui.hover": SubResource("sd_25"),
+"ui.select": SubResource("sd_26"),
+"ui.back": SubResource("sd_27"),
+"ui.error": SubResource("sd_28"),
+"ui.match_start": SubResource("sd_29"),
+"amb.field": SubResource("sd_30")
+})

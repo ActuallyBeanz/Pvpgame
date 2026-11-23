@@ -1,0 +1,16 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scenes/player/models/character_model.gd" id="1_ri6nr"]
+[ext_resource type="PackedScene" path="res://assets/models/kaykit_adventurers/Characters/gltf/Rogue.glb" id="2_gtami"]
+
+[node name="Rogue" type="Node3D" unique_id=698799230]
+script = ExtResource("1_ri6nr")
+character = ExtResource("2_gtami")
+
+[node name="NameTag" type="Label3D" parent="." unique_id=809662618]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.2, 0)
+billboard = 1
+no_depth_test = true
+text = "Player"
+font_size = 48
+outline_size = 10

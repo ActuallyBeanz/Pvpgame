@@ -1,0 +1,19 @@
+[gd_resource type="Resource" format=3]
+
+[ext_resource type="Script" path="res://data/items/item_def.gd" id="1_item"]
+[ext_resource type="Resource" path="res://data/items/boomerang_basic_stats.tres" id="2_stats"]
+
+[resource]
+script = ExtResource("1_item")
+id = "boomerang_basic"
+display_name = "Gyrewing"
+model_id = "weapon.boomerang.basic"
+stats = ExtResource("2_stats")
+aim_anim = &"1H_Ranged_Aiming"
+shoot_anim = &"Throw"
+hand_position = Vector3(0, 0.05, 0.02)
+hand_rotation_deg = Vector3(90, 0, 0)
+back_position = Vector3(0.12, 0.05, -0.32)
+back_rotation_deg = Vector3(0, 0, 90)
+material = "wood"
+action_tag = "throw"

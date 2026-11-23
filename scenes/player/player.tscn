@@ -1,0 +1,92 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scenes/player/player.gd" id="1_player"]
+[ext_resource type="Script" path="res://scenes/player/camera_rig.gd" id="2_rig"]
+[ext_resource type="Script" path="res://scenes/player/equipment.gd" id="3_equip"]
+[ext_resource type="Script" path="res://scenes/player/focus_targeting.gd" id="4_focus"]
+
+[sub_resource type="CapsuleShape3D" id="Shape_body"]
+radius = 0.4
+height = 1.8
+
+[sub_resource type="SphereShape3D" id="Shape_arm"]
+radius = 0.25
+
+[sub_resource type="SceneReplicationConfig" id="Repl_player"]
+properties/0/path = NodePath(".:sync_position")
+properties/0/spawn = true
+properties/0/replication_mode = 1
+properties/1/path = NodePath(".:sync_yaw")
+properties/1/spawn = true
+properties/1/replication_mode = 1
+properties/2/path = NodePath(".:sync_speed")
+properties/2/spawn = false
+properties/2/replication_mode = 2
+properties/3/path = NodePath(".:sync_on_floor")
+properties/3/spawn = false
+properties/3/replication_mode = 2
+properties/4/path = NodePath("Equipment:sync_weapon_id")
+properties/4/spawn = true
+properties/4/replication_mode = 2
+properties/5/path = NodePath("Equipment:sync_drawn")
+properties/5/spawn = true
+properties/5/replication_mode = 2
+properties/6/path = NodePath("Equipment:sync_aiming")
+properties/6/spawn = false
+properties/6/replication_mode = 2
+properties/7/path = NodePath(".:sync_move_state")
+properties/7/spawn = false
+properties/7/replication_mode = 2
+properties/8/path = NodePath(".:sync_action_time")
+properties/8/spawn = false
+properties/8/replication_mode = 2
+properties/9/path = NodePath(".:sync_action")
+properties/9/spawn = false
+properties/9/replication_mode = 2
+properties/10/path = NodePath(".:sync_strafe")
+properties/10/spawn = false
+properties/10/replication_mode = 1
+properties/11/path = NodePath(".:sync_focus")
+properties/11/spawn = false
+properties/11/replication_mode = 2
+properties/12/path = NodePath("Equipment:sync_thrown")
+properties/12/spawn = true
+properties/12/replication_mode = 2
+properties/13/path = NodePath(".:sync_action_seq")
+properties/13/spawn = false
+properties/13/replication_mode = 2
+
+[node name="Player" type="CharacterBody3D"]
+collision_layer = 2
+collision_mask = 3
+floor_snap_length = 0.3
+script = ExtResource("1_player")
+
+[node name="Collision" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
+shape = SubResource("Shape_body")
+
+[node name="Model" type="Node3D" parent="."]
+
+[node name="CameraRig" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.6, 0)
+script = ExtResource("2_rig")
+
+[node name="Pivot" type="Node3D" parent="CameraRig"]
+
+[node name="SpringArm3D" type="SpringArm3D" parent="CameraRig/Pivot"]
+collision_mask = 1
+shape = SubResource("Shape_arm")
+spring_length = 5.0
+
+[node name="Camera3D" type="Camera3D" parent="CameraRig/Pivot/SpringArm3D"]
+fov = 70.0
+
+[node name="Equipment" type="Node" parent="."]
+script = ExtResource("3_equip")
+
+[node name="Focus" type="Node" parent="."]
+script = ExtResource("4_focus")
+
+[node name="Sync" type="MultiplayerSynchronizer" parent="."]
+replication_config = SubResource("Repl_player")

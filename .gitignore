@@ -1,0 +1,31 @@
+# Godot 4+ specific ignores
+.godot/
+/android/
+
+# Runtime logs written by DebugLog
+logs/
+
+# Godot editor binaries (too big for GitHub, re-download any time)
+Godot_v*.exe
+*.exe
+
+# Reference material, not part of the game
+oot-main/
+
+# Old manual backups (Git history replaces these)
+backups/
+
+# Scratch / temp
+Claude outputs/
+*.zip
+*.tmp
+.DS_Store
+Thumbs.db
+
+# Export builds
+/build/
+/export/
+export_credentials.cfg
+
+# Personal notes
+LLM Prompt.txt

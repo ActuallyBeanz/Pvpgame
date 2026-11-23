@@ -1,0 +1,16 @@
+[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://assets/models/env/tree_oak_a.glb" id="1_lojl7"]
+
+[sub_resource type="CylinderShape3D" id="CylinderShape3D_x4p4m"]
+height = 3.2
+radius = 0.38
+
+[node name="TreeOakA" type="StaticBody3D" unique_id=666335435]
+metadata/material = "wood"
+
+[node name="Model" type="Node3D" parent="." unique_id=1210664176 instance=ExtResource("1_lojl7")]
+
+[node name="TrunkCollision" type="CollisionShape3D" parent="." unique_id=257133140]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.05, 1.6, 0)
+shape = SubResource("CylinderShape3D_x4p4m")

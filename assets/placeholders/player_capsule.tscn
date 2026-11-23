@@ -1,0 +1,30 @@
+[gd_scene format=3]
+
+[sub_resource type="CapsuleMesh" id="CapsuleMesh_body"]
+radius = 0.4
+height = 1.8
+
+[sub_resource type="BoxMesh" id="BoxMesh_nose"]
+size = Vector3(0.3, 0.15, 0.3)
+
+[sub_resource type="StandardMaterial3D" id="Mat_nose"]
+albedo_color = Color(0.12, 0.12, 0.14, 1)
+
+[node name="PlayerCapsule" type="Node3D"]
+
+[node name="Body" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
+mesh = SubResource("CapsuleMesh_body")
+
+[node name="Nose" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.45, -0.38)
+mesh = SubResource("BoxMesh_nose")
+surface_material_override/0 = SubResource("Mat_nose")
+
+[node name="NameTag" type="Label3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.25, 0)
+billboard = 1
+no_depth_test = true
+text = "Player"
+font_size = 48
+outline_size = 10

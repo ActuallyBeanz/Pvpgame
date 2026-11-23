@@ -1,0 +1,16 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scenes/player/models/character_model.gd" id="1_a7fyu"]
+[ext_resource type="PackedScene" path="res://assets/models/kaykit_adventurers/Characters/gltf/Barbarian.glb" id="2_byn84"]
+
+[node name="Barbarian" type="Node3D" unique_id=862171341]
+script = ExtResource("1_a7fyu")
+character = ExtResource("2_byn84")
+
+[node name="NameTag" type="Label3D" parent="." unique_id=885345819]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.2, 0)
+billboard = 1
+no_depth_test = true
+text = "Player"
+font_size = 48
+outline_size = 10

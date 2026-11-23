@@ -1,0 +1,13 @@
+[gd_resource type="Resource" format=3]
+
+[ext_resource type="Script" path="res://data/items/item_def.gd" id="1_xqvye"]
+
+[resource]
+script = ExtResource("1_xqvye")
+id = "arrows"
+display_name = "Arrows"
+kind = "ammo"
+model_id = "weapon.arrow.basic"
+pickup_model_id = "pickup.arrows.bundle"
+amount = 5
+action_tag = "ammo"

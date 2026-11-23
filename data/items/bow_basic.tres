@@ -1,0 +1,20 @@
+[gd_resource type="Resource" format=3]
+
+[ext_resource type="Script" path="res://data/items/item_def.gd" id="1_wqt3r"]
+[ext_resource type="Resource" path="res://data/items/bow_basic_stats.tres" id="2_enhqv"]
+
+[resource]
+script = ExtResource("1_wqt3r")
+id = "bow_basic"
+display_name = "Hunter's Bow"
+model_id = "weapon.bow.basic"
+stats = ExtResource("2_enhqv")
+ammo_item_id = "arrows"
+starting_ammo = 8
+hand_position = Vector3(0, 0.05, 0)
+hand_rotation_deg = Vector3(0, -90, 0)
+back_position = Vector3(-0.05, 0.3, -0.48)
+back_rotation_deg = Vector3(0, 90, 35)
+worn_model_id = "weapon.quiver.basic"
+worn_position = Vector3(0.2, 0.25, -0.5)
+worn_rotation_deg = Vector3(0, 0, -25)
