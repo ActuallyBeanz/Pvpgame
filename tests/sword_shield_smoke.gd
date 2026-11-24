@@ -89,7 +89,7 @@ func _process(delta: float) -> void:
 		3:
 			if _eq.sync_weapon_id == "sword_dawnsteel" and _eq.sync_shield_id == "shield_gildcrest" and _t > 0.8:
 				print("[blade] picked up sword + shield (drawn=%s) hotbar=%s" % [_eq.sync_drawn, _eq.inventory])
-				if _eq.inventory[0] != "sword_dawnsteel" or _eq.inventory[1] != "shield_gildcrest" or _eq.inventory.size() != 9:
+				if _eq.inventory[0] != "sword_dawnsteel" or _eq.inventory[1] != "shield_gildcrest" or _eq.inventory_size != 9:
 					_done(false, "hotbar should hold sword, shield in slots 1-2 of 9")
 					return
 				_shot("01_sword_shield")

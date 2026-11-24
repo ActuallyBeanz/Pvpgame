@@ -26,6 +26,10 @@
 [ext_resource type="PackedScene" path="res://scenes/props/world/torch.tscn" id="23_torch"]
 [ext_resource type="PackedScene" path="res://assets/models/weapons/sword_dawnsteel.glb" id="24_sword"]
 [ext_resource type="PackedScene" path="res://assets/models/weapons/shield_gildcrest.glb" id="25_shield"]
+[ext_resource type="PackedScene" path="res://assets/models/weapons/grappleclaw.glb" id="26_gclaw"]
+[ext_resource type="PackedScene" path="res://assets/models/weapons/grappleclaw_tip.glb" id="27_gtip"]
+[ext_resource type="PackedScene" path="res://assets/models/weapons/skytether.glb" id="28_sky"]
+[ext_resource type="PackedScene" path="res://assets/models/weapons/skytether_tip.glb" id="29_stip"]
 
 [resource]
 script = ExtResource("12_ckosp")
@@ -51,6 +55,10 @@ models = Dictionary[String, PackedScene]({
 "prop.target.dummy": ExtResource("19_dummy"),
 "weapon.arrow.basic": ExtResource("14_dd1ba"),
 "weapon.boomerang.basic": ExtResource("20_boom"),
+"weapon.grapple.grappleclaw": ExtResource("26_gclaw"),
+"weapon.grapple.grappleclaw_tip": ExtResource("27_gtip"),
+"weapon.grapple.skytether": ExtResource("28_sky"),
+"weapon.grapple.skytether_tip": ExtResource("29_stip"),
 "weapon.bow.basic": ExtResource("13_8nbfg"),
 "weapon.quiver.basic": ExtResource("15_nnf8h"),
 "weapon.shield.gildcrest": ExtResource("25_shield"),

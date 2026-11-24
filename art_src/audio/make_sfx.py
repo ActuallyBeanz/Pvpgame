@@ -625,6 +625,53 @@ def shield_bash(v):
     return finish(x, peak=0.65, hi=7000, verb=0.06)
 
 
+def hook_fire(v):
+    """Grapple launch: spring snap + rising chain whoosh."""
+    d = 0.3
+    x = silence(d)
+    place(x, modal([1250, 2700, 4100], 0.08, [0.02, 0.012, 0.006], [1, 0.6, 0.3]), 0, 0.6)
+    place(x, svf_sweep(noise(0.22), 900, 3200, q=3) * env_ad(int(0.22 * SR), 0.005, 0.2, 3), 0.01, 0.7)
+    return finish(x, peak=0.6, hi=10000, verb=0.05)
+
+
+def hook_chain(v):
+    """Seamless loop: ratcheting chain clicks (16 per second) while it runs out / reels in."""
+    d = 0.5
+    n = int(d * SR)
+    x = np.zeros(n)
+    clicks = 8
+    for k in range(clicks):
+        at = int(k * n / clicks)
+        c = fft_filter(noise(0.012), lo=2500) * env_ad(int(0.012 * SR), 0.0003, 0.008)
+        ping = modal([1800 + 140 * (k % 3), 3900], 0.03, [0.008, 0.004], [0.6, 0.3])
+        seg = np.zeros(int(0.03 * SR))
+        seg[: len(c)] += c
+        seg[: len(ping)] += ping[: len(seg)]
+        end = min(n, at + len(seg))
+        x[at:end] += seg[: end - at]
+    x = x / np.max(np.abs(x)) * 0.45
+    return x  # no finish(): keep it exactly loopable
+
+
+def hook_latch(v):
+    """Claw bites into wood / straw: bright metal clank on a woody knock."""
+    d = 0.45
+    x = silence(d)
+    place(x, modal([880, 1960, 3150], 0.35, [0.09, 0.05, 0.03], [1, 0.6, 0.35]), 0, 0.7)
+    place(x, modal([190, 420, 760], 0.15, [0.05, 0.03, 0.015], [1, 0.5, 0.3]), 0, 0.6)
+    place(x, fft_filter(noise(0.02), lo=1500) * env_ad(int(0.02 * SR), 0.0005, 0.012), 0, 0.5)
+    return finish(x, peak=0.65, hi=9500, verb=0.12)
+
+
+def hook_deflect(v):
+    """Claw bounces off something it can't hold: dull tink."""
+    d = 0.3
+    x = silence(d)
+    place(x, modal([640, 1430, 2300], 0.2, [0.03, 0.02, 0.01], [1, 0.4, 0.2]), 0, 0.7)
+    place(x, thump(240, 120, 0.06), 0, 0.4)
+    return finish(x, peak=0.55, hi=8000, verb=0.08)
+
+
 CATALOGUE = [
     ("player.footstep.grass", "player", "step_grass", footstep_grass, 4, dict(volume_db=-6, pitch=(0.9, 1.1), max_distance=30, max_voices=6)),
     ("player.footstep.stone", "player", "step_stone", footstep_stone, 4, dict(volume_db=-6, pitch=(0.92, 1.08), max_distance=30, max_voices=6)),
@@ -672,6 +719,10 @@ CATALOGUE = [
     ("sword.charged", "weapons", "sword_charged", sword_charged, 1, dict(volume_db=-5, pitch=(1.0, 1.0), max_distance=25)),
     ("shield.block", "weapons", "shield_block", shield_block, 2, dict(volume_db=-2, pitch=(0.95, 1.05), max_distance=45, max_voices=6)),
     ("shield.bash", "weapons", "shield_bash", shield_bash, 1, dict(volume_db=-3, pitch=(0.95, 1.05), max_distance=35)),
+    ("hook.fire", "weapons", "hook_fire", hook_fire, 1, dict(volume_db=-4, pitch=(0.96, 1.04), max_distance=40)),
+    ("hook.chain", "weapons", "hook_chain", hook_chain, 1, dict(volume_db=-8, pitch=(1.0, 1.0), max_distance=30, loop=True)),
+    ("hook.latch", "weapons", "hook_latch", hook_latch, 1, dict(volume_db=-3, pitch=(0.95, 1.05), max_distance=45)),
+    ("hook.deflect", "weapons", "hook_deflect", hook_deflect, 1, dict(volume_db=-4, pitch=(0.95, 1.05), max_distance=40)),
 ]
 
 

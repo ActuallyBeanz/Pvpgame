@@ -5,6 +5,7 @@ extends Control
 
 @export var crosshair_color := Color(1, 1, 1, 0.9)
 @export var charge_full_color := Color(1.0, 0.82, 0.3)
+@export var hook_color := Color(1.0, 0.3, 0.25)       ## crosshair over something the grapple can latch
 @export var focus_bar_height := 0.075      ## fraction of screen height per bar
 @export var focus_bar_speed := 10.0
 
@@ -20,8 +21,10 @@ var _bar := 0.0
 
 
 const Hotbar := preload("res://ui/hotbar.gd")
+const InventoryPanel := preload("res://ui/inventory_panel.gd")
 
 var _hotbar: Control
+var inventory: Control                     ## Tab bag panel (ui/inventory_panel.gd)
 
 
 func _ready() -> void:
@@ -33,6 +36,15 @@ func _ready() -> void:
 	_hotbar.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	_hotbar.grow_vertical = Control.GROW_DIRECTION_BEGIN
 	_hotbar.offset_bottom = -14
+	inventory = InventoryPanel.new()
+	inventory.name = "Inventory"
+	inventory.icons = _hotbar.icons
+	add_child(inventory)
+	inventory.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM)
+	inventory.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	inventory.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	inventory.offset_bottom = -96             # sits right above the hotbar
+	_hotbar.slot_hovered.connect(inventory.set_hovered)
 	for top in [true, false]:
 		var r := ColorRect.new()
 		r.color = Color(0, 0, 0, 0.92)
@@ -48,6 +60,7 @@ func _process(delta: float) -> void:
 		_player = _find_local_player()
 		_equipment = _player.get_node_or_null("Equipment") if _player else null
 		_hotbar.equipment = _equipment
+		inventory.equipment = _equipment
 		if _equipment == null:
 			visible = false
 			return
@@ -66,8 +79,12 @@ func _process(delta: float) -> void:
 	charge_bar.value = power * 100.0
 	charge_bar.modulate = charge_full_color if _equipment.charge >= 1.0 else Color.WHITE
 	crosshair.modulate = crosshair_color
+	if kind == "hook" and _equipment.hook.aim_on_hookable():
+		crosshair.modulate = hook_color   # red: the claw would stick there
 	crosshair.scale = Vector2.ONE * lerpf(1.6, 0.8, power) if kind == "shoot" and drawn else Vector2.ONE
 	ammo_label.text = _weapon_line(w, kind)
+	ammo_label.visible = not GameConfig.inventory_open
+	prompt_label.visible = not GameConfig.inventory_open
 	var p: Node = _equipment.nearest_pickup
 	if p:
 		prompt_label.text = "[E] Pick up %s" % p.display_name()
@@ -86,6 +103,14 @@ func _weapon_line(w: Resource, kind: String) -> String:
 			status = "fire arrow!" if _equipment.sync_arrow_element == "fire" else "hold LMB to draw"
 		"throw":
 			status = "returning..." if _equipment.sync_thrown else "hold LMB: sweep to pick targets"
+		"hook":
+			var hk: Node = _equipment.hook
+			if hk.pulling():
+				status = "reeling in..."
+			elif hk.busy():
+				status = "chain out..."
+			else:
+				status = "hold LMB aim · release: fire (%.0fm)" % _equipment.stats().max_range
 		"slash":
 			status = "charged! release" if _equipment.melee.charged else ("charging..." if _equipment.melee.charging else "LMB combo · hold: spin")
 	var sh: Resource = _equipment.shield_item()

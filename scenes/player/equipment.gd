@@ -5,8 +5,10 @@ extends Node
 ##   action_tag "throw" (boomerang): LMB throws; homes in on your focus lock target
 ## Owner-authoritative for its own state (synced via the player's $Sync);
 ## pickups are granted by the host (see scenes/items/pickup.gd).
-## Inventory: 9 hotbar slots (weapons, shield, ammo), keys 1-9 equip the weapon in a slot.
-## Controls: 1-9 pick weapon · Q draw/holster · LMB use · E pick up
+## Inventory: 9 hotbar slots (keys 1-9) + bag slots. Tab opens the bag: drag items
+## between any slots (move_item). Only weapons on the hotbar can be equipped.
+## Controls: 1-9 pick weapon (inventory open + hovering a slot: put it on that hotbar
+## slot) · Q draw/holster · LMB use · E pick up · Tab inventory
 
 signal changed
 
@@ -14,12 +16,14 @@ const ArrowScene := preload("res://scenes/weapons/arrow_projectile.tscn")
 const BoomerangScene := preload("res://scenes/weapons/boomerang_projectile.tscn")
 const BoomerangAim := preload("res://scenes/player/boomerang_aim.gd")
 const Melee := preload("res://scenes/player/melee.gd")
+const HookTool := preload("res://scenes/player/hook_tool.gd")
 const Motor := preload("res://scenes/player/movement_motor.gd")
 const FX := preload("res://systems/components/element_fx.gd")
 
 @export var pickup_radius := 2.2
 @export var holster_swap_delay := 0.25     ## when the model moves hand <-> back during the anim
 @export var inventory_size := 9             ## hotbar slots (keys 1-9)
+@export var bag_size := 18                  ## extra slots shown when the inventory (Tab) is open
 @export var lit_arrow_burn_time := 8.0     ## a lit nocked arrow burns out after this (OoT deku-stick style)
 @export var nock_forward := 0.62           ## nocked arrow tip distance in front of the bow hand
 
@@ -31,9 +35,12 @@ var sync_thrown := false                   ## boomerang is out of your hand
 var sync_arrow_element := ""               ## nocked arrow lit by holding it in a fire ("fire")
 var sync_shield_id := ""                   ## shield worn on the off hand (separate from weapon slots)
 var sync_blocking := false                 ## shield raised (F)
+var sync_hook_phase := 0                   ## HookTool.Phase: grapple claw idle / out / back / pulling
+var sync_hook_tip := Vector3.ZERO          ## grapple claw position while it's out
 
 var weapons: Array[String] = []            ## owned weapon ids, hotbar order (owner only)
-var inventory: Array[String] = []          ## hotbar: item id per slot, "" = empty (owner only)
+var inventory: Array[String] = []          ## item id per slot, "" = empty (owner only): [0, inventory_size) = hotbar, then bag
+var ui_hover_slot := -1                    ## set by the inventory UI: slot under the mouse (-1 = none)
 var ammo: Dictionary = {}                  ## ammo item id -> count (owner only)
 var charge := 0.0                          ## 0..1 bow draw progress
 var nearest_pickup: Node3D
@@ -56,12 +63,13 @@ var _lit_timer := 0.0
 var _boom_aim: Node
 var _boom_aiming := false
 var melee: Node
+var hook: Node                              ## grapple tool logic (scenes/player/hook_tool.gd)
 var _shield_vis: Node3D
 
 
 func _ready() -> void:
 	_player = get_parent()
-	inventory.resize(inventory_size)
+	inventory.resize(inventory_size + bag_size)
 	inventory.fill("")
 	_boom_aim = BoomerangAim.new()
 	_boom_aim.name = "BoomerangAim"
@@ -71,6 +79,10 @@ func _ready() -> void:
 	melee.name = "Melee"
 	add_child(melee)
 	melee.setup(self, _player)
+	hook = HookTool.new()
+	hook.name = "Hook"
+	add_child(hook)
+	hook.setup(self, _player)
 
 
 func is_local() -> bool:
@@ -97,7 +109,7 @@ func ammo_count() -> int:
 
 
 func is_aiming() -> bool:
-	return sync_aiming and weapon_type() in ["shoot", "throw"]
+	return sync_aiming and weapon_type() in ["shoot", "throw", "hook"]
 
 
 func move_speed_mult() -> float:
@@ -130,12 +142,12 @@ func receive_item(item_id: String, amount: int) -> void:
 	if it == null:
 		return
 	if it.kind == "weapon":
-		if not weapons.has(item_id):
+		if not inventory.has(item_id):
 			if not _store(item_id):
-				print("[equipment] hotbar full, can't carry %s" % item_id)
+				print("[equipment] inventory full, can't carry %s" % item_id)
 				return
 			_add_ammo(it.ammo_item_id, it.starting_ammo)
-			if sync_weapon_id == "":
+			if sync_weapon_id == "" and hotbar_index(item_id) >= 0:
 				_equip(item_id)
 		else:
 			_add_ammo(it.ammo_item_id, it.starting_ammo)  # duplicate weapon -> its ammo
@@ -149,7 +161,8 @@ func receive_item(item_id: String, amount: int) -> void:
 	changed.emit()
 
 
-## Put an item in the first free hotbar slot (no-op if already there). false = full.
+## Put an item in the first free slot, hotbar first, then the bag (no-op if already
+## carried). false = full.
 func _store(item_id: String) -> bool:
 	if inventory.has(item_id):
 		return true
@@ -157,12 +170,70 @@ func _store(item_id: String) -> bool:
 	if free < 0:
 		return false
 	inventory[free] = item_id
+	_rebuild_weapons()
+	return true
+
+
+## Weapons on the hotbar, in slot order (cycle_weapon / ownership for equipping).
+func _rebuild_weapons() -> void:
 	weapons.clear()
-	for id in inventory:
+	for i in inventory_size:
+		var id := inventory[i]
 		var it := ItemDB.get_item(id) if id != "" else null
 		if it and it.kind == "weapon":
 			weapons.append(id)
+
+
+## Hotbar slot holding this item, or -1 (in the bag / not carried).
+func hotbar_index(item_id: String) -> int:
+	var i := inventory.find(item_id)
+	return i if i >= 0 and i < inventory_size else -1
+
+
+func is_hotbar_slot(slot: int) -> bool:
+	return slot >= 0 and slot < inventory_size
+
+
+## Inventory UI: move the item in `from` to `to` (swaps if `to` is taken). Moving the
+## equipped weapon off the hotbar unequips it. Refused while that weapon is out of
+## your hand (boomerang flying, grapple chain out). Owner only.
+func move_item(from: int, to: int) -> bool:
+	if from == to or from < 0 or to < 0 or from >= inventory.size() or to >= inventory.size():
+		return false
+	var a := inventory[from]
+	var b := inventory[to]
+	if a == "":
+		return false
+	var leaves_hotbar := (a == sync_weapon_id and not is_hotbar_slot(to)) \
+		or (b == sync_weapon_id and not is_hotbar_slot(from))
+	if sync_weapon_id != "" and leaves_hotbar and _weapon_busy():
+		return false
+	inventory[from] = b
+	inventory[to] = a
+	_rebuild_weapons()
+	if sync_weapon_id != "" and hotbar_index(sync_weapon_id) < 0:
+		_unequip()
+	changed.emit()
 	return true
+
+
+func _weapon_busy() -> bool:
+	return sync_thrown or (hook != null and hook.busy())
+
+
+## Put the current weapon away completely (nothing in hand or on the back).
+func _unequip() -> void:
+	melee.cancel()
+	_release(false)
+	_cancel_boomerang_aim()
+	if hook:
+		hook.cancel()
+	sync_weapon_id = ""
+	sync_drawn = false
+	sync_aiming = false
+	_applied = ""
+	if _player.camera_rig:
+		_player.camera_rig.set_aim(false)
 
 
 func _add_ammo(ammo_id: String, n: int) -> void:
@@ -180,6 +251,7 @@ func _equip(item_id: String) -> void:
 		_set_drawn(not sync_drawn)
 		return
 	_release(false)
+	hook.cancel()
 	sync_weapon_id = item_id
 	sync_drawn = false
 	_applied = ""
@@ -202,37 +274,43 @@ func _process(delta: float) -> void:
 	if _model:
 		var w := weapon()
 		var sh := shield_item()
+		var on_chain := sync_hook_phase != HookTool.Phase.IDLE and weapon_type() == "hook"
 		if sync_blocking and sh:
 			_model.set_aiming(true, sh.stats.block_anim, &"")
 		else:
-			_model.set_aiming(sync_aiming and sync_drawn, w.aim_anim if w else &"", w.shoot_anim if w else &"")
+			# grapple: the arm stays pointed out while the chain is out
+			_model.set_aiming((sync_aiming or on_chain) and sync_drawn, w.aim_anim if w else &"", w.shoot_anim if w else &"")
+	hook.update_visuals()
 
 
 func _local_update(delta: float) -> void:
 	_cooldown = maxf(0.0, _cooldown - delta)
-	var can_act := GameConfig.gameplay_input_enabled
 	_update_nearest_pickup()
-	if not can_act:
-		_release(false)
-		_cancel_boomerang_aim()
-		melee.cancel()
-		sync_aiming = false
-		_player.camera_rig.set_aim(false)
+	if not GameConfig.gameplay_input_enabled:
+		_stop_combat_input()
 		return
+	# Walking-around keys still work with the inventory open (pick up, hotbar keys).
 	if Input.is_action_just_pressed("interact") and nearest_pickup:
 		nearest_pickup.request_take()
 	for i in inventory_size:
-		if Input.is_action_just_pressed("weapon_%d" % (i + 1)) and inventory[i] != "":
+		if not Input.is_action_just_pressed("weapon_%d" % (i + 1)):
+			continue
+		if GameConfig.inventory_open and ui_hover_slot >= 0:
+			move_item(ui_hover_slot, i)   # hover an item + press 1-9: put it on that hotbar slot
+		elif inventory[i] != "":
 			var slot_item := ItemDB.get_item(inventory[i])
-			if slot_item and slot_item.kind == "weapon":
+			if slot_item and slot_item.kind == "weapon" and not _weapon_busy():
 				_equip(inventory[i])
-	if Input.is_action_just_pressed("cycle_weapon") and weapons.size() > 1:
+	if Input.is_action_just_pressed("cycle_weapon") and weapons.size() > 1 and not _weapon_busy():
 		_equip(weapons[(weapons.find(sync_weapon_id) + 1) % weapons.size()])
+	if not GameConfig.combat_input_enabled():
+		_stop_combat_input()
+		return
 	melee.update(delta)
 	var w := weapon()
 	if w == null:
 		return
-	if Input.is_action_just_pressed("toggle_weapon") and not melee.busy():
+	if Input.is_action_just_pressed("toggle_weapon") and not melee.busy() and not hook.busy():
 		_release(false)
 		_set_drawn(not sync_drawn)
 	if Input.is_action_just_pressed("attack") and not sync_drawn and (not sync_blocking or melee.focus_guard):
@@ -245,6 +323,20 @@ func _local_update(delta: float) -> void:
 			_update_bow(delta)
 		"throw":
 			_update_boomerang()
+		"hook":
+			hook.update(delta)
+
+
+## Paused / inventory open: let go of everything that's held (draw, aim, charge, block).
+func _stop_combat_input() -> void:
+	_release(false)
+	_cancel_boomerang_aim()
+	melee.cancel()
+	if hook:
+		hook.stop_aim()
+	sync_aiming = false
+	sync_blocking = false
+	_player.camera_rig.set_aim(false)
 
 
 func _update_bow(delta: float) -> void:

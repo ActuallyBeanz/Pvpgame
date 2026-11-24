@@ -164,7 +164,7 @@ surface_material_override/0 = SubResource("Mat_block")
 [node name="Shape" type="CollisionShape3D" parent="Course/Step3"]
 shape = SubResource("Shape_step3")
 
-[node name="GrapplePillar" type="StaticBody3D" parent="Course"]
+[node name="GrapplePillar" type="StaticBody3D" parent="Course" groups=["hook_targets"]]
 position = Vector3(-12, 4, -12)
 
 [node name="Mesh" type="MeshInstance3D" parent="Course/GrapplePillar"]

@@ -1,0 +1,12 @@
+[gd_resource type="Resource" format=3]
+
+[ext_resource type="Script" path="res://data/items/hook_stats.gd" id="1_hstat"]
+
+[resource]
+script = ExtResource("1_hstat")
+max_range = 28.0
+fire_speed = 52.0
+tip_model_id = "weapon.grapple.skytether_tip"
+lock_on_range = 28.0
+pull_speed = 24.0
+aim_fov = 42.0

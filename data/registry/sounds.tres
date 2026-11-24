@@ -1,4 +1,4 @@
-[gd_resource type="Resource" load_steps=128 format=3]
+[gd_resource type="Resource" load_steps=136 format=3]
 
 [ext_resource type="Script" path="res://data/registry/sound_registry.gd" id="1_reg"]
 [ext_resource type="Script" path="res://data/audio/sound_def.gd" id="2_def"]
@@ -82,6 +82,10 @@
 [ext_resource type="AudioStream" path="res://assets/audio/sfx/weapons/shield_block_1.wav" id="80_snd"]
 [ext_resource type="AudioStream" path="res://assets/audio/sfx/weapons/shield_block_2.wav" id="81_snd"]
 [ext_resource type="AudioStream" path="res://assets/audio/sfx/weapons/shield_bash.wav" id="82_snd"]
+[ext_resource type="AudioStream" path="res://assets/audio/sfx/weapons/hook_fire.wav" id="83_snd"]
+[ext_resource type="AudioStream" path="res://assets/audio/sfx/weapons/hook_chain.wav" id="84_snd"]
+[ext_resource type="AudioStream" path="res://assets/audio/sfx/weapons/hook_latch.wav" id="85_snd"]
+[ext_resource type="AudioStream" path="res://assets/audio/sfx/weapons/hook_deflect.wav" id="86_snd"]
 
 [sub_resource type="Resource" id="sd_0"]
 script = ExtResource("2_def")
@@ -623,6 +627,54 @@ max_distance = 35.0
 max_voices = 4
 loop = false
 
+[sub_resource type="Resource" id="sd_45"]
+script = ExtResource("2_def")
+streams = Array[AudioStream]([ExtResource("83_snd")])
+volume_db = -4.0
+pitch_min = 0.96
+pitch_max = 1.04
+bus = &"SFX"
+spatial = true
+max_distance = 40.0
+max_voices = 4
+loop = false
+
+[sub_resource type="Resource" id="sd_46"]
+script = ExtResource("2_def")
+streams = Array[AudioStream]([ExtResource("84_snd")])
+volume_db = -8.0
+pitch_min = 1.0
+pitch_max = 1.0
+bus = &"SFX"
+spatial = true
+max_distance = 30.0
+max_voices = 4
+loop = true
+
+[sub_resource type="Resource" id="sd_47"]
+script = ExtResource("2_def")
+streams = Array[AudioStream]([ExtResource("85_snd")])
+volume_db = -3.0
+pitch_min = 0.95
+pitch_max = 1.05
+bus = &"SFX"
+spatial = true
+max_distance = 45.0
+max_voices = 4
+loop = false
+
+[sub_resource type="Resource" id="sd_48"]
+script = ExtResource("2_def")
+streams = Array[AudioStream]([ExtResource("86_snd")])
+volume_db = -4.0
+pitch_min = 0.95
+pitch_max = 1.05
+bus = &"SFX"
+spatial = true
+max_distance = 40.0
+max_voices = 4
+loop = false
+
 [resource]
 script = ExtResource("1_reg")
 sounds = Dictionary[String, Resource]({
@@ -670,5 +722,9 @@ sounds = Dictionary[String, Resource]({
 "sword.charge": SubResource("sd_41"),
 "sword.charged": SubResource("sd_42"),
 "shield.block": SubResource("sd_43"),
-"shield.bash": SubResource("sd_44")
+"shield.bash": SubResource("sd_44"),
+"hook.fire": SubResource("sd_45"),
+"hook.chain": SubResource("sd_46"),
+"hook.latch": SubResource("sd_47"),
+"hook.deflect": SubResource("sd_48")
 })

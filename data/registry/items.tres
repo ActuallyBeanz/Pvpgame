@@ -6,6 +6,8 @@
 [ext_resource type="Resource" path="res://data/items/boomerang_basic.tres" id="4_boom"]
 [ext_resource type="Resource" path="res://data/items/sword_dawnsteel.tres" id="5_sword"]
 [ext_resource type="Resource" path="res://data/items/shield_gildcrest.tres" id="6_shield"]
+[ext_resource type="Resource" path="res://data/items/grappleclaw.tres" id="7_gclaw"]
+[ext_resource type="Resource" path="res://data/items/skytether.tres" id="8_sky"]
 
 [resource]
 script = ExtResource("3_f3wow")
@@ -13,6 +15,8 @@ items = Dictionary[String, Resource]({
 "arrows": ExtResource("2_3gb1h"),
 "boomerang_basic": ExtResource("4_boom"),
 "bow_basic": ExtResource("1_8sg2i"),
+"grappleclaw": ExtResource("7_gclaw"),
 "shield_gildcrest": ExtResource("6_shield"),
+"skytether": ExtResource("8_sky"),
 "sword_dawnsteel": ExtResource("5_sword")
 })

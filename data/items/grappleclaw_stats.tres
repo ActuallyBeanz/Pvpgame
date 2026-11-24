@@ -1,0 +1,9 @@
+[gd_resource type="Resource" format=3]
+
+[ext_resource type="Script" path="res://data/items/hook_stats.gd" id="1_hstat"]
+
+[resource]
+script = ExtResource("1_hstat")
+max_range = 14.0
+tip_model_id = "weapon.grapple.grappleclaw_tip"
+lock_on_range = 14.0

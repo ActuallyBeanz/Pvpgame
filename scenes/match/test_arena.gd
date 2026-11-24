@@ -41,6 +41,8 @@ const PickupScene := preload("res://scenes/items/pickup.tscn")
 	{ "id": "boomerang_basic", "pos": Vector3(0.0, 0, 3.5) },
 	{ "id": "sword_dawnsteel", "pos": Vector3(2.5, 0, 3.5) },
 	{ "id": "shield_gildcrest", "pos": Vector3(5.0, 0, 3.5) },
+	{ "id": "grappleclaw", "pos": Vector3(-7.5, 0, 3.5) },
+	{ "id": "skytether", "pos": Vector3(-10.0, 0, 3.5) },
 ]
 
 @export_group("Targets")

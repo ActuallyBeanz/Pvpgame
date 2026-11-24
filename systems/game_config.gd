@@ -11,6 +11,14 @@ var settings: Settings = _load_settings()
 
 ## False while a menu/pause screen owns the mouse & keyboard.
 var gameplay_input_enabled := true
+## True while the Tab inventory is open: you can still walk / jump / roll, but the
+## mouse belongs to the inventory (no camera look, attack, aim or focus).
+var inventory_open := false
+
+
+## Attack / aim / focus / block may read input (not paused, inventory closed).
+func combat_input_enabled() -> bool:
+	return gameplay_input_enabled and not inventory_open
 
 
 func _ready() -> void:

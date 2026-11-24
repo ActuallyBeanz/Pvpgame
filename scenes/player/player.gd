@@ -97,7 +97,7 @@ func _simulate(delta: float) -> void:
 	# Raw stick (no action deadzone): the motor applies OoT's own stick curve.
 	var stick := Input.get_vector("move_left", "move_right", "move_forward", "move_back", 0.05) \
 		if can_act else Vector2.ZERO
-	focus.update(can_act, equipment.lock_on_range())
+	focus.update(GameConfig.combat_input_enabled(), equipment.lock_on_range())
 	var aiming: bool = equipment.is_aiming()
 	var roll_pressed := can_act and Input.is_action_just_pressed("roll")
 	var rolling := roll_pressed or motor.state == Motor.State.ROLL
@@ -136,7 +136,10 @@ func _simulate(delta: float) -> void:
 		it.oot_strafe_speeds = false
 	camera_rig.set_focus(focus.active, focus.focus_yaw(), focus.lock_point())
 
-	motor.step(self, wish, delta, it)
+	if equipment.hook.pulling():
+		_reel_in(delta)
+	else:
+		motor.step(self, wish, delta, it)
 	model_root.rotation.y = motor.facing
 	if focus.active and focus.target == null and motor.state == Motor.State.ROLL:
 		focus.free_yaw = motor.heading  # come out of the roll facing the way you rolled
@@ -151,9 +154,25 @@ func _simulate(delta: float) -> void:
 	sync_yaw = motor.facing
 	sync_speed = absf(motor.speed)
 	sync_on_floor = is_on_floor()
-	sync_move_state = motor.state
+	sync_move_state = motor.state if not equipment.hook.pulling() else Motor.State.AIR
 	sync_strafe = motor.local_velocity()
 	sync_focus = it.focus and not camera_rig.first_person
+
+
+## Grapple: the hook tool drags the body to the latch point (motor paused), facing it.
+func _reel_in(delta: float) -> void:
+	var to: Vector3 = equipment.hook.latch_point - global_position
+	if Vector2(to.x, to.z).length() > 0.05:
+		motor.facing = Motor.yaw_of(to)
+		motor.heading = motor.facing
+	if equipment.hook.pull_body(self, delta):
+		var push: Vector3 = equipment.hook.push_dir()
+		var hop_y := velocity.y
+		motor.reset(motor.facing)   # airborne, OoT-style hop off the surface
+		if push != Vector3.ZERO:
+			motor.heading = Motor.yaw_of(push)
+			motor.speed = Vector2(velocity.x, velocity.z).length()
+		velocity.y = hop_y
 
 
 func _on_rolled(dir: int) -> void:
