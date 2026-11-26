@@ -1,5 +1,5 @@
 # Authors OoT-style move animations on the KayKit Adventurers rig (shared by all 5 characters):
-#   OoT_Roll, OoT_Backflip, OoT_LedgeHopUp, OoT_LedgeClimb, OoT_LedgeHang (loop)
+#   OoT_Roll, OoT_Backflip, OoT_LedgeHopUp, OoT_LedgeClimb, OoT_LedgeHang (loop), OoT_HookPull (loop)
 # Poses are written as rotations in the character's REST model space (Blender: X = character's
 # left, -Y = forward, Z = up) and converted to each bone's local frame, so they read clearly.
 # Run: blender --background --factory-startup --python make_oot_anims.py -- <Knight.glb> <out_dir> [preview]
@@ -191,6 +191,18 @@ def hang(sway):
                 t=torso(5, 0, -12))
 key("OoT_LedgeHang", [(0, hang(0)), (15, hang(8)), (30, hang(0))], loop=True)
 
+# ---- reeled in by the grapple (loop): launcher arm locked straight out at the claw, other arm
+# swept back, legs trailing together with a little flutter. Godot pitches the whole body toward
+# the latch point on top of this, so the pose itself stays upright.
+def hookpull(flutter):
+    p = pose(0, 0.0, l=legs(14 + flutter, 30 - flutter, 22 - flutter, 42 + flutter), t=torso(-4, -6, -14))
+    p["upperarm.r"] = aim("upperarm.r", (-0.12, -1.0, 0.12))   # launcher hand: straight ahead
+    p["lowerarm.r"] = R(("Z", 4))
+    p["upperarm.l"] = aim("upperarm.l", (0.45, 0.45, -0.75))   # free arm: down and back
+    p["lowerarm.l"] = R(("Z", -20))
+    return p
+key("OoT_HookPull", [(0, hookpull(0)), (6, hookpull(6)), (12, hookpull(0))], loop=True)
+
 arm.animation_data.action = None
 
 if PREVIEW:
@@ -210,7 +222,7 @@ if PREVIEW:
     sc.render.engine = "BLENDER_WORKBENCH"
     sc.display.shading.light = "STUDIO"; sc.display.shading.color_type = "TEXTURE"
     shots = {"OoT_Roll": [0, 4, 8, 12, 16, 20, 24], "OoT_Backflip": [0, 3, 6, 9, 12, 15, 20],
-             "OoT_LedgeHopUp": [0, 4, 9, 12, 15], "OoT_LedgeClimb": [0, 8, 14, 19, 24], "OoT_LedgeHang": [0, 15]}
+             "OoT_LedgeHopUp": [0, 4, 9, 12, 15], "OoT_LedgeClimb": [0, 8, 14, 19, 24], "OoT_LedgeHang": [0, 15], "OoT_HookPull": [0, 6]}
     for name, frames in shots.items():
         arm.animation_data.action = bpy.data.actions[name]
         for f in frames:

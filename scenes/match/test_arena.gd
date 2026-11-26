@@ -52,11 +52,11 @@ const PickupScene := preload("res://scenes/items/pickup.tscn")
 @export_group("Training dummies")
 @export var dummy_id := "prop.target.dummy"
 ## Spread across the course: open ground, behind cover, on the platform, behind
-## the steps, in the grove, out by the tree ring.
+## the steps, in the grove, out by the tree ring, and on top of the purple grapple pillar.
 @export var dummy_positions: PackedVector3Array = [
 	Vector3(-6, 0, -6), Vector3(7, 0, 5), Vector3(-8, 0, 12.5), Vector3(0, 3, -22),
 	Vector3(12, 0, -18), Vector3(-15, 0, 15), Vector3(-24, 0, -8), Vector3(22, 0, 16),
-	Vector3(-12, 0, -16), Vector3(26, 0, -14),
+	Vector3(-12, 0, -16), Vector3(26, 0, -14), Vector3(-12, 8, -12),
 ]
 
 @export_group("Trees")

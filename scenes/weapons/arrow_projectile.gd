@@ -103,12 +103,19 @@ func _stick(res: Dictionary) -> void:
 	var col: Object = res.collider
 	if col is Node3D and not (col is StaticBody3D):
 		reparent(col)  # ride along with moving things (players, props)
+	# Don't float in the air when the prop breaks. Hook up BEFORE delivering the hit: on the
+	# host a killing shot breaks the prop (ice, crate) synchronously inside deliver_hit().
+	var r := WorldRules.reactive_of(col)
+	if r:
+		if r.dead:
+			queue_free()
+			return
+		r.destroyed.connect(queue_free, CONNECT_ONE_SHOT)
 	var hit_info := WorldRules.make_hit(maxf(damage, 8.0), "pierce", element, dir)
 	if not WorldRules.deliver_hit(col, hit_info, cosmetic):
 		Audio.play_at("arrow.hit", res.position)
-	var r := WorldRules.reactive_of(col)
-	if r:
-		r.destroyed.connect(queue_free)  # don't float in the air when the prop breaks
+	if r and r.dead:
+		queue_free()   # this arrow was the one that broke it
 	if _flames:
 		get_tree().create_timer(2.5).timeout.connect(func() -> void:
 			if is_instance_valid(_flames):

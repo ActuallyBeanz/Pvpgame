@@ -30,6 +30,8 @@ extends Node3D
 @export var anim_hop_up := &"oot/OoT_LedgeHopUp"
 @export var anim_climb := &"oot/OoT_LedgeClimb"
 @export var anim_hang := &"oot/OoT_LedgeHang"
+@export var anim_hook := &"oot/OoT_HookPull"         ## reeled in by the grapple (loop)
+@export var anim_hook_fallback := &"Jump_Idle"     ## used until oot_moves.glb has OoT_HookPull
 @export var sidehop_anim_time := 0.35
 
 @export_group("Tuning")
@@ -38,6 +40,16 @@ extends Node3D
 @export var air_blend_time := 0.15
 @export var strafe_side_speed := 2.8      ## m/s where strafe anims play at 1x (OoT 0.4x run)
 @export var strafe_back_speed := 2.1      ## m/s for the back-walk anim (OoT 0.3x run)
+
+@export_group("Grapple pull pose")
+## While the grapple reels you in, the whole body tips toward the claw (OoT hookshot):
+## flat out for a sideways pull, upright when you're hauled straight up.
+@export var hook_lean_factor := 0.85      ## share of the angle between "up" and the pull direction
+@export var hook_lean_max_deg := 78.0
+@export var hook_lean_speed := 14.0       ## how fast the body tips in / rights itself
+@export var hook_pivot_height := 0.95     ## tip around this point above the feet (≈ hips)
+@export var hook_arm_reach := true        ## launcher arm points straight at the claw while pulled
+@export var hook_arm_bone := "upperarm.r"
 @export var dodge_duration := 0.8         ## matches the motor's roll_duration
 @export var focus_blend_speed := 10.0
 @export var upper_blend_speed := 12.0
@@ -63,8 +75,14 @@ var _focus := 0.0
 var _roll_seq := -1
 static var _moves_lib: AnimationLibrary
 var _move_state := 0
+var _lean := 0.0                          ## current forward pitch (radians) from the grapple pull
+var _visual_base := Transform3D.IDENTITY
+var _hook_arm: SkeletonModifier3D         ## LookAtModifier3D on the launcher arm
+var _hook_aim: Node3D                     ## its target, parked on the claw
+var _hook_arm_w := 0.0
 
-const LOOPING := ["anim_idle", "anim_walk", "anim_run", "anim_air", "anim_strafe_left", "anim_strafe_right", "anim_back"]
+const HOOK_PHASE_PULL := 3                ## HookTool.Phase.PULL
+const LOOPING := ["anim_idle", "anim_walk", "anim_run", "anim_air", "anim_strafe_left", "anim_strafe_right", "anim_back", "anim_hook"]
 
 
 func _ready() -> void:
@@ -77,17 +95,21 @@ func _ready() -> void:
 	if face_flip:
 		visual.rotation.y = PI
 	add_child(visual)
+	_visual_base = visual.transform
 	if not show_hand_items:
 		for item in _builtin_hand_items():
 			item.visible = false
 	anim = visual.find_child("AnimationPlayer", true, false) as AnimationPlayer
 	if anim:
 		_add_moves_library()
+		if not anim.has_animation(anim_hook):
+			anim_hook = anim_hook_fallback
 		for prop: String in LOOPING:
 			var a := anim.get_animation(get(prop))
 			if a:
 				a.loop_mode = Animation.LOOP_LINEAR
 		_build_tree()
+		_build_hook_arm()
 	var n := get_parent()
 	while n and not ("sync_speed" in n):
 		n = n.get_parent()
@@ -161,7 +183,7 @@ func _add_moves_library() -> void:
 			_moves_lib = AnimationLibrary.new()
 			for n in ap.get_animation_list():
 				var a := ap.get_animation(n).duplicate() as Animation
-				a.loop_mode = Animation.LOOP_LINEAR if n == "OoT_LedgeHang" else Animation.LOOP_NONE
+				a.loop_mode = Animation.LOOP_LINEAR if n in ["OoT_LedgeHang", "OoT_HookPull"] else Animation.LOOP_NONE
 				_moves_lib.add_animation(n, a)
 		src.free()
 	if _moves_lib and not anim.has_animation_library(&"oot"):
@@ -178,7 +200,10 @@ func _process(delta: float) -> void:
 	var ref := walk_anim_speed if speed < (walk_anim_speed + run_anim_speed) * 0.5 else run_anim_speed
 	tree.set("parameters/loco_speed/scale", 1.0 if speed < 0.4 else clampf(speed / ref, 0.7, 1.4))
 	var hanging: bool = "sync_move_state" in _owner_body and _owner_body.sync_move_state == 5  # Motor.State.HANG
-	tree.set("parameters/ground_air/transition_request", "hang" if hanging else ("ground" if on_floor else "air"))
+	var pull_dir := _hook_pull_dir()
+	var state := "hook" if pull_dir != Vector3.ZERO else ("hang" if hanging else ("ground" if on_floor else "air"))
+	tree.set("parameters/ground_air/transition_request", state)
+	_update_lean(pull_dir, delta)
 	if "sync_focus" in _owner_body:
 		_focus = lerpf(_focus, 1.0 if _owner_body.sync_focus else 0.0, 1.0 - exp(-focus_blend_speed * delta))
 		tree.set("parameters/focus_mix/blend_amount", _focus)
@@ -196,6 +221,59 @@ func _process(delta: float) -> void:
 	var goal := 1.0 if (_aiming or _action_left > 0.0) else 0.0
 	_upper = lerpf(_upper, goal, 1.0 - exp(-upper_blend_speed * delta))
 	tree.set("parameters/upper/blend_amount", _upper)
+
+
+## World-space direction the grapple is reeling this body in (ZERO when not being pulled).
+## Reads the synced Equipment state, so it works the same on every peer.
+func _hook_pull_dir() -> Vector3:
+	var eq: Node = _owner_body.get("equipment") if _owner_body else null
+	if eq == null or not ("sync_hook_phase" in eq) or int(eq.sync_hook_phase) != HOOK_PHASE_PULL:
+		return Vector3.ZERO
+	var d: Vector3 = eq.sync_hook_tip - (global_position + Vector3.UP * hook_pivot_height)
+	return d.normalized() if d.length_squared() > 0.04 else Vector3.ZERO
+
+
+## Tip the visual forward (around the hips) toward the claw while being pulled.
+## The player already yaws the model to face the latch point, so this is pure pitch.
+func _update_lean(pull_dir: Vector3, delta: float) -> void:
+	var goal := 0.0
+	if pull_dir != Vector3.ZERO:
+		goal = minf(acos(clampf(pull_dir.y, -1.0, 1.0)) * hook_lean_factor, deg_to_rad(hook_lean_max_deg))
+	_lean = lerpf(_lean, goal, 1.0 - exp(-hook_lean_speed * delta))
+	if absf(_lean) < 0.001 and goal == 0.0:
+		_lean = 0.0
+	var pitch := Basis(Vector3.RIGHT, -_lean)     # + lean = tip forward (toward -Z)
+	var pivot := Vector3.UP * hook_pivot_height
+	visual.transform = Transform3D(pitch, pivot - pitch * pivot) * _visual_base
+	if _hook_arm:
+		_hook_arm_w = lerpf(_hook_arm_w, 1.0 if pull_dir != Vector3.ZERO else 0.0, 1.0 - exp(-hook_lean_speed * delta))
+		_hook_arm.influence = _hook_arm_w
+		_hook_arm.active = _hook_arm_w > 0.01
+		if pull_dir != Vector3.ZERO:
+			_hook_aim.global_position = _owner_body.equipment.sync_hook_tip
+
+
+## Launcher arm reaches for the claw while being reeled in (on top of the aim pose).
+## KayKit bones run along +Y. Skipped quietly if this Godot build has no LookAtModifier3D.
+func _build_hook_arm() -> void:
+	var skel := visual.find_child("Skeleton3D", true, false) as Skeleton3D
+	if not hook_arm_reach or skel == null or skel.find_bone(hook_arm_bone) < 0 or not ClassDB.class_exists("LookAtModifier3D"):
+		return
+	_hook_aim = Node3D.new()
+	_hook_aim.name = "HookArmTarget"
+	_hook_aim.top_level = true
+	add_child(_hook_aim)
+	_hook_arm = ClassDB.instantiate("LookAtModifier3D") as SkeletonModifier3D
+	_hook_arm.name = "HookArmLookAt"
+	skel.add_child(_hook_arm)
+	_hook_arm.set("bone_name", hook_arm_bone)
+	_hook_arm.set("forward_axis", 2)            # SkeletonModifier3D.BONE_AXIS_PLUS_Y
+	_hook_arm.set("primary_rotation_axis", Vector3.AXIS_X)
+	_hook_arm.set("use_secondary_rotation", true)
+	_hook_arm.set("transition_duration", 0.0)
+	_hook_arm.set("target_node", _hook_arm.get_path_to(_hook_aim))
+	_hook_arm.influence = 0.0
+	_hook_arm.active = false
 
 
 # ---------------------------------------------------------------- setup
@@ -225,6 +303,7 @@ func _build_tree() -> void:
 	ground_air.add_input("ground")
 	ground_air.add_input("air")
 	ground_air.add_input("hang")
+	ground_air.add_input("hook")
 	ground_air.xfade_time = air_blend_time
 	bt.add_node("ground_air", ground_air)
 
@@ -258,6 +337,8 @@ func _build_tree() -> void:
 	bt.connect_node("ground_air", 1, "air")
 	bt.add_node("hang_anim", _clip(anim_hang))
 	bt.connect_node("ground_air", 2, "hang_anim")
+	bt.add_node("hook_anim", _clip(anim_hook))
+	bt.connect_node("ground_air", 3, "hook_anim")
 	bt.connect_node("shoot", 0, "aim_pose")
 	bt.connect_node("shoot", 1, "shoot_anim")
 	bt.connect_node("action", 0, "shoot")

@@ -82,7 +82,7 @@ func update(delta: float) -> void:
 	_cooldown = maxf(0.0, _cooldown - delta)
 	var holding := Input.is_action_pressed("attack")
 	var pressed := Input.is_action_just_pressed("attack")
-	var rolling: bool = _player.motor.state == Motor.State.ROLL
+	var rolling: bool = _player.motor.action_locked()   # roll / backflip / sidehop: no firing
 	var ready: bool = _eq.sync_drawn and phase == Phase.IDLE and _cooldown <= 0.0 \
 		and _eq._swap_timer < 0.0 and not rolling
 	var lock: Node3D = _player.focus.target if _player.focus.active and s.homes_on_lock else null
@@ -117,9 +117,7 @@ func _aim_query(s: Resource) -> Dictionary:
 	var origin: Vector3 = muzzle_position()
 	var from := cam.global_position
 	var dir := -cam.global_basis.z
-	var q := PhysicsRayQueryParameters3D.create(from, from + dir * (s.max_range + 12.0), 3)
-	q.exclude = [_player.get_rid()]
-	var hit := _player.get_world_3d().direct_space_state.intersect_ray(q)
+	var hit := _ray(from, from + dir * (s.max_range + 12.0))
 	var point: Vector3 = hit.position if not hit.is_empty() else from + dir * (s.max_range + 12.0)
 	var in_range: bool = origin.distance_to(point) <= s.max_range
 	if not in_range:
@@ -146,9 +144,7 @@ func _fire(at: Vector3, s: Resource) -> void:
 func _tick_out(s: Resource, delta: float) -> void:
 	var step := minf(s.fire_speed * delta, s.max_range - _travelled)
 	var to := _tip + _dir * step
-	var q := PhysicsRayQueryParameters3D.create(_tip, to + _dir * s.tip_radius, 3)
-	q.exclude = [_player.get_rid()]
-	var hit := _player.get_world_3d().direct_space_state.intersect_ray(q)
+	var hit := _ray(_tip, to + _dir * s.tip_radius)
 	if not hit.is_empty():
 		_tip = hit.position
 		if is_hookable(hit.collider):
@@ -180,7 +176,9 @@ func _tick_back(s: Resource, delta: float) -> void:
 func _latch(hit: Dictionary, s: Resource) -> void:
 	latch_point = hit.position
 	latch_normal = hit.normal if (hit.normal as Vector3).length_squared() > 0.5 else -_dir
-	latched_to = hit.collider as Node3D
+	latched_to = hook_owner(hit.collider)
+	if latched_to == null:
+		latched_to = hit.collider as Node3D
 	last_latched = latched_to.name
 	_pull_t = 0.0
 	_stuck_t = 0.0
@@ -193,14 +191,37 @@ func _latch(hit: Dictionary, s: Resource) -> void:
 
 
 static func is_hookable(n: Object) -> bool:
+	return hook_owner(n) != null
+
+
+## The hookable prop (group "hook_targets") a collider belongs to, or null.
+static func hook_owner(n: Object) -> Node3D:
 	var node := n as Node
 	while node:
 		if node.is_in_group(HOOK_GROUP):
-			return true
+			return node as Node3D
 		if node is PhysicsBody3D:
-			return false
+			return null
 		node = node.get_parent()
-	return false
+	return null
+
+
+## Claw / crosshair ray: solid world + players, plus the flames of hookable fire props
+## (torches, braziers), so aiming at the fire itself bites. Flames of anything that isn't
+## hookable are ignored rather than knocking the claw back.
+func _ray(from: Vector3, to: Vector3) -> Dictionary:
+	var space := _player.get_world_3d().direct_space_state
+	var q := PhysicsRayQueryParameters3D.create(from, to, 3)
+	q.exclude = [_player.get_rid()]
+	var hit := space.intersect_ray(q)
+	var fq := PhysicsRayQueryParameters3D.create(from, to, WorldRules.FIRE_ZONE_LAYER)
+	fq.collide_with_areas = true
+	fq.collide_with_bodies = false
+	var fire := space.intersect_ray(fq)
+	if not fire.is_empty() and is_hookable(fire.collider) and (hit.is_empty() \
+			or from.distance_to(fire.position) < from.distance_to(hit.position)):
+		return fire
+	return hit
 
 
 # ---------------------------------------------------------------- owner: reel in

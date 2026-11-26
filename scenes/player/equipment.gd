@@ -362,7 +362,8 @@ func _update_bow(delta: float) -> void:
 		_drawing = true
 		charge = minf(1.0, charge + delta / s.draw_time)
 	if _drawing and not holding:
-		_release(charge >= s.min_charge_to_fire)
+		# Let go mid-backflip / sidehop: the shot fizzles (no firing out of a move).
+		_release(charge >= s.min_charge_to_fire and not _player.motor.action_locked())
 	_player.camera_rig.set_aim(sync_aiming, s)
 
 
@@ -536,7 +537,8 @@ func _apply_spread(dir: Vector3, deg: float) -> Vector3:
 func _update_boomerang() -> void:
 	var s := stats()
 	var holding := Input.is_action_pressed("attack")
-	var ready_to_throw := sync_drawn and not sync_thrown and _cooldown <= 0.0 and _swap_timer < 0.0
+	var ready_to_throw: bool = sync_drawn and not sync_thrown and _cooldown <= 0.0 and _swap_timer < 0.0 \
+		and not _player.motor.action_locked()   # no throwing out of a roll / backflip / sidehop
 	if holding and ready_to_throw and (_boom_aiming or Input.is_action_just_pressed("attack")):
 		if not _boom_aiming:
 			_boom_aiming = true

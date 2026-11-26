@@ -120,6 +120,12 @@ func is_busy() -> bool:
 	return state == State.CLIMB or state == State.HANG
 
 
+## Mid-move (roll, backflip, sidehop, bonk, climb/hang): no shooting, throwing or
+## grappling until it's over. No animation cancelling.
+func action_locked() -> bool:
+	return state == State.ROLL or state == State.BONK or is_busy() or hop != Hop.NONE
+
+
 func step(body: CharacterBody3D, wish: Vector3, delta: float, intent: Intent) -> void:
 	var p := profile
 	_intent = intent
