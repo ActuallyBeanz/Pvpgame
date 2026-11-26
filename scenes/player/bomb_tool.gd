@@ -76,7 +76,7 @@ func _hand() -> Vector3:
 
 
 func _release(speed: float, up: float) -> void:
-	var fwd := -_player.model_root.global_basis.z
+	var fwd: Vector3 = -_player.model_root.global_basis.z
 	var target: Node3D = _player.focus.target if _player.focus.active else null
 	if target and is_instance_valid(target) and speed > 2.0:
 		var to: Vector3 = target.get_lock_point() - _hand()

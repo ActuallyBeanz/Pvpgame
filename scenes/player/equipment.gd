@@ -266,7 +266,7 @@ func _update_punch(delta: float) -> void:
 	if _model:
 		_model.play_action(&"Unarmed_Melee_Attack_Punch_A", 0.4)
 	rpc_punch_anim.rpc()
-	var fwd := -_player.model_root.global_basis.z
+	var fwd: Vector3 = -_player.model_root.global_basis.z
 	var centre := _player.global_position + Vector3.UP * 1.0 + fwd * punch_reach * 0.7
 	var shape := SphereShape3D.new()
 	shape.radius = 0.7
