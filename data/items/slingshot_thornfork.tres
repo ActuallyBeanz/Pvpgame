@@ -1,0 +1,20 @@
+[gd_resource type="Resource" format=3]
+
+[ext_resource type="Script" path="res://data/items/item_def.gd" id="1_item"]
+[ext_resource type="Resource" path="res://data/items/slingshot_thornfork_stats.tres" id="2_stats"]
+
+[resource]
+script = ExtResource("1_item")
+id = "slingshot_thornfork"
+display_name = "Thornfork Slingshot"
+model_id = "weapon.slingshot.thornfork"
+ammo_item_id = "slingstones"
+starting_ammo = 10
+hand_position = Vector3(0, 0.05, 0)
+hand_rotation_deg = Vector3(0, -61, 0)
+back_position = Vector3(-0.18, 0.1, -0.4)
+back_rotation_deg = Vector3(0, 90, 90)
+material = "wood"
+action_tag = "shoot"
+category = "ranged"
+stats = ExtResource("2_stats")

@@ -93,7 +93,13 @@ text = ">"
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 48)
 layout_mode = 2
-text = "Host"
+text = "Host (Island)"
+
+[node name="HostTestButton" type="Button" parent="Center/VBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 36)
+layout_mode = 2
+text = "Host Test Arena"
 
 [node name="AddressEdit" type="LineEdit" parent="Center/VBox"]
 unique_name_in_owner = true

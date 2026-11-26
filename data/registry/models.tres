@@ -31,9 +31,59 @@
 [ext_resource type="PackedScene" path="res://assets/models/weapons/skytether.glb" id="28_sky"]
 [ext_resource type="PackedScene" path="res://assets/models/weapons/skytether_tip.glb" id="29_stip"]
 
+[ext_resource type="PackedScene" path="res://assets/models/weapons/greatsword_emberfang.glb" id="m0_emberfang"]
+[ext_resource type="PackedScene" path="res://assets/models/weapons/maul_quakeheart.glb" id="m1_quakeheart"]
+[ext_resource type="PackedScene" path="res://assets/models/weapons/slingshot_thornfork.glb" id="m2_thornfork"]
+[ext_resource type="PackedScene" path="res://assets/models/weapons/slingstone.glb" id="m3_slingstone"]
+[ext_resource type="PackedScene" path="res://assets/models/weapons/slingstones.glb" id="m4_slingstones"]
+[ext_resource type="PackedScene" path="res://assets/models/weapons/fan_galeleaf.glb" id="m5_galeleaf"]
+[ext_resource type="PackedScene" path="res://assets/models/weapons/staff_sandspire.glb" id="m6_sandspire"]
+[ext_resource type="PackedScene" path="res://assets/models/weapons/rod_rimecaller.glb" id="m7_rimecaller"]
+[ext_resource type="PackedScene" path="res://assets/models/weapons/bomb_blastgourd.glb" id="m8_blastgourd"]
+[ext_resource type="PackedScene" path="res://assets/models/weapons/trap_snapjaw.glb" id="m9_snapjaw"]
+[ext_resource type="PackedScene" path="res://assets/models/items/cinderpepper.glb" id="m10_cinderpepper"]
+[ext_resource type="PackedScene" path="res://assets/models/items/frostcap.glb" id="m11_frostcap"]
+[ext_resource type="PackedScene" path="res://assets/models/items/sparkthistle.glb" id="m12_sparkthistle"]
+[ext_resource type="PackedScene" path="res://assets/models/items/dewbloom.glb" id="m13_dewbloom"]
+[ext_resource type="PackedScene" path="res://assets/models/items/smolderpuff.glb" id="m14_smolderpuff"]
+[ext_resource type="PackedScene" path="res://assets/models/items/glarepetal.glb" id="m15_glarepetal"]
+[ext_resource type="PackedScene" path="res://assets/models/items/muddlemoss.glb" id="m16_muddlemoss"]
+[ext_resource type="PackedScene" path="res://assets/models/items/lumenbell.glb" id="m17_lumenbell"]
+[ext_resource type="PackedScene" path="res://assets/models/items/hearthapple.glb" id="m18_hearthapple"]
+[ext_resource type="PackedScene" path="res://assets/models/items/stoutroot.glb" id="m19_stoutroot"]
+[ext_resource type="PackedScene" path="res://assets/models/items/amberdrip_comb.glb" id="m20_amberdrip_comb"]
+[ext_resource type="PackedScene" path="res://assets/models/items/coppergleam_ore.glb" id="m21_coppergleam_ore"]
+[ext_resource type="PackedScene" path="res://assets/models/items/ironvein_ore.glb" id="m22_ironvein_ore"]
+[ext_resource type="PackedScene" path="res://assets/models/items/starsilver_ore.glb" id="m23_starsilver_ore"]
+[ext_resource type="PackedScene" path="res://assets/models/items/wood_bundle.glb" id="m24_wood"]
 [resource]
 script = ExtResource("12_ckosp")
 models = Dictionary[String, PackedScene]({
+"item.material.wood": ExtResource("m24_wood"),
+"weapon.greatsword.emberfang": ExtResource("m0_emberfang"),
+"weapon.maul.quakeheart": ExtResource("m1_quakeheart"),
+"weapon.slingshot.thornfork": ExtResource("m2_thornfork"),
+"weapon.slingstone": ExtResource("m3_slingstone"),
+"pickup.slingstones": ExtResource("m4_slingstones"),
+"tool.fan.galeleaf": ExtResource("m5_galeleaf"),
+"tool.staff.sandspire": ExtResource("m6_sandspire"),
+"tool.rod.rimecaller": ExtResource("m7_rimecaller"),
+"item.bomb.blastgourd": ExtResource("m8_blastgourd"),
+"item.trap.snapjaw": ExtResource("m9_snapjaw"),
+"item.reagent.cinderpepper": ExtResource("m10_cinderpepper"),
+"item.reagent.frostcap": ExtResource("m11_frostcap"),
+"item.reagent.sparkthistle": ExtResource("m12_sparkthistle"),
+"item.reagent.dewbloom": ExtResource("m13_dewbloom"),
+"item.reagent.smolderpuff": ExtResource("m14_smolderpuff"),
+"item.reagent.glarepetal": ExtResource("m15_glarepetal"),
+"item.reagent.muddlemoss": ExtResource("m16_muddlemoss"),
+"item.reagent.lumenbell": ExtResource("m17_lumenbell"),
+"item.food.hearthapple": ExtResource("m18_hearthapple"),
+"item.food.stoutroot": ExtResource("m19_stoutroot"),
+"item.food.amberdrip_comb": ExtResource("m20_amberdrip_comb"),
+"item.ore.coppergleam_ore": ExtResource("m21_coppergleam_ore"),
+"item.ore.ironvein_ore": ExtResource("m22_ironvein_ore"),
+"item.ore.starsilver_ore": ExtResource("m23_starsilver_ore"),
 "debug.missing": ExtResource("1_ut6gy"),
 "env.rock.basic": ExtResource("5_25x7b"),
 "env.tree.basic": ExtResource("4_1iksr"),

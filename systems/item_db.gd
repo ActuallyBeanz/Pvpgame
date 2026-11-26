@@ -24,3 +24,10 @@ func get_item(item_id: String) -> Resource:
 
 func has_item(item_id: String) -> bool:
 	return _items.has(item_id)
+
+
+## Every registered item id, sorted (test areas, debug menus).
+func all_ids() -> Array:
+	var ids := _items.keys()
+	ids.sort()
+	return ids

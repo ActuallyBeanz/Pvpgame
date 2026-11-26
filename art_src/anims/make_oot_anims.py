@@ -1,5 +1,5 @@
 # Authors OoT-style move animations on the KayKit Adventurers rig (shared by all 5 characters):
-#   OoT_Roll, OoT_Backflip, OoT_LedgeHopUp, OoT_LedgeClimb, OoT_LedgeHang (loop), OoT_HookPull (loop)
+#   OoT_Roll, OoT_Backflip, OoT_LedgeHopUp, OoT_LedgeClimb, OoT_LedgeHang (loop), OoT_HookPull (loop), OoT_Swim (loop), OoT_Tread (loop)
 # Poses are written as rotations in the character's REST model space (Blender: X = character's
 # left, -Y = forward, Z = up) and converted to each bone's local frame, so they read clearly.
 # Run: blender --background --factory-startup --python make_oot_anims.py -- <Knight.glb> <out_dir> [preview]
@@ -203,6 +203,23 @@ def hookpull(flutter):
     return p
 key("OoT_HookPull", [(0, hookpull(0)), (6, hookpull(6)), (12, hookpull(0))], loop=True)
 
+# ---- swimming (loops). Godot tips the body forward while you swim, so "up" in these poses
+# becomes "forward": breaststroke = reach up, sweep out and down, frog kick.
+def stroke(arm, bend, hip, knee, chest=0):
+    return pose(0, 0.0, a=arms(arm, bend), l=legs(hip, knee), t=torso(0, chest, -25))
+key("OoT_Swim", [
+    (0,  stroke((0.12, -0.15, 1.0), 5, 2, 8)),
+    (8,  stroke((0.9, -0.15, 0.35), 20, -35, 95, 5)),
+    (14, stroke((0.45, -0.35, -0.8), 45, 6, 12, -5)),
+    (19, stroke((0.3, -0.75, 0.25), 80, 4, 10)),
+    (24, stroke((0.12, -0.15, 1.0), 5, 2, 8)),
+], loop=True)
+# treading water upright: arms sculling at the sides, legs cycling
+def tread(t):
+    return pose(0, 0.0, a=arms((0.9, -0.2 + 0.35 * t, -0.25), 25),
+                l=legs(-30 + 30 * t, 60 - 40 * t, -30 * t, 20 + 40 * t), t=torso(3, 0, -5))
+key("OoT_Tread", [(0, tread(0)), (15, tread(1)), (30, tread(0))], loop=True)
+
 arm.animation_data.action = None
 
 if PREVIEW:
@@ -222,7 +239,7 @@ if PREVIEW:
     sc.render.engine = "BLENDER_WORKBENCH"
     sc.display.shading.light = "STUDIO"; sc.display.shading.color_type = "TEXTURE"
     shots = {"OoT_Roll": [0, 4, 8, 12, 16, 20, 24], "OoT_Backflip": [0, 3, 6, 9, 12, 15, 20],
-             "OoT_LedgeHopUp": [0, 4, 9, 12, 15], "OoT_LedgeClimb": [0, 8, 14, 19, 24], "OoT_LedgeHang": [0, 15], "OoT_HookPull": [0, 6]}
+             "OoT_LedgeHopUp": [0, 4, 9, 12, 15], "OoT_LedgeClimb": [0, 8, 14, 19, 24], "OoT_LedgeHang": [0, 15], "OoT_HookPull": [0, 6], "OoT_Swim": [0, 8, 14, 19], "OoT_Tread": [0, 15]}
     for name, frames in shots.items():
         arm.animation_data.action = bpy.data.actions[name]
         for f in frames:

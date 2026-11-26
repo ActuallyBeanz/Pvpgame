@@ -20,6 +20,7 @@ extends Resource
 ])
 
 @export_group("Match")
-@export_file("*.tscn") var match_scene: String = "res://scenes/match/test_arena.tscn"
+@export_file("*.tscn") var match_scene: String = "res://scenes/match/test_arena.tscn"   ## fallback / smoke tests ("Host Test Arena")
+@export_file("*.tscn") var island_scene: String = "res://scenes/match/island.tscn"   ## "Host (Island)"
 ## Test arena only. The real map uses spawn rules from the map config (M3).
 @export var test_spawn_radius: float = 6.0

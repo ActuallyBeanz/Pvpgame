@@ -25,6 +25,7 @@ const InventoryPanel := preload("res://ui/inventory_panel.gd")
 
 var _hotbar: Control
 var inventory: Control                     ## Tab bag panel (ui/inventory_panel.gd)
+var _breath: ProgressBar                   ## air left while your head is underwater
 
 
 func _ready() -> void:
@@ -45,6 +46,23 @@ func _ready() -> void:
 	inventory.grow_vertical = Control.GROW_DIRECTION_BEGIN
 	inventory.offset_bottom = -96             # sits right above the hotbar
 	_hotbar.slot_hovered.connect(inventory.set_hovered)
+	_breath = ProgressBar.new()
+	_breath.name = "BreathBar"
+	_breath.show_percentage = false
+	_breath.custom_minimum_size = Vector2(220, 12)
+	var fill := StyleBoxFlat.new()
+	fill.bg_color = Color(0.45, 0.85, 1.0)
+	fill.set_corner_radius_all(6)
+	_breath.add_theme_stylebox_override("fill", fill)
+	var bg := StyleBoxFlat.new()
+	bg.bg_color = Color(0, 0, 0, 0.5)
+	bg.set_corner_radius_all(6)
+	_breath.add_theme_stylebox_override("background", bg)
+	_breath.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_breath)
+	_breath.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
+	_breath.position += Vector2(-110, 70)
+	_breath.visible = false
 	for top in [true, false]:
 		var r := ColorRect.new()
 		r.color = Color(0, 0, 0, 0.92)
@@ -66,6 +84,13 @@ func _process(delta: float) -> void:
 			return
 	visible = true
 	_update_bars(delta)
+	var motor: Variant = _player.get("motor") if _player else null
+	if motor and motor.profile:
+		var full: float = motor.profile.breath_max
+		_breath.max_value = full
+		_breath.value = motor.breath
+		_breath.visible = motor.breath < full - 0.05
+		_breath.modulate = Color(1, 0.45, 0.4) if motor.breath < full * 0.25 else Color.WHITE
 	var w: Resource = _equipment.weapon()
 	var kind: String = _equipment.weapon_type()
 	var drawn: bool = _equipment.sync_drawn and w != null
@@ -87,7 +112,7 @@ func _process(delta: float) -> void:
 	prompt_label.visible = not GameConfig.inventory_open
 	var p: Node = _equipment.nearest_pickup
 	if p:
-		prompt_label.text = "[E] Pick up %s" % p.display_name()
+		prompt_label.text = p.prompt_text() if p.has_method("prompt_text") else "[E] Pick up %s" % p.display_name()
 	elif drawn and _player.focus.active and not locked:
 		prompt_label.text = "No target in range"
 	else:
@@ -111,6 +136,11 @@ func _weapon_line(w: Resource, kind: String) -> String:
 				status = "chain out..."
 			else:
 				status = "hold LMB aim · release: fire (%.0fm)" % _equipment.stats().max_range
+		"bomb":
+			var bt: Node = _equipment.bomb
+			status = ("fuse %.1fs · LMB throw · Q set down" % bt.fuse_left) if bt.holding else ("x%d · LMB pull one out" % _equipment.ammo_count())
+		"tool":
+			status = "power not built yet (held only)"
 		"slash":
 			status = "charged! release" if _equipment.melee.charged else ("charging..." if _equipment.melee.charging else "LMB combo · hold: spin")
 	var sh: Resource = _equipment.shield_item()

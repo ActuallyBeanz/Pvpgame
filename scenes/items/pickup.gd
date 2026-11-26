@@ -15,6 +15,8 @@ const GROUP := "pickups"
 @export var glow_color := Color(1.0, 0.82, 0.35)
 @export var infinite := false              ## test stands: never runs out, can be taken again and again
 @export var show_label := false            ## floating item name (test area)
+@export var natural := false               ## growing in the world (herbs, ore): sits on the ground, no glow ring / bob
+@export var natural_scale := 1.4           ## natural: model size (gatherable models are small)
 @export var retake_delay := 0.5            ## infinite: seconds before the same peer can take again
 
 var item: Resource
@@ -31,7 +33,11 @@ func _ready() -> void:
 		return
 	var mid: String = item.pickup_model_id if item.pickup_model_id != "" else item.model_id
 	_visual = AssetRegistry.instantiate(mid)
+	_visual.scale = Vector3.ONE * _scale()
 	add_child(_visual)
+	if natural:
+		_visual.rotation.y = randf() * TAU
+		return
 	_t = randf() * TAU
 	# Modern-lighting accent: soft glow light + emissive ground ring.
 	var light := OmniLight3D.new()
@@ -69,11 +75,17 @@ func _ready() -> void:
 
 
 func _process(delta: float) -> void:
-	if _visual == null:
+	if _visual == null or natural:
 		return
 	_t += delta
 	_visual.position.y = 0.6 + sin(_t * bob_speed) * bob_height
 	_visual.rotation.y += spin_speed * delta
+
+
+func _scale() -> float:
+	if natural:
+		return natural_scale
+	return float(item.pickup_scale) if item and "pickup_scale" in item else 1.0
 
 
 func display_name() -> String:
@@ -126,7 +138,7 @@ func rpc_taken(peer: int) -> void:
 	if infinite:
 		if _visual:  # little "pop" so you can see it worked
 			var tw := create_tween()
-			_visual.scale = Vector3.ONE * 1.35
-			tw.tween_property(_visual, "scale", Vector3.ONE, 0.25)
+			_visual.scale = Vector3.ONE * 1.35 * _scale()
+			tw.tween_property(_visual, "scale", Vector3.ONE * _scale(), 0.25)
 		return
 	queue_free()

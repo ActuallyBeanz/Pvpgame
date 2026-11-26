@@ -35,3 +35,23 @@ extends Resource
 @export var lock_on_range := 15.0
 @export var trail_color := Color(0.55, 0.95, 1.0, 0.85)
 @export var blade_length := 1.72                ## model units, guard -> tip (trail + charge sparkles)
+
+@export_group("Moveset")
+@export_enum("sword", "greatsword", "hammer") var style := "sword"   ## Master Sword / Biggoron / Megaton Hammer
+@export var two_handed := false                  ## no shield while it's drawn
+@export var can_spin := true
+@export var can_poke := true                     ## shield up (F) + LMB = quick stab from behind the shield (one-handers)
+@export var poke_anim := &"1H_Melee_Attack_Stab"
+@export var poke_damage := 8.0
+@export var poke_duration := 0.32
+@export var poke_reach := 2.3
+@export_subgroup("Jump attack (focus + Space, or LMB in the air)")
+@export var jump_anim := &"2H_Melee_Attack_Chop"
+@export var jump_damage := 24.0                  ## OoT: jump slash = double damage
+@export var jump_duration := 0.62
+@export var jump_reach := 2.6
+@export var jump_forward_speed := 6.5
+@export var jump_up := 6.0
+@export_subgroup("Hammer")
+@export var shockwave_radius := 0.0              ## > 0: the slam also hits everything around the impact point
+@export var shockwave_damage := 14.0

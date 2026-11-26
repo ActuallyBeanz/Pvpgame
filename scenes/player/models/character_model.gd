@@ -32,6 +32,10 @@ extends Node3D
 @export var anim_hang := &"oot/OoT_LedgeHang"
 @export var anim_hook := &"oot/OoT_HookPull"         ## reeled in by the grapple (loop)
 @export var anim_hook_fallback := &"Jump_Idle"     ## used until oot_moves.glb has OoT_HookPull
+@export var anim_swim := &"oot/OoT_Swim"           ## breaststroke (body tipped forward in code)
+@export var anim_tread := &"oot/OoT_Tread"         ## floating still
+@export var swim_lean_deg := 62.0                  ## body tip while swimming along the surface
+@export var dive_lean_deg := 85.0
 @export var sidehop_anim_time := 0.35
 
 @export_group("Tuning")
@@ -80,9 +84,13 @@ var _visual_base := Transform3D.IDENTITY
 var _hook_arm: SkeletonModifier3D         ## LookAtModifier3D on the launcher arm
 var _hook_aim: Node3D                     ## its target, parked on the claw
 var _hook_arm_w := 0.0
+var _was_swimming := false
 
 const HOOK_PHASE_PULL := 3                ## HookTool.Phase.PULL
-const LOOPING := ["anim_idle", "anim_walk", "anim_run", "anim_air", "anim_strafe_left", "anim_strafe_right", "anim_back", "anim_hook"]
+const LOOPING := ["anim_idle", "anim_walk", "anim_run", "anim_air", "anim_strafe_left", "anim_strafe_right", "anim_back", "anim_hook", "anim_swim", "anim_tread"]
+const STATE_SWIM := 6                     ## Motor.State.SWIM
+const STATE_DIVE := 7
+const FX := preload("res://systems/components/element_fx.gd")
 
 
 func _ready() -> void:
@@ -104,6 +112,10 @@ func _ready() -> void:
 		_add_moves_library()
 		if not anim.has_animation(anim_hook):
 			anim_hook = anim_hook_fallback
+		if not anim.has_animation(anim_swim):
+			anim_swim = anim_walk
+		if not anim.has_animation(anim_tread):
+			anim_tread = anim_idle
 		for prop: String in LOOPING:
 			var a := anim.get_animation(get(prop))
 			if a:
@@ -183,7 +195,7 @@ func _add_moves_library() -> void:
 			_moves_lib = AnimationLibrary.new()
 			for n in ap.get_animation_list():
 				var a := ap.get_animation(n).duplicate() as Animation
-				a.loop_mode = Animation.LOOP_LINEAR if n in ["OoT_LedgeHang", "OoT_HookPull"] else Animation.LOOP_NONE
+				a.loop_mode = Animation.LOOP_LINEAR if n in ["OoT_LedgeHang", "OoT_HookPull", "OoT_Swim", "OoT_Tread"] else Animation.LOOP_NONE
 				_moves_lib.add_animation(n, a)
 		src.free()
 	if _moves_lib and not anim.has_animation_library(&"oot"):
@@ -201,9 +213,16 @@ func _process(delta: float) -> void:
 	tree.set("parameters/loco_speed/scale", 1.0 if speed < 0.4 else clampf(speed / ref, 0.7, 1.4))
 	var hanging: bool = "sync_move_state" in _owner_body and _owner_body.sync_move_state == 5  # Motor.State.HANG
 	var pull_dir := _hook_pull_dir()
+	var ms := int(_owner_body.sync_move_state) if "sync_move_state" in _owner_body else 0
+	var swimming := ms == STATE_SWIM or ms == STATE_DIVE
 	var state := "hook" if pull_dir != Vector3.ZERO else ("hang" if hanging else ("ground" if on_floor else "air"))
+	var swim_lean := 0.0
+	if swimming and pull_dir == Vector3.ZERO:
+		var moving := speed > 0.4 or ms == STATE_DIVE
+		state = "swim" if moving else "tread"
+		swim_lean = deg_to_rad(dive_lean_deg if ms == STATE_DIVE else swim_lean_deg * clampf(speed / 2.5, 0.0, 1.0))
 	tree.set("parameters/ground_air/transition_request", state)
-	_update_lean(pull_dir, delta)
+	_update_lean(pull_dir, delta, swim_lean)
 	if "sync_focus" in _owner_body:
 		_focus = lerpf(_focus, 1.0 if _owner_body.sync_focus else 0.0, 1.0 - exp(-focus_blend_speed * delta))
 		tree.set("parameters/focus_mix/blend_amount", _focus)
@@ -215,6 +234,10 @@ func _process(delta: float) -> void:
 			_play_move_action(int(_owner_body.sync_action), float(_owner_body.sync_action_time))
 		if _owner_body.sync_move_state != _move_state:
 			_move_state = _owner_body.sync_move_state
+			if _move_state == STATE_SWIM and not _was_swimming:
+				FX.burst(global_position + Vector3.UP * 1.0, get_tree().current_scene, Color(0.75, 0.9, 1.0), 14, 0.09, 4.0)
+				Audio.play_at("fire.extinguish", global_position, -10.0, 0.6)   # stand-in splash
+			_was_swimming = _move_state == STATE_SWIM or _move_state == STATE_DIVE
 			if _move_state == 3:  # Motor.State.BONK
 				play_full(anim_bonk, 0.6)
 	_action_left = maxf(0.0, _action_left - delta)
@@ -235,12 +258,12 @@ func _hook_pull_dir() -> Vector3:
 
 ## Tip the visual forward (around the hips) toward the claw while being pulled.
 ## The player already yaws the model to face the latch point, so this is pure pitch.
-func _update_lean(pull_dir: Vector3, delta: float) -> void:
-	var goal := 0.0
+func _update_lean(pull_dir: Vector3, delta: float, extra_goal := 0.0) -> void:
+	var goal := extra_goal
 	if pull_dir != Vector3.ZERO:
 		goal = minf(acos(clampf(pull_dir.y, -1.0, 1.0)) * hook_lean_factor, deg_to_rad(hook_lean_max_deg))
 	_lean = lerpf(_lean, goal, 1.0 - exp(-hook_lean_speed * delta))
-	if absf(_lean) < 0.001 and goal == 0.0:
+	if absf(_lean) < 0.001 and goal == 0.0 and pull_dir == Vector3.ZERO:
 		_lean = 0.0
 	var pitch := Basis(Vector3.RIGHT, -_lean)     # + lean = tip forward (toward -Z)
 	var pivot := Vector3.UP * hook_pivot_height
@@ -304,6 +327,8 @@ func _build_tree() -> void:
 	ground_air.add_input("air")
 	ground_air.add_input("hang")
 	ground_air.add_input("hook")
+	ground_air.add_input("swim")
+	ground_air.add_input("tread")
 	ground_air.xfade_time = air_blend_time
 	bt.add_node("ground_air", ground_air)
 
@@ -339,6 +364,10 @@ func _build_tree() -> void:
 	bt.connect_node("ground_air", 2, "hang_anim")
 	bt.add_node("hook_anim", _clip(anim_hook))
 	bt.connect_node("ground_air", 3, "hook_anim")
+	bt.add_node("swim_anim", _clip(anim_swim))
+	bt.connect_node("ground_air", 4, "swim_anim")
+	bt.add_node("tread_anim", _clip(anim_tread))
+	bt.connect_node("ground_air", 5, "tread_anim")
 	bt.connect_node("shoot", 0, "aim_pose")
 	bt.connect_node("shoot", 1, "shoot_anim")
 	bt.connect_node("action", 0, "shoot")

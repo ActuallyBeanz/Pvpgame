@@ -1,0 +1,18 @@
+[gd_resource type="Resource" format=3]
+
+[ext_resource type="Script" path="res://data/items/bow_stats.gd" id="1_bstat"]
+
+[resource]
+script = ExtResource("1_bstat")
+draw_time = 0.5
+fire_cooldown = 0.3
+aim_move_speed_mult = 0.7
+min_speed = 18.0
+max_speed = 42.0
+gravity = 12.0
+lifetime = 4.0
+stick_time = 4.0
+spread_uncharged_deg = 4.0
+spread_charged_deg = 0.8
+min_damage = 6.0
+max_damage = 18.0

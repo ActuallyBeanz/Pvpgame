@@ -1,0 +1,21 @@
+[gd_resource type="Resource" format=3]
+
+[ext_resource type="Script" path="res://data/items/item_def.gd" id="1_item"]
+[ext_resource type="Resource" path="res://data/items/maul_quakeheart_stats.tres" id="2_stats"]
+
+[resource]
+script = ExtResource("1_item")
+id = "maul_quakeheart"
+display_name = "Quakeheart Maul"
+model_id = "weapon.maul.quakeheart"
+aim_anim = &"2H_Melee_Idle"
+shoot_anim = &"2H_Melee_Attack_Chop"
+hand_position = Vector3(0, 0.033, 0)
+hand_rotation_deg = Vector3(0, 180, 0)
+back_position = Vector3(0.05, 0.45, -0.42)
+back_rotation_deg = Vector3(0, 0, 150)
+icon_roll_deg = -45.0
+material = "stone"
+action_tag = "slash"
+category = "melee"
+stats = ExtResource("2_stats")

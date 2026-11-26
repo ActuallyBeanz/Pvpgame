@@ -9,9 +9,57 @@
 [ext_resource type="Resource" path="res://data/items/grappleclaw.tres" id="7_gclaw"]
 [ext_resource type="Resource" path="res://data/items/skytether.tres" id="8_sky"]
 
+[ext_resource type="Resource" path="res://data/items/greatsword_emberfang.tres" id="i0_greatsword_emberfang"]
+[ext_resource type="Resource" path="res://data/items/maul_quakeheart.tres" id="i1_maul_quakeheart"]
+[ext_resource type="Resource" path="res://data/items/slingshot_thornfork.tres" id="i2_slingshot_thornfork"]
+[ext_resource type="Resource" path="res://data/items/slingstones.tres" id="i3_slingstones"]
+[ext_resource type="Resource" path="res://data/items/fan_galeleaf.tres" id="i4_fan_galeleaf"]
+[ext_resource type="Resource" path="res://data/items/staff_sandspire.tres" id="i5_staff_sandspire"]
+[ext_resource type="Resource" path="res://data/items/rod_rimecaller.tres" id="i6_rod_rimecaller"]
+[ext_resource type="Resource" path="res://data/items/bomb_blastgourd.tres" id="i7_bomb_blastgourd"]
+[ext_resource type="Resource" path="res://data/items/trap_snapjaw.tres" id="i8_trap_snapjaw"]
+[ext_resource type="Resource" path="res://data/items/cinderpepper.tres" id="i9_cinderpepper"]
+[ext_resource type="Resource" path="res://data/items/frostcap.tres" id="i10_frostcap"]
+[ext_resource type="Resource" path="res://data/items/sparkthistle.tres" id="i11_sparkthistle"]
+[ext_resource type="Resource" path="res://data/items/dewbloom.tres" id="i12_dewbloom"]
+[ext_resource type="Resource" path="res://data/items/smolderpuff.tres" id="i13_smolderpuff"]
+[ext_resource type="Resource" path="res://data/items/glarepetal.tres" id="i14_glarepetal"]
+[ext_resource type="Resource" path="res://data/items/muddlemoss.tres" id="i15_muddlemoss"]
+[ext_resource type="Resource" path="res://data/items/lumenbell.tres" id="i16_lumenbell"]
+[ext_resource type="Resource" path="res://data/items/hearthapple.tres" id="i17_hearthapple"]
+[ext_resource type="Resource" path="res://data/items/stoutroot.tres" id="i18_stoutroot"]
+[ext_resource type="Resource" path="res://data/items/amberdrip_comb.tres" id="i19_amberdrip_comb"]
+[ext_resource type="Resource" path="res://data/items/coppergleam_ore.tres" id="i20_coppergleam_ore"]
+[ext_resource type="Resource" path="res://data/items/ironvein_ore.tres" id="i21_ironvein_ore"]
+[ext_resource type="Resource" path="res://data/items/starsilver_ore.tres" id="i22_starsilver_ore"]
+[ext_resource type="Resource" path="res://data/items/wood.tres" id="i23_wood"]
 [resource]
 script = ExtResource("3_f3wow")
 items = Dictionary[String, Resource]({
+"wood": ExtResource("i23_wood"),
+"greatsword_emberfang": ExtResource("i0_greatsword_emberfang"),
+"maul_quakeheart": ExtResource("i1_maul_quakeheart"),
+"slingshot_thornfork": ExtResource("i2_slingshot_thornfork"),
+"slingstones": ExtResource("i3_slingstones"),
+"fan_galeleaf": ExtResource("i4_fan_galeleaf"),
+"staff_sandspire": ExtResource("i5_staff_sandspire"),
+"rod_rimecaller": ExtResource("i6_rod_rimecaller"),
+"bomb_blastgourd": ExtResource("i7_bomb_blastgourd"),
+"trap_snapjaw": ExtResource("i8_trap_snapjaw"),
+"cinderpepper": ExtResource("i9_cinderpepper"),
+"frostcap": ExtResource("i10_frostcap"),
+"sparkthistle": ExtResource("i11_sparkthistle"),
+"dewbloom": ExtResource("i12_dewbloom"),
+"smolderpuff": ExtResource("i13_smolderpuff"),
+"glarepetal": ExtResource("i14_glarepetal"),
+"muddlemoss": ExtResource("i15_muddlemoss"),
+"lumenbell": ExtResource("i16_lumenbell"),
+"hearthapple": ExtResource("i17_hearthapple"),
+"stoutroot": ExtResource("i18_stoutroot"),
+"amberdrip_comb": ExtResource("i19_amberdrip_comb"),
+"coppergleam_ore": ExtResource("i20_coppergleam_ore"),
+"ironvein_ore": ExtResource("i21_ironvein_ore"),
+"starsilver_ore": ExtResource("i22_starsilver_ore"),
 "arrows": ExtResource("2_3gb1h"),
 "boomerang_basic": ExtResource("4_boom"),
 "bow_basic": ExtResource("1_8sg2i"),

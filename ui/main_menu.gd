@@ -22,6 +22,7 @@ func _ready() -> void:
 	address_edit.text = GameConfig.settings.default_address
 	address_edit.placeholder_text = "host IP  (or IP:port)"
 	host_button.pressed.connect(_on_host_pressed)
+	%HostTestButton.pressed.connect(_on_host_test_pressed)
 	join_button.pressed.connect(_on_join_pressed)
 	address_edit.text_submitted.connect(func(_t: String) -> void: _on_join_pressed())
 	NetworkManager.join_failed.connect(_on_join_failed)
@@ -87,7 +88,16 @@ static func _pretty(id: String) -> String:
 	return id.trim_prefix(Lobby.MODEL_PREFIX).replace("_", " ").capitalize()
 
 
+func _on_host_test_pressed() -> void:
+	_host(GameConfig.settings.match_scene)
+
+
 func _on_host_pressed() -> void:
+	_host(GameConfig.settings.island_scene)
+
+
+func _host(scene_path: String) -> void:
+	Lobby.match_scene = scene_path
 	var err := NetworkManager.host()
 	if err != OK:
 		status_label.text = "Couldn't host on port %d (%s). Is another copy already hosting?" \
@@ -118,5 +128,6 @@ func _on_join_failed(reason: String) -> void:
 
 func _set_busy(busy: bool) -> void:
 	host_button.disabled = busy
+	%HostTestButton.disabled = busy
 	join_button.disabled = busy
 	address_edit.editable = not busy

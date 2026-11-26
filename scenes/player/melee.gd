@@ -4,8 +4,13 @@ extends Node
 ##   Sword drawn:  tap LMB = 3-hit combo · focus-locked (RMB) = thrust
 ##                 keep holding LMB after a swing = charge, release when it sparkles = spin attack
 ##                 LMB with the sword away = draw + slash in one (like OoT's B button)
+##   Jump attack:  focus (RMB) + Space with no side/back direction = leaping slash (OoT jump
+##                 attack, double damage); LMB while airborne = the same slash coming down
+##   Greatsword (Biggoron): two-handed (no shield), slower, bigger hits and spin
+##   Hammer (Megaton): two-handed, one heavy overhead slam + shockwave, no spin
 ##   Shield owned: hold RMB (focus) or F = shield up (blocks frontal arrows / boomerangs /
-##                 sword hits). Focus + LMB still attacks; F + LMB = shield bash
+##                 sword hits). Focus + LMB still attacks; F + LMB = poke from behind the
+##                 shield with a one-handed sword (OoT), shield bash otherwise
 ## Hits go through WorldRules (slash / pierce / blunt tags), so wood, ice, dummies and
 ## future enemies all react with no extra code.
 
@@ -13,7 +18,7 @@ const FX := preload("res://systems/components/element_fx.gd")
 const BladeTrail := preload("res://systems/components/blade_trail.gd")
 const Motor := preload("res://scenes/player/movement_motor.gd")
 
-enum Kind { SLASH_1, SLASH_2, SLASH_3, STAB, SPIN, BASH }
+enum Kind { SLASH_1, SLASH_2, SLASH_3, STAB, SPIN, BASH, JUMP, POKE }
 
 var swinging := false
 var charging := false
@@ -41,6 +46,7 @@ var _block_t := 0.0
 var _bash_cd := 0.0
 var _trail: MeshInstance3D
 var _remote_trail_left := 0.0
+var _shock_done := false
 
 
 func setup(equipment: Node, player: CharacterBody3D) -> void:
@@ -111,6 +117,15 @@ func update(delta: float) -> void:
 		return
 	var pressed := Input.is_action_just_pressed("attack")
 	var held := Input.is_action_pressed("attack")
+	# OoT jump attack: focus + jump straight ahead, or attack while airborne
+	if not swinging and not charging:
+		var stick := Input.get_vector("move_left", "move_right", "move_forward", "move_back")
+		var leap: bool = Input.is_action_just_pressed("jump") and _player.focus.active and _player.is_on_floor() \
+			and absf(stick.x) < 0.5 and stick.y < 0.4 and _player.motor.water_depth < 0.5
+		var air: bool = _player.motor.state == Motor.State.AIR and _player.motor.hop == Motor.Hop.NONE
+		if leap or (pressed and air):
+			_jump_attack(s, leap)
+			return
 	if pressed:
 		_held_from_press = true
 		if swinging:
@@ -128,7 +143,7 @@ func update(delta: float) -> void:
 		_next_attack(s)
 		return
 	# Still holding LMB after a swing ended: charge the spin attack.
-	if held and _held_from_press and not swinging:
+	if held and _held_from_press and not swinging and s.can_spin:
 		if not charging:
 			charging = true
 			_charge_t = 0.0
@@ -154,6 +169,18 @@ func _next_attack(s: Resource) -> void:
 	_combo = (i + 1) % s.combo_anims.size()
 
 
+func _jump_attack(s: Resource, leap: bool) -> void:
+	if leap:
+		var m = _player.motor
+		m.heading = m.facing
+		m.speed = s.jump_forward_speed
+		_player.velocity.y = s.jump_up
+	var action: String = "blunt" if s.style == "hammer" else s.slash_action
+	_start(Kind.JUMP, s.jump_anim, s.jump_duration, s.jump_damage, s.jump_reach, 120.0, action, Vector2(0.45, 0.95), true)
+	_queued = false
+	_combo = 0
+
+
 func _spin(s: Resource) -> void:
 	_start(Kind.SPIN, s.spin_anim, s.spin_duration, s.spin_damage, s.spin_radius, 360.0,
 		s.slash_action, Vector2(0.1, 0.9), true)
@@ -163,7 +190,8 @@ func _spin(s: Resource) -> void:
 func _start(kind: int, anim_name: StringName, dur: float, dmg: float, reach: float, arc: float,
 		action: String, window: Vector2, full_body: bool) -> void:
 	swinging = true
-	if kind != Kind.BASH:
+	_shock_done = false
+	if kind != Kind.BASH and kind != Kind.POKE:
 		_eq.sync_blocking = false   # the shield drops for the swing, comes back after
 		_block_t = 0.0
 	_kind = kind
@@ -227,6 +255,10 @@ func _tick_swing(delta: float) -> void:
 	_trail.active = in_window and _kind != Kind.BASH
 	if in_window:
 		_do_hits()
+		var s := sword_stats()
+		if not _shock_done and s and s.shockwave_radius > 0.0 and _kind != Kind.POKE and _kind != Kind.BASH:
+			_shock_done = true
+			_shockwave(s)
 	if _t >= _dur:
 		swinging = false
 		_trail.active = false
@@ -271,6 +303,39 @@ func _do_hits() -> void:
 		print("[sword] hit %s for %.0f" % [(col as Node).name, hit_info.damage])
 
 
+## Hammer slam: everything around the impact point takes a blunt hit (OoT Megaton Hammer).
+func _shockwave(s: Resource) -> void:
+	var at := _player.global_position + _forward() * 1.6 + Vector3.UP * 0.3
+	var shape := SphereShape3D.new()
+	shape.radius = s.shockwave_radius
+	var q := PhysicsShapeQueryParameters3D.new()
+	q.shape = shape
+	q.transform = Transform3D(Basis(), at)
+	q.collision_mask = 3
+	q.exclude = [_player.get_rid()]
+	for r in _player.get_world_3d().direct_space_state.intersect_shape(q, 32):
+		var col: Object = r.collider
+		if col == null or _hit_ids.has(col.get_instance_id()) or not _reacts(col):
+			continue
+		_hit_ids[col.get_instance_id()] = true
+		var dir: Vector3 = ((col as Node3D).global_position - at)
+		dir.y = 0.0
+		WorldRules.deliver_hit(col, WorldRules.make_hit(s.shockwave_damage, "blunt", "", dir.normalized() if dir.length() > 0.05 else _forward()), false)
+	_shock_fx(at)
+	rpc_shock.rpc(at)
+
+
+@rpc("authority", "call_remote", "reliable")
+func rpc_shock(at: Vector3) -> void:
+	_shock_fx(at)
+
+
+func _shock_fx(at: Vector3) -> void:
+	FX.burst(at, get_tree().current_scene, Color(0.75, 0.65, 0.5), 22, 0.14, 5.0)
+	FX.smoke_puff(at, get_tree().current_scene, 1.2)
+	Audio.play_at("ice.shatter", at, 2.0, 0.55)
+
+
 ## Something we can damage / that reacts (not the ground or plain walls).
 func _reacts(col: Object) -> bool:
 	return col.has_method("react_to_hit_info") or col.has_method("react_to_hit") \
@@ -290,9 +355,9 @@ func _recoil() -> void:
 func _update_block(delta: float) -> void:
 	var sh := shield_stats()
 	var w: Resource = _eq.weapon()
-	var can: bool = sh != null and not swinging and not charging \
+	var can: bool = sh != null and (not swinging or _kind == Kind.POKE) and not charging \
 		and (w == null or w.action_tag == "slash" or not _eq.sync_drawn) \
-		and _player.motor.state != Motor.State.ROLL
+		and _player.motor.state != Motor.State.ROLL and not _eq.two_handed_drawn()
 	var by_key: bool = can and Input.is_action_pressed("block")
 	var by_focus: bool = can and sh.raise_on_focus and _player.focus.active
 	if by_key or by_focus:
@@ -304,6 +369,13 @@ func _update_block(delta: float) -> void:
 	_eq.sync_blocking = sh != null and _block_t >= sh.raise_time
 	if _eq.sync_blocking and not was:
 		_eq._applied = ""   # shield moves to the hand
+	var ss := sword_stats()
+	if _eq.sync_blocking and Input.is_action_just_pressed("attack") and not swinging and ss and _eq.sync_drawn \
+			and ss.can_poke and not ss.two_handed and (not focus_guard or Input.is_action_pressed("block")):
+		# OoT: shield up + B = quick stab from behind the shield (shield stays up)
+		_start(Kind.POKE, ss.poke_anim, ss.poke_duration, ss.poke_damage, ss.poke_reach, 50.0,
+			"pierce", Vector2(0.25, 0.7), false)
+		return
 	if _eq.sync_blocking and not focus_guard and Input.is_action_just_pressed("attack") and _bash_cd <= 0.0:
 		_bash_cd = sh.bash_cooldown
 		_eq.sync_blocking = false

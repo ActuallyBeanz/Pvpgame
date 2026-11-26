@@ -5,9 +5,10 @@ extends Resource
 
 @export var id := ""
 @export var display_name := ""
-@export_enum("weapon", "ammo", "shield") var kind := "weapon"   ## shield: worn on the off hand, separate from weapon slots
+@export_enum("weapon", "ammo", "shield", "material") var kind := "weapon"   ## shield: off hand. material: stacks in the bag (reagents, food, ore, bombs...)
 @export var model_id := ""                 ## AssetRegistry id used in hands / on back
 @export var pickup_model_id := ""          ## AssetRegistry id shown on the ground (blank = model_id)
+@export var pickup_scale := 1.0             ## ground model size (small gatherables read better bigger)
 
 @export_group("Hotbar icon")
 @export var icon: Texture2D                ## optional hand-made icon; blank = rendered from the model
@@ -43,5 +44,6 @@ extends Resource
 
 @export_group("Tags")
 @export var element := ""
+@export var category := ""                 ## reagent / food / ore / throwable / trap / tool (crafting + loot tables)
 @export var material := "wood"
 @export var action_tag := "shoot"

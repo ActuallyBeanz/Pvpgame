@@ -131,3 +131,27 @@ extends Resource
 @export var drop_regrab_delay := 0.4
 ## Backing off an edge while focused grabs it (OoT back-walk ledge grab).
 @export var walkoff_grab_min_drop := 1.5
+
+@export_group("Swimming (OoT-style)")
+## Deep water (surface more than swim_enter_depth above your feet) = swim. No weapons while swimming.
+@export var swim_enter_depth := 1.25
+@export var swim_exit_depth := 1.0          ## shallower than this: you're standing again
+@export var float_depth := 1.3              ## feet this far under the surface while floating (head out)
+@export var swim_speed := 3.2
+@export var swim_dash_speed := 6.0          ## hold Shift (sprint) to dash through the water
+@export var swim_accel := 6.0
+@export var swim_turn_rate_deg := 220.0
+@export var dive_speed := 3.5               ## hold Roll (Ctrl) to swim down, Jump (Space) to swim up
+@export var swim_up_speed := 4.0
+@export var jump_out_velocity := 9.0        ## Space at the surface: hop out of the water
+@export var jump_out_grace := 0.6           ## seconds you can't re-enter swimming after hopping out
+@export var dive_swim_speed := 2.6
+@export var buoyancy := 3.0                 ## m/s rising back to the surface
+@export var breath_max := 8.0               ## seconds of air while your head is underwater
+@export var breath_regen := 3.0             ## per second at the surface / on land
+@export var head_height := 1.65
+@export var climb_out_height := 2.8         ## swim into a bank this low (above the water) to climb out
+@export var climb_out_up := 6.5
+@export var climb_out_push := 3.0
+@export var shallow_slow_start := 0.35      ## water deeper than this slows walking...
+@export var shallow_min_mult := 0.6         ## ...down to this at waist depth

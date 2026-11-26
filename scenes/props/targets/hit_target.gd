@@ -10,6 +10,7 @@ const FX := preload("res://systems/components/element_fx.gd")
 
 @export var lockable := true
 @export var lock_height := 1.15            ## lock point above the base (chest)
+@export var head_height := 1.4             ## hits above this (from the base) count as headshots
 @export var wobble_per_damage := 0.04      ## radians of kick per point of damage
 @export var max_kick := 0.6
 @export var wobble_stiffness := 70.0
@@ -33,6 +34,11 @@ func _ready() -> void:
 	add_to_group("no_climb")
 	if lockable:
 		add_to_group("lock_targets")
+
+
+## "head" or "body" for a hit at this world point (arrows multiply headshots).
+func hit_zone(p: Vector3) -> String:
+	return "head" if p.y - global_position.y >= head_height else "body"
 
 
 func get_lock_point() -> Vector3:

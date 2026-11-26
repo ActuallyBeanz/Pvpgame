@@ -24,8 +24,10 @@ signal grabbed_ledge
 signal bonked
 signal jumped(auto: bool)
 signal landed
+signal entered_water(pos: Vector3)
+signal drowning               ## breath ran out (once per second): damage hooks in here later
 
-enum State { GROUND, AIR, ROLL, BONK, CLIMB, HANG }
+enum State { GROUND, AIR, ROLL, BONK, CLIMB, HANG, SWIM, DIVE }
 enum RollDir { FORWARD, BACK, LEFT, RIGHT }
 enum Hop { NONE = -1, SIDE_LEFT, SIDE_RIGHT, BACKFLIP, UP }
 enum Climb { STEP, HOP_UP, CLIMB, TALL, PULL_UP }
@@ -35,6 +37,7 @@ class Intent:
 	var jump_pressed := false
 	var jump_held := false
 	var roll_pressed := false
+	var roll_held := false         ## swimming: Ctrl held = swim down
 	var sprint := false
 	var speed_mult := 1.0
 	var focus := false             ## face focus_yaw and strafe
@@ -51,6 +54,10 @@ var heading := 0.0      ## travel yaw in radians (0 = -Z)
 var facing := 0.0       ## model yaw in radians
 var invulnerable := false
 var hop := Hop.NONE     ## current airborne focus hop
+var breath := 8.0       ## seconds of air left (refills out of the water)
+var water_depth := 0.0  ## how deep the water is over your feet this tick (0 = dry)
+var _drown_t := 0.0
+var _swim_block := 0.0        ## after hopping out of the water
 
 var _timer := 0.0
 var _coyote := 0.0
@@ -108,6 +115,7 @@ func stick_to_speed(tilt: float) -> float:
 
 
 func reset(yaw: float) -> void:
+	breath = profile.breath_max if profile else 8.0
 	speed = 0.0
 	heading = yaw
 	facing = yaw
@@ -120,10 +128,19 @@ func is_busy() -> bool:
 	return state == State.CLIMB or state == State.HANG
 
 
+func in_water() -> bool:
+	return state == State.SWIM or state == State.DIVE
+
+
+## Under the surface: no items (at the surface you can still fight).
+func underwater() -> bool:
+	return state == State.DIVE
+
+
 ## Mid-move (roll, backflip, sidehop, bonk, climb/hang): no shooting, throwing or
 ## grappling until it's over. No animation cancelling.
 func action_locked() -> bool:
-	return state == State.ROLL or state == State.BONK or is_busy() or hop != Hop.NONE
+	return state == State.ROLL or state == State.BONK or is_busy() or hop != Hop.NONE or underwater()
 
 
 func step(body: CharacterBody3D, wish: Vector3, delta: float, intent: Intent) -> void:
@@ -147,6 +164,20 @@ func step(body: CharacterBody3D, wish: Vector3, delta: float, intent: Intent) ->
 	if state == State.HANG:
 		_tick_hang(body, intent, delta)
 		return
+
+	# Water: deep = swim / dive (own physics), shallow = wading slowdown.
+	water_depth = _water_depth(body)
+	_swim_block = maxf(0.0, _swim_block - delta)
+	var may_enter := _swim_block <= 0.0 or body.velocity.y < 0.0
+	if state == State.SWIM or state == State.DIVE or (water_depth > p.swim_enter_depth and state != State.ROLL and may_enter):
+		if state != State.SWIM and state != State.DIVE:
+			_enter_swim(body)
+		_tick_swim(body, has_input, target_yaw, tilt, intent, delta)
+		return
+	breath = minf(p.breath_max, breath + p.breath_regen * delta)
+	if water_depth > p.shallow_slow_start:
+		var wade := clampf((water_depth - p.shallow_slow_start) / maxf(0.01, p.swim_enter_depth - p.shallow_slow_start), 0.0, 1.0)
+		target_speed *= lerpf(1.0, p.shallow_min_mult, wade)
 
 	_coyote = p.coyote_time if was_on_floor else _coyote - delta
 	_jump_buffer = p.jump_buffer_time if intent.jump_pressed else _jump_buffer - delta
@@ -654,6 +685,110 @@ func _slope_penalty(body: CharacterBody3D) -> float:
 	var n := body.get_floor_normal()
 	var uphill := clampf(-dir_of(heading).dot(n), 0.0, 0.6)
 	return profile.slope_slowdown * uphill * uphill
+
+
+# ---------------------------------------------------------------- swimming
+func _feet_y(body: CharacterBody3D) -> float:
+	return body.global_position.y - maxf(_feet_offset, 0.0)
+
+
+func _water_depth(body: CharacterBody3D) -> float:
+	var lvl: float = Water.level_at(body.global_position)
+	return lvl - _feet_y(body) if lvl > -INF else 0.0
+
+
+func _enter_swim(body: CharacterBody3D) -> void:
+	hop = Hop.NONE
+	_jumped = false
+	speed = minf(absf(speed), profile.swim_speed)
+	body.velocity.y = clampf(body.velocity.y, -5.0, 2.0)   # splash in, don't plunge to the bed
+	_set_state(State.SWIM)
+	entered_water.emit(body.global_position)
+
+
+## OoT swimming: float at the surface (no weapons), hold Jump to dive while you have breath,
+## let go to float back up. Swim into a low bank to climb out; wade out where it gets shallow.
+func _tick_swim(body: CharacterBody3D, has_input: bool, target_yaw: float, tilt: float, intent: Intent, delta: float) -> void:
+	var p := profile
+	var lvl: float = Water.level_at(body.global_position)
+	if lvl == -INF:
+		_set_state(State.AIR)
+		return
+	var feet := _feet_y(body)
+	var depth := lvl - feet
+	var head_under := feet + p.head_height < lvl - 0.05
+	# breath
+	if head_under:
+		breath = maxf(0.0, breath - delta)
+		if breath <= 0.0:
+			_drown_t -= delta
+			if _drown_t <= 0.0:
+				_drown_t = 1.0
+				drowning.emit()
+	else:
+		breath = minf(p.breath_max, breath + p.breath_regen * delta)
+		_drown_t = 0.0
+	# standing depth again (walked up a bank / shallows): back to normal movement
+	if state == State.SWIM and depth < p.swim_exit_depth:
+		_set_state(State.GROUND if body.is_on_floor() else State.AIR)
+		return
+	# Space at the surface = hop out of the water (onto a bank, or just a splashy jump)
+	if state == State.SWIM and intent.jump_pressed:
+		body.velocity.y = p.jump_out_velocity
+		speed = maxf(speed, p.climb_out_push)
+		_swim_block = p.jump_out_grace
+		_set_state(State.AIR)
+		jumped.emit(false)
+		var h0 := dir_of(heading) * speed
+		body.velocity.x = h0.x
+		body.velocity.z = h0.z
+		body.move_and_slide()
+		return
+	# Ctrl = swim down (while you have air), Space = swim up, neither = float up slowly
+	if state == State.SWIM and intent.roll_held and breath > 1.0:
+		_set_state(State.DIVE)
+		body.velocity.y = -p.dive_speed
+	var top := lvl - p.float_depth
+	if state == State.DIVE:
+		if intent.roll_held and breath > 0.0:
+			body.velocity.y = move_toward(body.velocity.y, -p.dive_speed, 10.0 * delta)
+		elif intent.jump_held:
+			body.velocity.y = move_toward(body.velocity.y, p.swim_up_speed, 12.0 * delta)
+		else:
+			body.velocity.y = move_toward(body.velocity.y, p.buoyancy, 6.0 * delta)
+		if feet >= top - 0.05 and body.velocity.y > 0.0:
+			_set_state(State.SWIM)
+	else:
+		var bob := sin(Time.get_ticks_msec() * 0.003) * 0.06
+		body.velocity.y = clampf((top + bob - feet) * 5.0, -4.0, 3.0)
+	# horizontal: slow turning stroke
+	var max_speed := (p.dive_swim_speed if state == State.DIVE else p.swim_speed) * tilt
+	if intent.sprint and has_input:
+		max_speed = p.swim_dash_speed * tilt                # Shift: dash stroke
+	speed = move_toward(speed, max_speed if has_input else 0.0, p.swim_accel * (2.0 if intent.sprint else 1.0) * delta)
+	if has_input:
+		heading = rotate_toward(heading, target_yaw, deg_to_rad(p.swim_turn_rate_deg) * delta)
+	var horiz := dir_of(heading) * speed
+	body.velocity.x = horiz.x
+	body.velocity.z = horiz.z
+	body.move_and_slide()
+	var face_goal := intent.focus_yaw if intent.focus and state == State.SWIM else heading   # aim at the surface
+	facing = rotate_toward(facing, face_goal, deg_to_rad(p.swim_turn_rate_deg) * delta)
+	heading = wrapf(heading, -PI, PI)
+	facing = wrapf(facing, -PI, PI)
+	# climb out onto a low bank you're swimming into
+	if state == State.SWIM and has_input and body.is_on_wall():
+		var probe_top := lvl + p.climb_out_height + 0.4
+		var from := Vector3(body.global_position.x, probe_top, body.global_position.z) + dir_of(facing) * 0.9
+		var d := _ray_depth(body, from, p.climb_out_height + 1.5)
+		if d < INF:
+			var ledge_y := probe_top - d
+			if ledge_y > lvl - 0.3 and ledge_y - lvl < p.climb_out_height:
+				body.velocity.y = p.climb_out_up
+				speed = p.climb_out_push
+				heading = facing
+				_set_state(State.AIR)
+				jumped.emit(true)
 
 
 func _set_state(s: State) -> void:

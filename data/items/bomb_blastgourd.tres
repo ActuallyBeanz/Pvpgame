@@ -1,0 +1,23 @@
+[gd_resource type="Resource" format=3]
+
+[ext_resource type="Script" path="res://data/items/item_def.gd" id="1_item"]
+[ext_resource type="Resource" path="res://data/items/bomb_blastgourd_stats.tres" id="2_stats"]
+
+[resource]
+script = ExtResource("1_item")
+id = "bomb_blastgourd"
+display_name = "Blastgourd Bomb"
+model_id = "item.bomb.blastgourd"
+pickup_scale = 1.6
+stats = ExtResource("2_stats")
+ammo_item_id = "bomb_blastgourd"
+starting_ammo = 5
+max_carry = 20
+aim_anim = &"1H_Ranged_Aiming"
+shoot_anim = &"Throw"
+hand_position = Vector3(0, 0.12, 0)
+back_position = Vector3(0.15, 0.0, -0.3)
+material = "wood"
+element = "fire"
+action_tag = "bomb"
+category = "throwable"

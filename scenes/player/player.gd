@@ -113,6 +113,7 @@ func _simulate(delta: float) -> void:
 	it.jump_pressed = can_act and Input.is_action_just_pressed("jump")
 	it.jump_held = can_act and Input.is_action_pressed("jump")
 	it.roll_pressed = roll_pressed
+	it.roll_held = can_act and Input.is_action_pressed("roll")
 	it.camera_yaw = camera_rig.get_yaw()
 	it.sprint = can_act and Input.is_action_pressed("sprint") and not aiming
 	it.speed_mult = equipment.move_speed_mult()
@@ -256,3 +257,8 @@ func _build_model() -> void:
 		tag.text = display_name
 		tag.visible = not is_local()  # don't show your own name over your head
 		tag.reparent(self, false)     # keep the tag from spinning with the model
+
+
+## "head" or "body" for a hit at this world point (headshots, once players take damage).
+func hit_zone(p: Vector3) -> String:
+	return "head" if p.y - global_position.y >= 1.45 else "body"

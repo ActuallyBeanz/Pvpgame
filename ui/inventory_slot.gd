@@ -110,7 +110,7 @@ func refresh() -> void:
 		return
 	_icon.texture = icons.get_icon(id) if icons else null
 	_name.text = "" if _icon.texture else it.display_name
-	_count.text = str(int(equipment.ammo.get(id, 0))) if it.kind == "ammo" else ""
+	_count.text = str(int(equipment.ammo.get(id, 0))) if it.kind in ["ammo", "material"] or (it.kind == "weapon" and it.ammo_item_id == id) else ""
 	var cur_w: Resource = equipment.weapon()
 	var border := Color(1, 1, 1, 0.3)
 	var width := 2

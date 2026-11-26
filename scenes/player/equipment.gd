@@ -64,6 +64,8 @@ var _boom_aim: Node
 var _boom_aiming := false
 var melee: Node
 var hook: Node                              ## grapple tool logic (scenes/player/hook_tool.gd)
+var bomb: Node                              ## Blastgourd bombs (scenes/player/bomb_tool.gd)
+const BombTool := preload("res://scenes/player/bomb_tool.gd")
 var _shield_vis: Node3D
 
 
@@ -83,6 +85,10 @@ func _ready() -> void:
 	hook.name = "Hook"
 	add_child(hook)
 	hook.setup(self, _player)
+	bomb = BombTool.new()
+	bomb.name = "Bomb"
+	add_child(bomb)
+	bomb.setup(self, _player)
 
 
 func is_local() -> bool:
@@ -116,6 +122,12 @@ func move_speed_mult() -> float:
 	var s := stats()
 	var m: float = s.aim_move_speed_mult if is_aiming() and s and "aim_move_speed_mult" in s else 1.0
 	return m * melee.move_mult()
+
+
+## A two-handed weapon (greatsword, hammer) is out: the shield stays on your back.
+func two_handed_drawn() -> bool:
+	var s := stats()
+	return sync_drawn and s != null and "two_handed" in s and s.two_handed
 
 
 func shield_item() -> Resource:
@@ -153,6 +165,11 @@ func receive_item(item_id: String, amount: int) -> void:
 			_add_ammo(it.ammo_item_id, it.starting_ammo)  # duplicate weapon -> its ammo
 	elif it.kind == "ammo":
 		_add_ammo(item_id, amount)
+	elif it.kind == "material":
+		if not _store_bag_first(item_id):
+			print("[equipment] inventory full, can't carry %s" % item_id)
+			return
+		_add_ammo(item_id, maxi(amount, 1))   # stack count lives in `ammo` like arrows
 	elif it.kind == "shield":
 		if _store(item_id):
 			sync_shield_id = item_id
@@ -172,6 +189,17 @@ func _store(item_id: String) -> bool:
 	inventory[free] = item_id
 	_rebuild_weapons()
 	return true
+
+
+## Materials go to the bag first so they don't crowd weapons off the hotbar.
+func _store_bag_first(item_id: String) -> bool:
+	if inventory.has(item_id):
+		return true
+	for i in range(inventory_size, inventory.size()):
+		if inventory[i] == "":
+			inventory[i] = item_id
+			return true
+	return _store(item_id)
 
 
 ## Weapons on the hotbar, in slot order (cycle_weapon / ownership for equipping).
@@ -218,7 +246,72 @@ func move_item(from: int, to: int) -> bool:
 
 
 func _weapon_busy() -> bool:
-	return sync_thrown or (hook != null and hook.busy())
+	return sync_thrown or (hook != null and hook.busy()) or (bomb != null and bomb.busy())
+
+
+# ---------------------------------------------------------------- bare hands
+@export var punch_cooldown := 0.45
+@export var punch_reach := 1.1
+@export var punch_damage := 3.0
+@export var punches_per_wood := 2          ## punch a tree this many times for 1 Wood
+@export var wood_per_tree := 6
+var _punch_cd := 0.0
+
+
+func _update_punch(delta: float) -> void:
+	_punch_cd = maxf(0.0, _punch_cd - delta)
+	if not Input.is_action_just_pressed("attack") or _punch_cd > 0.0 or _player.motor.action_locked():
+		return
+	_punch_cd = punch_cooldown
+	if _model:
+		_model.play_action(&"Unarmed_Melee_Attack_Punch_A", 0.4)
+	rpc_punch_anim.rpc()
+	var fwd := -_player.model_root.global_basis.z
+	var centre := _player.global_position + Vector3.UP * 1.0 + fwd * punch_reach * 0.7
+	var shape := SphereShape3D.new()
+	shape.radius = 0.7
+	var q := PhysicsShapeQueryParameters3D.new()
+	q.shape = shape
+	q.transform = Transform3D(Basis(), centre)
+	q.collision_mask = 3
+	q.exclude = [_player.get_rid()]
+	for r in _player.get_world_3d().direct_space_state.intersect_shape(q, 8):
+		var col: Object = r.collider
+		if col == null or not (col is Node3D):
+			continue
+		var node := col as Node3D
+		if node.is_in_group("hook_targets") and str(node.get_meta("material", "")) == "wood":
+			_punch_tree(node, centre)
+			return
+		if col.has_method("react_to_hit_info") or col.has_method("react_to_hit") or WorldRules.reactive_of(col) != null:
+			WorldRules.deliver_hit(col, WorldRules.make_hit(punch_damage, "blunt", "", fwd), false)
+			Audio.play_at("target.hit", centre, -4.0, 1.3)
+			return
+	Audio.play_at("sword.swing", centre, -8.0, 1.6)
+
+
+## Trees: every few punches shake loose a piece of Wood (limited per tree). Per-tree counts
+## live on the tree node; wood goes straight into your bag.
+func _punch_tree(tree: Node3D, at: Vector3) -> void:
+	var left: int = int(tree.get_meta("wood_left", wood_per_tree))
+	var hits: int = int(tree.get_meta("punches", 0)) + 1
+	tree.set_meta("punches", hits)
+	Audio.play_at("wood.hit", at, 0.0, randf_range(0.9, 1.1))
+	FX.burst(at, get_tree().current_scene, Color(0.4, 0.62, 0.25), 6, 0.05, 2.5)
+	if tree.has_method("react_to_hit"):
+		tree.react_to_hit(1.0, -_player.model_root.global_basis.z, false)
+	if left <= 0:
+		return
+	if hits % punches_per_wood == 0:
+		tree.set_meta("wood_left", left - 1)
+		receive_item("wood", 1)
+		Audio.play("item.get", -4.0, 1.2)
+
+
+@rpc("authority", "call_remote", "unreliable")
+func rpc_punch_anim() -> void:
+	if _model:
+		_model.play_action(&"Unarmed_Melee_Attack_Punch_A", 0.4)
 
 
 ## Put the current weapon away completely (nothing in hand or on the back).
@@ -228,6 +321,8 @@ func _unequip() -> void:
 	_cancel_boomerang_aim()
 	if hook:
 		hook.cancel()
+	if bomb:
+		bomb.cancel()
 	sync_weapon_id = ""
 	sync_drawn = false
 	sync_aiming = false
@@ -301,16 +396,28 @@ func _local_update(delta: float) -> void:
 			var slot_item := ItemDB.get_item(inventory[i])
 			if slot_item and slot_item.kind == "weapon" and not _weapon_busy():
 				_equip(inventory[i])
+		elif sync_weapon_id != "" and not _weapon_busy():
+			_unequip()                # empty hotbar slot = bare hands (punch)
+			changed.emit()
 	if Input.is_action_just_pressed("cycle_weapon") and weapons.size() > 1 and not _weapon_busy():
 		_equip(weapons[(weapons.find(sync_weapon_id) + 1) % weapons.size()])
 	if not GameConfig.combat_input_enabled():
 		_stop_combat_input()
 		return
+	if _player.motor.underwater():
+		# under the surface: weapon away, lit arrow doused (at the surface you can still fight)
+		_stop_combat_input()
+		if sync_drawn and not _weapon_busy():
+			_set_drawn(false)
+		if sync_arrow_element != "":
+			_extinguish_nock()
+		return
 	melee.update(delta)
 	var w := weapon()
 	if w == null:
+		_update_punch(delta)          # bare hands: punch (trees give wood)
 		return
-	if Input.is_action_just_pressed("toggle_weapon") and not melee.busy() and not hook.busy():
+	if Input.is_action_just_pressed("toggle_weapon") and not melee.busy() and not hook.busy() and not bomb.busy():
 		_release(false)
 		_set_drawn(not sync_drawn)
 	if Input.is_action_just_pressed("attack") and not sync_drawn and (not sync_blocking or melee.focus_guard):
@@ -325,6 +432,8 @@ func _local_update(delta: float) -> void:
 			_update_boomerang()
 		"hook":
 			hook.update(delta)
+		"bomb":
+			bomb.update(delta)
 
 
 ## Paused / inventory open: let go of everything that's held (draw, aim, charge, block).
@@ -334,6 +443,8 @@ func _stop_combat_input() -> void:
 	melee.cancel()
 	if hook:
 		hook.stop_aim()
+	if bomb:
+		bomb.cancel()
 	sync_aiming = false
 	sync_blocking = false
 	_player.camera_rig.set_aim(false)
@@ -441,7 +552,7 @@ func _update_nock(delta: float) -> void:
 		_nock_vis = Node3D.new()
 		_nock_vis.name = "NockedArrow"
 		_nock_vis.top_level = true
-		_nock_vis.add_child(AssetRegistry.instantiate("weapon.arrow.basic"))
+		_nock_vis.add_child(AssetRegistry.instantiate(_ammo_model_id()))
 		add_child(_nock_vis)
 	var hand := _hand_origin()
 	var dir: Vector3
@@ -513,10 +624,21 @@ func rpc_fire(origin: Vector3, vel: Vector3, element: String) -> void:
 
 func _spawn_arrow(origin: Vector3, vel: Vector3, dmg: float, cosmetic: bool, element := "") -> void:
 	var arrow := ArrowScene.instantiate()
+	arrow.model_id = _ammo_model_id()
+	var ammo_it: Resource = ItemDB.get_item(weapon().ammo_item_id) if weapon() else null
+	if ammo_it and ammo_it.material == "stone":
+		arrow.hit_action = "blunt"
 	arrow.cosmetic = cosmetic
 	arrow.element = element
 	_projectiles_root().add_child(arrow)
 	arrow.launch(origin, vel, stats(), dmg, _player.get_rid())
+
+
+## What the current weapon shoots (arrow, slingstone...): the ammo item's model.
+func _ammo_model_id() -> String:
+	var w := weapon()
+	var a: Resource = ItemDB.get_item(w.ammo_item_id) if w and w.ammo_item_id != "" else null
+	return a.model_id if a and a.model_id != "" else "weapon.arrow.basic"
 
 
 func _apply_spread(dir: Vector3, deg: float) -> Vector3:
@@ -648,7 +770,7 @@ func _find_model() -> void:
 func _refresh_visuals() -> void:
 	if _model == null:
 		return
-	var shield_in_hand := sync_blocking or (sync_drawn and weapon_type() == "slash")
+	var shield_in_hand := sync_blocking or (sync_drawn and weapon_type() == "slash" and not two_handed_drawn())
 	var state := "%s|%s|%s|%s|%s" % [sync_weapon_id, sync_drawn, sync_thrown, sync_shield_id, shield_in_hand]
 	if state == _applied or (_swap_timer >= 0.0 and not sync_blocking):
 		return

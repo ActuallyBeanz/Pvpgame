@@ -26,6 +26,8 @@ var profile_path := "user://profile.cfg"
 var _last_message := ""
 var _loaded_peers: Dictionary = {}
 var _all_loaded_sent := false
+var match_seed := 0                        ## host rolls it each match: loot / chest spots + contents
+var match_scene := ""                      ## host picks the map (blank = GameSettings.match_scene)
 
 
 func _ready() -> void:
@@ -105,7 +107,7 @@ func can_start() -> bool:
 
 func start_match() -> void:
 	if can_start():
-		rpc_start_match.rpc()
+		rpc_start_match.rpc(match_scene if match_scene != "" else GameConfig.settings.match_scene, randi())
 
 
 ## Every peer calls this once its match scene is ready (spawners exist).
@@ -158,12 +160,13 @@ func rpc_sync_roster(roster: Dictionary) -> void:
 
 
 @rpc("authority", "call_local", "reliable")
-func rpc_start_match() -> void:
+func rpc_start_match(scene_path: String = "", seed_value: int = 0) -> void:
 	state = State.IN_MATCH
+	match_seed = seed_value
 	_loaded_peers.clear()
 	_all_loaded_sent = false
 	match_started.emit()
-	get_tree().change_scene_to_file(GameConfig.settings.match_scene)
+	get_tree().change_scene_to_file(scene_path if scene_path != "" else GameConfig.settings.match_scene)
 
 
 # --- Internals ---------------------------------------------------------------------

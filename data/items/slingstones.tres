@@ -1,0 +1,17 @@
+[gd_resource type="Resource" format=3]
+
+[ext_resource type="Script" path="res://data/items/item_def.gd" id="1_item"]
+
+[resource]
+script = ExtResource("1_item")
+id = "slingstones"
+display_name = "Slingstones"
+kind = "ammo"
+model_id = "weapon.slingstone"
+pickup_model_id = "pickup.slingstones"
+pickup_scale = 1.8
+amount = 5
+max_carry = 30
+action_tag = "ammo"
+material = "stone"
+icon_model_id = "pickup.slingstones"

@@ -1,0 +1,20 @@
+[gd_resource type="Resource" format=3]
+
+[ext_resource type="Script" path="res://data/items/item_def.gd" id="1_item"]
+
+[resource]
+script = ExtResource("1_item")
+id = "staff_sandspire"
+display_name = "Sandspire Staff"
+model_id = "tool.staff.sandspire"
+aim_anim = &"1H_Ranged_Aiming"
+shoot_anim = &"Spellcast_Shoot"
+hand_position = Vector3(0, 0.033, 0)
+hand_rotation_deg = Vector3(0, 180, 0)
+back_position = Vector3(0.05, 0.45, -0.42)
+back_rotation_deg = Vector3(0, 0, 150)
+icon_roll_deg = -45.0
+material = "wood"
+action_tag = "tool"
+element = "sand"
+category = "tool"

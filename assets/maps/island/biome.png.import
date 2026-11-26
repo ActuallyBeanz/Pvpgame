@@ -1,0 +1,14 @@
+[remap]
+
+importer="image"
+type="Image"
+uid="uid://dah04qetduord"
+path="res://.godot/imported/biome.png-3cd60c0105d2ea7bd7565c97f5c4670d.image"
+
+[deps]
+
+source_file="res://assets/maps/island/biome.png"
+dest_files=["res://.godot/imported/biome.png-3cd60c0105d2ea7bd7565c97f5c4670d.image"]
+
+[params]
+

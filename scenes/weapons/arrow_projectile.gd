@@ -17,6 +17,8 @@ var stick_time := 12.0
 var damage := 0.0
 var shooter_rid := RID()
 var cosmetic := false                      ## remote copies: visuals only, no damage
+var headshot_mult := 1.0                   ## from the bow / slingshot stats
+var hit_action := "pierce"                 ## "blunt" for slingstones (shatters ice, no sticking-in look needed)
 var element := ""                          ## "fire" etc. Set by special ammo, or by flying through a fire zone
 
 var _age := 0.0
@@ -58,6 +60,7 @@ func launch(from: Vector3, vel: Vector3, stats: Resource, dmg: float, shooter: R
 	drag = stats.drag
 	lifetime = stats.lifetime
 	stick_time = stats.stick_time
+	headshot_mult = stats.headshot_mult if "headshot_mult" in stats else 1.0
 	damage = dmg
 	shooter_rid = shooter
 	_face(velocity)
@@ -83,6 +86,12 @@ func _physics_process(delta: float) -> void:
 	var res := get_world_3d().direct_space_state.intersect_ray(q)
 	if element != "fire" and WorldRules.rules.arrows_light_in_flight and WorldRules.fire_zone_on_segment(get_world_3d(), from, to if res.is_empty() else res.position):
 		set_element("fire")
+	if element == "fire" and Water.depth_at(to) > 0.0:
+		element = ""                               # doused flying into water
+		if _flames:
+			_flames.queue_free()
+			_flames = null
+		FX.smoke_puff(to, get_tree().current_scene, 0.4)
 	if res.is_empty():
 		global_position = to
 		_face(velocity)
@@ -111,7 +120,15 @@ func _stick(res: Dictionary) -> void:
 			queue_free()
 			return
 		r.destroyed.connect(queue_free, CONNECT_ONE_SHOT)
-	var hit_info := WorldRules.make_hit(maxf(damage, 8.0), "pierce", element, dir)
+	# head / body: targets that know where their head is (dummies, players) say which was hit
+	var zone := "body"
+	if col and col.has_method("hit_zone"):
+		zone = str(col.hit_zone(res.position))
+	var dmg := maxf(damage, 8.0) * (headshot_mult if zone == "head" else 1.0)
+	var hit_info := WorldRules.make_hit(dmg, hit_action, element, dir)
+	hit_info["zone"] = zone
+	if zone == "head" and not cosmetic:
+		_headshot_popup(res.position)
 	if not WorldRules.deliver_hit(col, hit_info, cosmetic):
 		Audio.play_at("arrow.hit", res.position)
 	if r and r.dead:
@@ -124,6 +141,25 @@ func _stick(res: Dictionary) -> void:
 		hit.emit(col, res.position, damage)
 		print("[arrow] hit %s at %.1fm from origin, dmg %.0f" % [
 			(col as Node).name if col is Node else "?", res.position.length(), damage])
+
+
+func _headshot_popup(at: Vector3) -> void:
+	var l := Label3D.new()
+	l.text = "HEADSHOT!"
+	l.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	l.no_depth_test = true
+	l.font_size = 48
+	l.outline_size = 10
+	l.pixel_size = 0.004
+	l.modulate = Color(1.0, 0.85, 0.2)
+	get_tree().current_scene.add_child(l)
+	l.global_position = at + Vector3.UP * 0.4
+	var tw := l.create_tween()
+	tw.tween_property(l, "global_position", l.global_position + Vector3.UP * 0.8, 0.7)
+	tw.parallel().tween_property(l, "modulate:a", 0.0, 0.7)
+	tw.tween_callback(l.queue_free)
+	Audio.play("target.hit", 4.0, 1.5)
+	print("[arrow] HEADSHOT x%.1f" % headshot_mult)
 
 
 ## Bounced off a raised shield: tumble away, can't hurt anyone any more.

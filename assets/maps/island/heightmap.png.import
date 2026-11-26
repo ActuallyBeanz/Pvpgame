@@ -1,0 +1,14 @@
+[remap]
+
+importer="image"
+type="Image"
+uid="uid://bgqeu6upwq7v5"
+path="res://.godot/imported/heightmap.png-48f6bb8152368ad4a867f91f3728146b.image"
+
+[deps]
+
+source_file="res://assets/maps/island/heightmap.png"
+dest_files=["res://.godot/imported/heightmap.png-48f6bb8152368ad4a867f91f3728146b.image"]
+
+[params]
+

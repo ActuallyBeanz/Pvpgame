@@ -43,7 +43,7 @@ const PickupScene := preload("res://scenes/items/pickup.tscn")
 	{ "id": "shield_gildcrest", "pos": Vector3(5.0, 0, 3.5) },
 	{ "id": "grappleclaw", "pos": Vector3(-7.5, 0, 3.5) },
 	{ "id": "skytether", "pos": Vector3(-10.0, 0, 3.5) },
-]
+	]
 
 @export_group("Targets")
 @export var target_id := "prop.target.archery"
@@ -237,8 +237,17 @@ func _place_pickups() -> void:
 	var root := Node3D.new()
 	root.name = "Pickups"
 	add_child(root)
-	for i in item_stands.size():
-		var st: Dictionary = item_stands[i]
+	var stands := item_stands.duplicate()
+	var listed := {}
+	for st in stands:
+		listed[str(st.id)] = true
+	var extra := 0
+	for id in ItemDB.all_ids():                  # anything not placed by hand gets a stand too
+		if not listed.has(str(id)):
+			stands.append({ "id": str(id), "pos": Vector3(-12.5 + (extra % 10) * 2.5, 0, -2.0 - int(extra / 10) * 2.5) })
+			extra += 1
+	for i in stands.size():
+		var st: Dictionary = stands[i]
 		if not ItemDB.has_item(str(st.id)):
 			continue
 		var pu := PickupScene.instantiate()
