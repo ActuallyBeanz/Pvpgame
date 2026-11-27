@@ -44,6 +44,7 @@ extends Resource
 
 @export_group("Tags")
 @export var element := ""
+@export var heal := 0.0                     ## food: right-click > Eat restores this much health
 @export var category := ""                 ## reagent / food / ore / throwable / trap / tool (crafting + loot tables)
 @export var material := "wood"
 @export var action_tag := "shoot"

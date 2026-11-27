@@ -296,7 +296,13 @@ func _do_hits() -> void:
 	q.exclude = [_player.get_rid()]
 	for r in _player.get_world_3d().direct_space_state.intersect_shape(q, 32):
 		var col: Object = r.collider
-		if col == null or _hit_ids.has(col.get_instance_id()) or not _reacts(col):
+		if col == null or _hit_ids.has(col.get_instance_id()):
+			continue
+		if col is Node and (col as Node).is_in_group("harvest_rock"):
+			_hit_ids[col.get_instance_id()] = true
+			_eq.harvest_rock(col, (col as Node3D).global_position + Vector3.UP * 0.6)   # blades chip stone off boulders
+			continue
+		if not _reacts(col):
 			continue
 		var to: Vector3 = (col as Node3D).global_position - centre
 		to.y = 0.0
@@ -309,7 +315,7 @@ func _do_hits() -> void:
 			_recoil()
 			return
 		var action := "blunt" if _kind == Kind.BASH else _action
-		var hit_info := WorldRules.make_hit(_dmg, action, "", dir)
+		var hit_info := WorldRules.make_hit(_dmg, action, _eq.weapon_element(), dir)
 		var ss := sword_stats()
 		if ss and ss.style == "hammer" and _kind != Kind.BASH:
 			hit_info["smash"] = true                 # Megaton-style: smashes cracked walls

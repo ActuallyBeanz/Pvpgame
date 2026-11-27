@@ -33,9 +33,19 @@
 [ext_resource type="Resource" path="res://data/items/ironvein_ore.tres" id="i21_ironvein_ore"]
 [ext_resource type="Resource" path="res://data/items/starsilver_ore.tres" id="i22_starsilver_ore"]
 [ext_resource type="Resource" path="res://data/items/wood.tres" id="i23_wood"]
+[ext_resource type="Resource" path="res://data/items/stone.tres" id="j0_stone"]
+[ext_resource type="Resource" path="res://data/items/flint.tres" id="j1_flint"]
+[ext_resource type="Resource" path="res://data/items/flint_knife.tres" id="j2_flint_knife"]
+[ext_resource type="Resource" path="res://data/items/driftwood_club.tres" id="j3_driftwood_club"]
+[ext_resource type="Resource" path="res://data/items/twig_bow.tres" id="j4_twig_bow"]
 [resource]
 script = ExtResource("3_f3wow")
 items = Dictionary[String, Resource]({
+"stone": ExtResource("j0_stone"),
+"flint": ExtResource("j1_flint"),
+"flint_knife": ExtResource("j2_flint_knife"),
+"driftwood_club": ExtResource("j3_driftwood_club"),
+"twig_bow": ExtResource("j4_twig_bow"),
 "wood": ExtResource("i23_wood"),
 "greatsword_emberfang": ExtResource("i0_greatsword_emberfang"),
 "maul_quakeheart": ExtResource("i1_maul_quakeheart"),

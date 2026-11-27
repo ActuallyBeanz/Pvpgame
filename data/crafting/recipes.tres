@@ -1,0 +1,21 @@
+[gd_resource type="Resource" format=3]
+
+[ext_resource type="Script" path="res://data/crafting/recipe_book.gd" id="1_book"]
+
+[resource]
+script = ExtResource("1_book")
+recipes = Array[Dictionary]([
+{ "a": "flint", "b": "stone", "a_count": 1, "b_count": 1, "result": "flint_knife", "result_count": 1 },
+{ "a": "wood", "b": "stone", "a_count": 1, "b_count": 1, "result": "driftwood_club", "result_count": 1 },
+{ "a": "wood", "b": "stoutroot", "a_count": 2, "b_count": 1, "result": "twig_bow", "result_count": 1 },
+{ "a": "wood", "b": "flint", "a_count": 1, "b_count": 1, "result": "arrows", "result_count": 5 },
+{ "a": "stone", "b": "", "a_count": 1, "b_count": 0, "result": "slingstones", "result_count": 4 },
+{ "a": "wood", "b": "smolderpuff", "a_count": 1, "b_count": 1, "result": "bomb_blastgourd", "result_count": 1 },
+{ "a": "cinderpepper", "b": "@bow", "a_count": 1, "b_count": 0, "infuse": { "element": "fire", "charges": 5, "time": 0.0 } },
+{ "a": "cinderpepper", "b": "@melee", "a_count": 1, "b_count": 0, "infuse": { "element": "fire", "charges": 0, "time": 30.0 } },
+{ "a": "cinderpepper", "b": "@shield", "a_count": 1, "b_count": 0, "infuse": { "element": "fire", "charges": 0, "time": 45.0 } },
+{ "a": "frostcap", "b": "@bow", "a_count": 1, "b_count": 0, "infuse": { "element": "frost", "charges": 5, "time": 0.0 } },
+{ "a": "frostcap", "b": "@melee", "a_count": 1, "b_count": 0, "infuse": { "element": "frost", "charges": 0, "time": 30.0 } },
+{ "a": "sparkthistle", "b": "@bow", "a_count": 1, "b_count": 0, "infuse": { "element": "shock", "charges": 5, "time": 0.0 } },
+{ "a": "sparkthistle", "b": "@melee", "a_count": 1, "b_count": 0, "infuse": { "element": "shock", "charges": 0, "time": 30.0 } }
+])

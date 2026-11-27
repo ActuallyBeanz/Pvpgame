@@ -25,6 +25,9 @@ var _icon: TextureRect
 var _name: Label
 var _count: Label
 var _hover := false
+var _craft_hint := ""                      ## while something is dragged over me: what dropping makes
+var _hint_label: Label
+const CRAFT := Color(0.45, 1.0, 0.55)
 
 
 func setup(slot_index: int, size_px: int, key_text: String, icon_source: Node) -> void:
@@ -64,6 +67,11 @@ func setup(slot_index: int, size_px: int, key_text: String, icon_source: Node) -
 	_count.offset_right = -5
 	_count.offset_bottom = -2
 	_count.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	_hint_label = _label(12, CRAFT)
+	_hint_label.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
+	_hint_label.position.y = -20
+	_hint_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_hint_label.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	mouse_entered.connect(func() -> void: _set_hover(true))
 	mouse_exited.connect(func() -> void: _set_hover(false))
 
@@ -128,6 +136,12 @@ func refresh() -> void:
 	if _hover:
 		border = border.lerp(HOVER, 0.6)
 		width = maxi(width, 3)
+	if not _hover or not get_viewport().gui_is_dragging():
+		_craft_hint = ""
+	if _craft_hint != "":
+		border = CRAFT
+		width = 4
+	_hint_label.text = ("-> " + _craft_hint) if _craft_hint != "" else ""
 	_style.border_color = border
 	_style.set_border_width_all(width)
 	_style.bg_color = FILLED_BG.lightened(0.12) if width >= 4 or _hover else FILLED_BG
@@ -143,7 +157,7 @@ func _dragging_me() -> bool:
 
 
 # ---------------------------------------------------------------- right-click menu
-enum Act { EQUIP, UNEQUIP, TO_HOTBAR, SPLIT_HALF, SPLIT_ONE, DROP_ONE, DROP_ALL, SPLIT_CHOOSE }
+enum Act { EQUIP, UNEQUIP, TO_HOTBAR, SPLIT_HALF, SPLIT_ONE, DROP_ONE, DROP_ALL, SPLIT_CHOOSE, EAT, CRAFT_BASE = 100 }
 var _menu: PopupMenu
 
 
@@ -176,6 +190,11 @@ func _open_menu() -> void:
 				_menu.add_item("Equip", Act.EQUIP)
 		else:
 			_menu.add_item("Move to hotbar", Act.TO_HOTBAR)
+	if it.heal > 0.0:
+		_menu.add_item("Eat (+%d)" % roundi(it.heal), Act.EAT)
+	var singles: Array = equipment.single_recipes(id)
+	for k in singles.size():
+		_menu.add_item("Make %s" % equipment.recipe_label(singles[k]), Act.CRAFT_BASE + k)
 	if stack and n > 1:
 		_menu.add_item("Split...", Act.SPLIT_CHOOSE)
 		_menu.add_item("Split in half (%d)" % (n / 2), Act.SPLIT_HALF)
@@ -208,6 +227,13 @@ func _on_menu(act: int) -> void:
 		Act.SPLIT_CHOOSE:
 			_open_split_picker()
 			return
+		Act.EAT:
+			ok = equipment.eat(slot)
+		_:
+			if act >= Act.CRAFT_BASE:
+				var singles: Array = equipment.single_recipes(id)
+				var k := act - Act.CRAFT_BASE
+				ok = k < singles.size() and equipment.craft_single(singles[k])
 		Act.DROP_ONE:
 			ok = equipment.drop_item(slot, 1)
 		Act.DROP_ALL:
@@ -296,9 +322,22 @@ func _get_drag_data(_at: Vector2) -> Variant:
 
 
 func _can_drop_data(_at: Vector2, data: Variant) -> bool:
-	return GameConfig.inventory_open and data is Dictionary and data.has("inv_slot")
+	var ok: bool = GameConfig.inventory_open and data is Dictionary and data.has("inv_slot")
+	_craft_hint = ""
+	if ok and is_instance_valid(equipment) and int(data.inv_slot) != slot:
+		var from: int = int(data.inv_slot)
+		var r: Dictionary = equipment.find_recipe(equipment.inventory[from], item_id())
+		if not r.is_empty():
+			_craft_hint = equipment.recipe_label(r)   # glow green + show what it makes
+	return ok
 
 
+## Drop: a recipe crafts; otherwise move / swap / merge like before.
 func _drop_data(_at: Vector2, data: Variant) -> void:
-	if is_instance_valid(equipment):
-		Audio.play("ui.hover" if equipment.move_item(int(data.inv_slot), slot) else "ui.error")
+	if not is_instance_valid(equipment):
+		return
+	var from := int(data.inv_slot)
+	_craft_hint = ""
+	if equipment.try_craft(from, slot):
+		return
+	Audio.play("ui.hover" if equipment.move_item(from, slot) else "ui.error")

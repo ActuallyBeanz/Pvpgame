@@ -840,13 +840,13 @@ var cover_sets := {
 }
 ## Herbs / food / ore growing in the world (natural pickups): biome -> [item, per 1000 m²]
 var forage_sets := {
-	"forest": [["muddlemoss", 0.5], ["smolderpuff", 0.4], ["lumenbell", 0.4], ["amberdrip_comb", 0.25], ["hearthapple", 0.3]],
-	"grass": [["glarepetal", 0.35], ["sparkthistle", 0.3], ["stoutroot", 0.35], ["hearthapple", 0.25], ["coppergleam_ore", 0.15]],
-	"snow": [["frostcap", 0.9], ["ironvein_ore", 0.3], ["starsilver_ore", 0.05]],
-	"ash": [["cinderpepper", 0.9], ["coppergleam_ore", 0.3], ["starsilver_ore", 0.08]],
-	"sand": [["sparkthistle", 0.3], ["ironvein_ore", 0.25], ["cinderpepper", 0.2]],
-	"mesa": [["coppergleam_ore", 0.4], ["ironvein_ore", 0.3]],
-	"beach": [["dewbloom", 0.3]],
+	"forest": [["stone", 0.6], ["flint", 0.3], ["muddlemoss", 0.5], ["smolderpuff", 0.4], ["lumenbell", 0.4], ["amberdrip_comb", 0.25], ["hearthapple", 0.3]],
+	"grass": [["stone", 0.7], ["flint", 0.35], ["glarepetal", 0.35], ["sparkthistle", 0.3], ["stoutroot", 0.35], ["hearthapple", 0.25], ["coppergleam_ore", 0.15]],
+	"snow": [["stone", 0.5], ["flint", 0.3], ["frostcap", 0.9], ["ironvein_ore", 0.3], ["starsilver_ore", 0.05]],
+	"ash": [["stone", 0.5], ["flint", 0.5], ["cinderpepper", 0.9], ["coppergleam_ore", 0.3], ["starsilver_ore", 0.08]],
+	"sand": [["stone", 0.5], ["flint", 0.25], ["sparkthistle", 0.3], ["ironvein_ore", 0.25], ["cinderpepper", 0.2]],
+	"mesa": [["stone", 0.6], ["coppergleam_ore", 0.4], ["ironvein_ore", 0.3]],
+	"beach": [["stone", 0.4], ["dewbloom", 0.3]],
 }
 @export var cover_view_distance := 90.0          ## grass / flowers fade out past this (performance)
 @export var cover_chunk := 64.0
@@ -943,6 +943,7 @@ func _make_rock(id: String, nm: String) -> Node3D:
 	var body := StaticBody3D.new()
 	body.name = nm
 	body.set_meta("material", "stone")
+	body.add_to_group("harvest_rock")            # hit it for Stone (and sometimes Flint)
 	var model := ps.instantiate()
 	model.name = "Model"
 	body.add_child(model)
@@ -1257,6 +1258,21 @@ func _place_loot() -> void:
 		if _dry_flat(p, 30.0):
 			_spawn_chest(root, "common", p, rng, n)
 			n += 1
+	# starter materials next to every spawn (stone + flint to make a first weapon)
+	var starter := 0
+	for sp in spawn_points:
+		for item_id in ["stone", "stone", "flint"]:
+			var a := rng.randf() * TAU
+			var p := Vector2(sp.x, sp.z) + Vector2(cos(a), sin(a)) * rng.randf_range(3.0, 8.0)
+			if not _dry_flat(p, 35.0):
+				continue
+			var pu := PickupScene.instantiate()
+			pu.name = "Starter_%d" % starter
+			pu.item_id = item_id
+			pu.natural = true
+			pu.position = Vector3(p.x, ground(p.x, p.y) - 0.03, p.y)
+			root.add_child(pu)
+			starter += 1
 	# loose items anywhere
 	var loose := 0
 	for k in loose_items:

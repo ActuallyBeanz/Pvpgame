@@ -1,0 +1,22 @@
+[gd_resource type="Resource" format=3]
+
+[ext_resource type="Script" path="res://data/items/item_def.gd" id="1_item"]
+[ext_resource type="Resource" path="res://data/items/twig_bow_stats.tres" id="2_stats"]
+
+[resource]
+script = ExtResource("1_item")
+id = "twig_bow"
+display_name = "Twig Bow"
+model_id = "weapon.bow.twig"
+ammo_item_id = "arrows"
+starting_ammo = 3
+hand_position = Vector3(0, 0.05, 0)
+hand_rotation_deg = Vector3(0, -90, 0)
+back_position = Vector3(-0.05, 0.3, -0.48)
+back_rotation_deg = Vector3(0, 90, 35)
+icon_rotation_deg = Vector3(0, 90, 0)
+icon_roll_deg = -45.0
+material = "wood"
+action_tag = "shoot"
+category = "ranged"
+stats = ExtResource("2_stats")

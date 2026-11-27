@@ -78,6 +78,8 @@ func _apply_hit(damage: float, dir: Vector3, element: String, by_peer: int) -> v
 	if by_peer != multiplayer.get_unique_id():
 		_last_attacker = attacker
 	take_damage(damage, dir, "fire" if element == "fire" else "hit", attacker)
+	if element == "shock":
+		hitstun = maxf(hitstun, 0.8)                 # zapped: stunned a little longer
 	if element == "frost":
 		slow_left = maxf(slow_left, 2.5)
 		FX.burst(_player.global_position + Vector3.UP, get_tree().current_scene, Color(0.75, 0.95, 1.0), 10, 0.06, 2.5)
@@ -87,6 +89,8 @@ func _apply_hit(damage: float, dir: Vector3, element: String, by_peer: int) -> v
 func take_damage(amount: float, dir: Vector3, kind: String, source: String) -> void:
 	if dead or amount <= 0.0 or not _player.is_local():
 		return
+	if (kind == "fire" or kind == "lava") and _player.equipment.shield_resists("fire"):
+		amount *= 0.25                                # Cinderpepper on the shield
 	health = maxf(0.0, health - amount)
 	_player.sync_health = health
 	damaged.emit(amount, kind)
@@ -102,6 +106,15 @@ func take_damage(amount: float, dir: Vector3, kind: String, source: String) -> v
 	print("[health] -%.0f (%s) -> %.0f/%.0f" % [amount, kind, health, max_health])
 	if health <= 0.0:
 		_die(source if source != "" else (_last_attacker if kind != "fall" else "the fall"))
+
+
+## Owner: food etc.
+func heal(amount: float) -> void:
+	if dead or not _player.is_local():
+		return
+	health = minf(max_health, health + amount)
+	_player.sync_health = health
+	FX.burst(_player.global_position + Vector3.UP * 1.2, get_tree().current_scene, Color(0.5, 1.0, 0.55), 10, 0.05, 2.0)
 
 
 ## Owner: held in place (trap).

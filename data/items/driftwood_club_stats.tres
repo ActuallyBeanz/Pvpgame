@@ -1,0 +1,19 @@
+[gd_resource type="Resource" format=3]
+
+[ext_resource type="Script" path="res://data/items/sword_stats.gd" id="1_sstat"]
+
+[resource]
+script = ExtResource("1_sstat")
+combo_anims = Array[StringName]([&"1H_Melee_Attack_Chop", &"1H_Melee_Attack_Slice_Horizontal"])
+combo_damage = PackedFloat32Array(9, 11)
+combo_duration = PackedFloat32Array(0.5, 0.5)
+reach = 2.1
+arc_deg = 120.0
+slash_action = "blunt"
+stab_action = "blunt"
+stab_damage = 10.0
+spin_damage = 16.0
+spin_radius = 2.6
+jump_damage = 18.0
+trail_color = Color(0.85, 0.75, 0.55, 0.6)
+blade_length = 0.82

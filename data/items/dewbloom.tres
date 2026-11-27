@@ -15,3 +15,4 @@ action_tag = "material"
 element = "water"
 material = "plant"
 category = "reagent"
+heal = 8.0

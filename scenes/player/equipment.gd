@@ -185,6 +185,211 @@ func receive_item(item_id: String, amount: int) -> void:
 	changed.emit()
 
 
+# ---------------------------------------------------------------- crafting
+const RECIPES := preload("res://data/crafting/recipes.tres")
+var infusions: Dictionary = {}              ## item id -> { element, charges, until (sec) } (owner)
+var sync_infusion := ""                     ## element on the weapon in hand (every peer: glow)
+var _infuse_vis: Node3D
+var _infuse_vis_for := ""
+
+
+func _group_match(token: String, item_id: String) -> bool:
+	var it := ItemDB.get_item(item_id)
+	if it == null:
+		return false
+	match token:
+		"@bow":
+			return it.kind == "weapon" and it.action_tag == "shoot"
+		"@melee":
+			return it.kind == "weapon" and it.action_tag == "slash"
+		"@shield":
+			return it.kind == "shield"
+	return token == item_id
+
+
+## Recipe for dropping `a` onto `b` (either order). {} = none. Adds "_a_is" / "_b_is" = item ids.
+func find_recipe(a_id: String, b_id: String) -> Dictionary:
+	if a_id == "" or b_id == "":
+		return {}
+	for r in RECIPES.recipes:
+		var ra: String = r.get("a", "")
+		var rb: String = r.get("b", "")
+		if rb == "":
+			continue
+		if _group_match(ra, a_id) and _group_match(rb, b_id):
+			return r.merged({ "_a_is": a_id, "_b_is": b_id })
+		if _group_match(ra, b_id) and _group_match(rb, a_id):
+			return r.merged({ "_a_is": b_id, "_b_is": a_id })
+	return {}
+
+
+## One-item recipes for this item (right-click menu).
+func single_recipes(item_id: String) -> Array:
+	var out := []
+	for r in RECIPES.recipes:
+		if str(r.get("b", "")) == "" and str(r.get("a", "")) == item_id:
+			out.append(r)
+	return out
+
+
+func recipe_label(r: Dictionary) -> String:
+	if r.has("infuse"):
+		var inf: Dictionary = r.infuse
+		var tgt := ItemDB.get_item(str(r.get("_b_is", "")))
+		return "%s %s" % [str(inf.element).capitalize(), tgt.display_name if tgt else ""]
+	var res := ItemDB.get_item(str(r.get("result", "")))
+	var n := int(r.get("result_count", 1))
+	return ("%s x%d" % [res.display_name, n]) if res and n > 1 else (res.display_name if res else "?")
+
+
+func _count_of(item_id: String) -> int:
+	return int(ammo.get(item_id, 0)) if is_stackable(item_id) else (1 if inventory.has(item_id) else 0)
+
+
+func _take(item_id: String, n: int) -> void:
+	if n <= 0:
+		return
+	if is_stackable(item_id):
+		consume(item_id, n)
+	else:
+		var i := inventory.find(item_id)
+		if i >= 0:
+			if item_id == sync_weapon_id:
+				_unequip()
+			inventory[i] = ""
+			slot_counts[i] = 0
+			_rebuild_weapons()
+
+
+## Drag slot `from` onto slot `to`: craft if the pair is a recipe. Owner only.
+func try_craft(from: int, to: int) -> bool:
+	if from == to or from < 0 or to < 0 or from >= inventory.size() or to >= inventory.size():
+		return false
+	var r := find_recipe(inventory[from], inventory[to])
+	if r.is_empty():
+		return false
+	return _do_recipe(r)
+
+
+func craft_single(r: Dictionary) -> bool:
+	return _do_recipe(r.merged({ "_a_is": str(r.a), "_b_is": "" }))
+
+
+func _do_recipe(r: Dictionary) -> bool:
+	var a: String = r.get("_a_is", "")
+	var b: String = r.get("_b_is", "")
+	var an := int(r.get("a_count", 1))
+	var bn := int(r.get("b_count", 0)) if not str(r.get("b", "")).begins_with("@") else 0
+	if _count_of(a) < an or (b != "" and bn > 0 and _count_of(b) < bn) or (a == b and _count_of(a) < an + bn):
+		Audio.play("ui.error")
+		return false
+	if r.has("infuse"):
+		var inf: Dictionary = r.infuse
+		_take(a, an)
+		infuse(b, str(inf.element), int(inf.get("charges", 0)), float(inf.get("time", 0.0)))
+	else:
+		_take(a, an)
+		if b != "":
+			_take(b, bn)
+		# stackables (ammo, materials, bombs) come in result_count; crafted gear gets no starting-ammo bonus
+		receive_item(str(r.result), int(r.get("result_count", 1)) if is_stackable(str(r.result)) else -1)
+	_sync_totals()
+	changed.emit()
+	Audio.play("item.get", 0.0, 1.1)
+	print("[craft] %s" % recipe_label(r))
+	return true
+
+
+## Put an element on a weapon / shield: `charges` shots (bows) or `time` seconds.
+func infuse(item_id: String, element: String, charges: int, time: float) -> void:
+	infusions[item_id] = { "element": element, "charges": charges,
+		"until": Time.get_ticks_msec() / 1000.0 + time if time > 0.0 else 0.0 }
+
+
+func _infusion(item_id: String) -> Dictionary:
+	var inf: Dictionary = infusions.get(item_id, {})
+	if inf.is_empty():
+		return {}
+	var timed: bool = float(inf.until) > 0.0
+	if (timed and Time.get_ticks_msec() / 1000.0 > float(inf.until)) or (not timed and int(inf.charges) <= 0):
+		infusions.erase(item_id)
+		return {}
+	return inf
+
+
+## Element on the weapon in hand ("" = none). Melee: time based. Bows: use_shot_element().
+func weapon_element() -> String:
+	return str(_infusion(sync_weapon_id).get("element", ""))
+
+
+## Bow / slingshot: take one infused shot (element) if there are charges left.
+func use_shot_element() -> String:
+	var inf := _infusion(sync_weapon_id)
+	if inf.is_empty() or float(inf.until) > 0.0:
+		return ""
+	inf.charges = int(inf.charges) - 1
+	changed.emit()
+	return str(inf.element)
+
+
+## Worn shield protects against this element (e.g. Cinderpepper = fire / lava resistance).
+func shield_resists(element: String) -> bool:
+	return sync_shield_id != "" and str(_infusion(sync_shield_id).get("element", "")) == element
+
+
+## Food: right-click > Eat.
+func eat(slot: int) -> bool:
+	var id := inventory[slot] if slot >= 0 and slot < inventory.size() else ""
+	var it: Resource = ItemDB.get_item(id) if id != "" else null
+	if it == null or it.heal <= 0.0 or _player.health == null:
+		return false
+	if _player.health.health >= _player.health.max_health:
+		Audio.play("ui.error")
+		return false
+	_player.health.heal(it.heal)
+	consume(id, 1)
+	Audio.play("item.get", -2.0, 0.8)
+	return true
+
+
+## Every peer: a little element effect on the weapon in hand while it's infused.
+func _update_infusion_vis() -> void:
+	if is_local():
+		sync_infusion = weapon_element() if sync_drawn else ""
+	var want := sync_infusion if is_instance_valid(_weapon_vis) else ""
+	if want == _infuse_vis_for and (want == "" or is_instance_valid(_infuse_vis)):
+		return
+	if is_instance_valid(_infuse_vis):
+		_infuse_vis.queue_free()
+	_infuse_vis = null
+	_infuse_vis_for = want
+	if want == "":
+		return
+	if want == "fire":
+		_infuse_vis = FX.flames(0.35, true)
+	else:
+		var p := CPUParticles3D.new()
+		p.amount = 14
+		p.lifetime = 0.5
+		p.local_coords = false
+		p.emission_shape = CPUParticles3D.EMISSION_SHAPE_SPHERE
+		p.emission_sphere_radius = 0.25
+		p.gravity = Vector3(0, 0.5, 0)
+		p.initial_velocity_max = 0.4
+		var q := QuadMesh.new()
+		q.size = Vector2(0.06, 0.06)
+		var m := StandardMaterial3D.new()
+		m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		m.billboard_mode = BaseMaterial3D.BILLBOARD_PARTICLES
+		m.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+		m.albedo_color = WorldRules.element_color(want)
+		q.material = m
+		p.mesh = q
+		_infuse_vis = p
+	_weapon_vis.add_child(_infuse_vis)
+	_infuse_vis.position = Vector3(0, 0.5, 0)
+
+
 # ---------------------------------------------------------------- stacks
 ## Stackable = counted items (ammo, materials, and weapons that are their own ammo, like bombs).
 func is_stackable(item_id: String) -> bool:
@@ -443,11 +648,31 @@ func _update_punch(delta: float) -> void:
 		if is_tree(node):
 			_punch_tree(node, centre)
 			return
+		if node.is_in_group("harvest_rock"):
+			harvest_rock(node, centre)
+			return
 		if col.has_method("react_to_hit_info") or col.has_method("react_to_hit") or WorldRules.reactive_of(col) != null:
 			WorldRules.deliver_hit(col, WorldRules.make_hit(punch_damage, "blunt", "", fwd), false)
 			Audio.play_at("target.hit", centre, -4.0, 1.3)
 			return
 	Audio.play_at("sword.swing", centre, -8.0, 1.6)
+
+
+## Boulders: every 2 hits knock loose a Stone, sometimes Flint (limited per rock).
+func harvest_rock(n: Object, at: Vector3) -> void:
+	if not is_local() or not (n is Node and (n as Node).is_in_group("harvest_rock")):
+		return
+	var rock := n as Node3D
+	var left: int = int(rock.get_meta("stone_left", 6))
+	var hits: int = int(rock.get_meta("stone_hits", 0)) + 1
+	rock.set_meta("stone_hits", hits)
+	FX.burst(at, get_tree().current_scene, Color(0.6, 0.6, 0.62), 6, 0.05, 2.5)
+	Audio.play_at("ice.hit", at, -4.0, 0.6)
+	if left <= 0 or hits % 2 != 0:
+		return
+	rock.set_meta("stone_left", left - 1)
+	receive_item("flint" if randf() < 0.3 else "stone", 1)
+	Audio.play("item.get", -6.0, 1.1)
 
 
 ## Is this a tree? (grapple-able wooden body: the island trees and the oak scene)
@@ -570,6 +795,7 @@ func _process(delta: float) -> void:
 			# two-handed weapons (greatsword, hammer) are carried in both hands (their aim_anim pose)
 			_model.set_aiming((sync_aiming or on_chain or two_handed_drawn()) and sync_drawn, w.aim_anim if w else &"", w.shoot_anim if w else &"")
 	hook.update_visuals()
+	_update_infusion_vis()
 
 
 func _local_update(delta: float) -> void:
@@ -805,6 +1031,8 @@ func _fire() -> void:
 	consume(w.ammo_item_id, 1)
 	_cooldown = s.fire_cooldown
 	var element := sync_arrow_element
+	if element == "":
+		element = use_shot_element()          # Cinderpepper / Frostcap / Sparkthistle on the bow
 	sync_arrow_element = ""
 	_lit_timer = 0.0
 	_spawn_arrow(origin, vel, dmg, false, element)

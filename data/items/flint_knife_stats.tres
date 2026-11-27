@@ -1,0 +1,17 @@
+[gd_resource type="Resource" format=3]
+
+[ext_resource type="Script" path="res://data/items/sword_stats.gd" id="1_sstat"]
+
+[resource]
+script = ExtResource("1_sstat")
+combo_damage = PackedFloat32Array(6, 6, 10)
+combo_duration = PackedFloat32Array(0.34, 0.34, 0.45)
+reach = 1.9
+arc_deg = 130.0
+stab_damage = 9.0
+stab_reach = 2.2
+spin_damage = 14.0
+spin_radius = 2.4
+jump_damage = 14.0
+trail_color = Color(0.75, 0.8, 0.9, 0.7)
+blade_length = 0.48

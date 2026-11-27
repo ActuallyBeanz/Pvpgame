@@ -56,9 +56,19 @@
 [ext_resource type="PackedScene" path="res://assets/models/items/ironvein_ore.glb" id="m22_ironvein_ore"]
 [ext_resource type="PackedScene" path="res://assets/models/items/starsilver_ore.glb" id="m23_starsilver_ore"]
 [ext_resource type="PackedScene" path="res://assets/models/items/wood_bundle.glb" id="m24_wood"]
+[ext_resource type="PackedScene" path="res://assets/models/items/stone_chunk.glb" id="c0_stone"]
+[ext_resource type="PackedScene" path="res://assets/models/items/flint_shards.glb" id="c1_flint"]
+[ext_resource type="PackedScene" path="res://assets/models/items/flint_knife.glb" id="c2_flint"]
+[ext_resource type="PackedScene" path="res://assets/models/items/driftwood_club.glb" id="c3_driftwood"]
+[ext_resource type="PackedScene" path="res://assets/models/items/twig_bow.glb" id="c4_twig"]
 [resource]
 script = ExtResource("12_ckosp")
 models = Dictionary[String, PackedScene]({
+"item.material.stone": ExtResource("c0_stone"),
+"item.material.flint": ExtResource("c1_flint"),
+"weapon.knife.flint": ExtResource("c2_flint"),
+"weapon.club.driftwood": ExtResource("c3_driftwood"),
+"weapon.bow.twig": ExtResource("c4_twig"),
 "item.material.wood": ExtResource("m24_wood"),
 "weapon.greatsword.emberfang": ExtResource("m0_emberfang"),
 "weapon.maul.quakeheart": ExtResource("m1_quakeheart"),
