@@ -123,11 +123,13 @@ func _draw_hearts() -> void:
 		_heart(c, 11.0, Color(0.25, 0.08, 0.08, 0.9), 1.0, 0.0)
 		if fill > 0.0:
 			_heart(c, 11.0, Color(0.95, 0.15, 0.18), fill, 0.0)
+		if fill > 0.0 and fill < 1.0:
+			_heart_dividers(c, 11.0)
 
 
 func _heart(c: Vector2, r: float, col: Color, fill: float, grow: float) -> void:
 	var pts := PackedVector2Array()
-	var n := 28
+	var n := 72
 	for k in n:
 		var t := TAU * k / n
 		# classic heart curve, scaled into radius r
@@ -137,12 +139,25 @@ func _heart(c: Vector2, r: float, col: Color, fill: float, grow: float) -> void:
 	if fill >= 1.0:
 		_hearts.draw_colored_polygon(pts, col)
 		return
-	# partial heart: clip to the left part (thirds)
-	var cut := c.x - (r + grow) + 2.0 * (r + grow) * fill
-	var clipped := PackedVector2Array()
-	for p in pts:
-		clipped.append(Vector2(minf(p.x, cut), p.y))
-	_hearts.draw_colored_polygon(clipped, col)
+	# partial heart: pie slices from the centre, starting at 12 o'clock, clockwise (thirds)
+	var centre := c + Vector2(0, 0.15 * r)
+	var limit := fill * TAU
+	for k in n:
+		var a := pts[k]
+		var b := pts[(k + 1) % n]
+		var mid := (a + b) * 0.5 - centre
+		var ang := fposmod(atan2(mid.x, -mid.y), TAU)     # 0 = straight up, growing clockwise
+		if ang <= limit:
+			_hearts.draw_colored_polygon(PackedVector2Array([centre, a, b]), col)
+
+
+## Thin pie lines over a heart, so the thirds read clearly.
+func _heart_dividers(c: Vector2, r: float) -> void:
+	var centre := c + Vector2(0, 0.15 * r)
+	for k in 3:
+		var a := TAU * k / 3.0
+		var d := Vector2(sin(a), -cos(a))
+		_hearts.draw_line(centre, centre + d * r * 1.05, Color(0, 0, 0, 0.45), 1.5, true)
 
 
 ## Dropping a dragged slot anywhere outside the inventory / hotbar throws it on the ground.
