@@ -570,35 +570,30 @@ func _build_sand(parent: Node) -> void:
 	_sign(g, sand_center + Vector3(0, 0, -sand_size.y * 0.5 - 1.5), "SAND", Color(1, 0.85, 0.55), 64)
 
 
-## Bombable walls to test: a stash hut with a legendary chest, and a lone cracked wall.
+## Bombable wall to test: a secret cave (the doorway is the only way in) with a legendary chest.
+const CaveScript := preload("res://scenes/props/world/cave.gd")
+
+
 func _build_secret_test(parent: Node) -> void:
-	var g := Node3D.new()
-	g.name = "SecretTest"
-	parent.add_child(g)
 	var c := stash_test_pos
-	_keep_out(c + Vector3(4, 0, 0), Vector2(22, 12))
-	var stone := Color(0.55, 0.53, 0.5)
-	_box(g, c + Vector3(0, 1.9, -2.3), Vector3(5.2, 3.8, 0.8), stone)          # back
-	for side in [-1, 1]:
-		_box(g, c + Vector3(side * 2.2, 1.9, 0), Vector3(0.8, 3.8, 4.6), stone)
-	_box(g, c + Vector3(0, 4.15, 0), Vector3(5.8, 0.7, 5.4), stone)            # roof
-	var door := CrackedWall.new()
-	door.name = "TestStashWall"
-	g.add_child(door)
-	door.position = c + Vector3(0, 0, 2.3)
-	var chest := ChestScript.new()
-	chest.name = "TestSecretChest"
-	chest.tier = "legendary"
-	chest.loot_pool = ["skytether", "greatsword_emberfang", "maul_quakeheart", "bomb_blastgourd", "rod_rimecaller"]
-	chest.rolls = Vector2i(2, 3)
-	g.add_child(chest)
-	chest.position = c + Vector3(0, 0, -0.8)
-	var lone := CrackedWall.new()
-	lone.name = "TestCrackedWall"
-	lone.style = "sand"
-	g.add_child(lone)
-	lone.position = c + Vector3(9, 0, 2)
-	_sign(g, c + Vector3(-5, 0, 3), "BOMB / HAMMER", Color(1, 0.7, 0.5), 64)
+	_keep_out(c, Vector2(18, 18))
+	var cave := CaveScript.new()
+	cave.name = "TestCave"
+	cave.tier = "legendary"
+	parent.add_child(cave)
+	cave.position = c
+	cave.rotation.y = PI                                          # door faces the course (-Z)
+	for m in cave.find_children("*", "Marker3D", true, false):
+		if m.is_in_group("secret_spots"):
+			var chest := ChestScript.new()
+			chest.name = "TestSecretChest"
+			chest.tier = "legendary"
+			chest.loot_pool = ["skytether", "greatsword_emberfang", "maul_quakeheart", "bomb_blastgourd", "rod_rimecaller"]
+			chest.rolls = Vector2i(2, 3)
+			parent.add_child(chest)
+			chest.global_position = (m as Node3D).global_position
+			chest.global_rotation.y = (m as Node3D).global_rotation.y
+	_sign(parent, c + Vector3(-7, 0, -6), "BOMB / HAMMER THE DOOR", Color(1, 0.7, 0.5), 64)
 
 
 # ================================================================ paths + nature

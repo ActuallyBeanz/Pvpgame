@@ -25,7 +25,18 @@ func _ready() -> void:
 	cam.current = true
 	var dir := ProjectSettings.globalize_path("res://_shots")
 	DirAccess.make_dir_recursive_absolute(dir)
-	for v in VIEWS:
+	var views := VIEWS.duplicate()
+	await get_tree().process_frame
+	var spots := island.get_node_or_null("SecretSpots")
+	if spots:
+		for c in spots.get_children():
+			var n3 := c as Node3D
+			if c.name == "Cave_0" or c.name == "Cave_4":
+				var fwd := n3.global_basis.z
+				views.append([c.name, n3.global_position + fwd * 13.0 + Vector3.UP * 4.0, n3.global_position + Vector3.UP * 1.8])
+			elif c.name == "Plateau_3" or c.name == "Plateau_4":
+				views.append([c.name, n3.global_position + Vector3(22, -2, 18), n3.global_position + Vector3.DOWN * 3.0])
+	for v in views:
 		cam.global_position = v[1]
 		cam.look_at(v[2], Vector3.UP)
 		for i in 30:

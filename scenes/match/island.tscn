@@ -12,6 +12,8 @@
 [ext_resource type="Script" path="res://systems/world/lava/lava_pool.gd" id="10_v2sa5"]
 [ext_resource type="Script" path="res://systems/world/lava/lava_flow.gd" id="11_csutn"]
 [ext_resource type="Script" path="res://systems/world/bridge.gd" id="12_o102a"]
+[ext_resource type="Script" path="res://scenes/props/world/cave.gd" id="13_q2ule"]
+[ext_resource type="Script" path="res://scenes/props/world/plateau.gd" id="14_v2sa5"]
 
 [sub_resource type="Curve3D" id="Curve3D_emd0j"]
 _data = {
@@ -173,3 +175,76 @@ script = ExtResource("12_o102a")
 
 [node name="B" type="Marker3D" parent="Bridges/Bridge_7" unique_id=1998627026]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 35.987614, 5.9406657, 9.684769)
+
+[node name="SecretSpots" type="Node3D" parent="." unique_id=725530932]
+
+[node name="Cave_0" type="Node3D" parent="SecretSpots" unique_id=1658476205]
+transform = Transform3D(-0.70710677, 0, -0.70710677, 0, 1, 0, 0.70710677, 0, -0.70710677, -60, 5.2849607, 150)
+script = ExtResource("13_q2ule")
+
+[node name="Cave_1" type="Node3D" parent="SecretSpots" unique_id=2107427599]
+transform = Transform3D(-0.9238795, 0, 0.3826835, 0, 1, 0, -0.3826835, 0, -0.9238795, -120, 7.3172874, 60)
+script = ExtResource("13_q2ule")
+
+[node name="Cave_2" type="Node3D" parent="SecretSpots" unique_id=860282566]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -140, 14.52711, -110)
+script = ExtResource("13_q2ule")
+style = "snow"
+tier = "legendary"
+
+[node name="Cave_3" type="Node3D" parent="SecretSpots" unique_id=618340733]
+transform = Transform3D(-0.3826834, 0, 0.92387956, 0, 1, 0, -0.92387956, 0, -0.3826834, -215, 13.473687, -120)
+script = ExtResource("13_q2ule")
+style = "snow"
+
+[node name="Cave_4" type="Node3D" parent="SecretSpots" unique_id=367853209]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 170, 11.368825, -130)
+script = ExtResource("13_q2ule")
+style = "basalt"
+tier = "legendary"
+
+[node name="Cave_5" type="Node3D" parent="SecretSpots" unique_id=806990531]
+transform = Transform3D(-0.9238795, 0, -0.3826835, 0, 1, 0, 0.3826835, 0, -0.9238795, -40, 6.7195, -180)
+script = ExtResource("13_q2ule")
+
+[node name="Cave_6" type="Node3D" parent="SecretSpots" unique_id=1669833274]
+transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, 190, 11.380832, -60)
+script = ExtResource("13_q2ule")
+
+[node name="Plateau_0" type="Node3D" parent="SecretSpots" unique_id=1135978478]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 132.93771, 18.578878, 29.934834)
+script = ExtResource("14_v2sa5")
+radius = 8.565113
+post_angle_deg = 41.284756
+tier = "legendary"
+
+[node name="Plateau_1" type="Node3D" parent="SecretSpots" unique_id=455214400]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 138.8371, 10.3853445, 181.08093)
+script = ExtResource("14_v2sa5")
+radius = 7.214531
+post_angle_deg = 31.0755
+tier = "legendary"
+
+[node name="Plateau_2" type="Node3D" parent="SecretSpots" unique_id=897951367]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -202.38312, 13.05567, 28.26939)
+script = ExtResource("14_v2sa5")
+radius = 7.120787
+post_angle_deg = 101.70651
+
+[node name="Plateau_3" type="Node3D" parent="SecretSpots" unique_id=1137923127]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 7.3044405, 17.233522, 98.25197)
+script = ExtResource("14_v2sa5")
+radius = 7.4326916
+post_angle_deg = 92.9608
+
+[node name="Plateau_4" type="Node3D" parent="SecretSpots" unique_id=1162137685]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -118.00939, 13.527462, -34.9474)
+script = ExtResource("14_v2sa5")
+radius = 8.750087
+post_angle_deg = 1.1558235
+
+[node name="Plateau_5" type="Node3D" parent="SecretSpots" unique_id=524258117]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -53.25451, 18.476685, 24.786913)
+script = ExtResource("14_v2sa5")
+radius = 7.364387
+post_angle_deg = 55.26219

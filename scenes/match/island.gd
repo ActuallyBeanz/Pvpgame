@@ -334,6 +334,21 @@ const CrackedWall := preload("res://scenes/props/world/cracked_wall.gd")
 
 
 func _build_secrets() -> void:
+	var placed := get_node_or_null("SecretSpots")
+	if placed and placed.get_child_count() > 0:
+		# editable Cave / Plateau nodes in the scene (tools/map/build_secrets.tscn): keep scatter out,
+		# put a chest at each spot (fixed order -> fixed names on every peer)
+		for c in placed.get_children():
+			var rr: float = float(c.get("radius")) + 4.0 if c.get("radius") != null else 10.0
+			_landmark_zones.append(Vector3((c as Node3D).global_position.x, (c as Node3D).global_position.z, rr))
+		var sg := _group("Secrets")
+		var spots := get_tree().get_nodes_in_group("secret_spots")
+		spots.sort_custom(func(a: Node, b: Node) -> bool: return str(a.get_path()) < str(b.get_path()))
+		for i in spots.size():
+			var m := spots[i] as Node3D
+			_secret_chest(sg, str(m.get_meta("tier", "rare")), m.global_position, m.global_rotation.y, i)
+		print("[island] %d secrets (placed in the scene)" % spots.size())
+		return
 	var g := _group("Secrets")
 	var n := 0
 	for i in mesa_passes.size():
