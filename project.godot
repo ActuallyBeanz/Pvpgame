@@ -27,6 +27,7 @@ UserSettings="*res://systems/user_settings.gd"
 ItemDB="*res://systems/item_db.gd"
 NetworkManager="*res://systems/network_manager.gd"
 Lobby="*res://systems/lobby.gd"
+BugReporter="*res://systems/dev/bug_reporter.gd"
 
 [display]
 

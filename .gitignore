@@ -39,3 +39,4 @@ addons/terrain_3d/bin/*macos*
 addons/terrain_3d/bin/*arm64*
 addons/terrain_3d/bin/~*
 _shots/
+_reports/
