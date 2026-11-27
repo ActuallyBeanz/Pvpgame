@@ -139,14 +139,14 @@ func _heart(c: Vector2, r: float, col: Color, fill: float, grow: float) -> void:
 	if fill >= 1.0:
 		_hearts.draw_colored_polygon(pts, col)
 		return
-	# partial heart: pie slices from the centre, starting at 12 o'clock, clockwise (thirds)
+	# partial heart: pie slices from the centre, starting at 12 o'clock, counter-clockwise (thirds)
 	var centre := c + Vector2(0, 0.15 * r)
 	var limit := fill * TAU
 	for k in n:
 		var a := pts[k]
 		var b := pts[(k + 1) % n]
 		var mid := (a + b) * 0.5 - centre
-		var ang := fposmod(atan2(mid.x, -mid.y), TAU)     # 0 = straight up, growing clockwise
+		var ang := fposmod(atan2(-mid.x, -mid.y), TAU)    # 0 = straight up, growing counter-clockwise (damage eats the right side first)
 		if ang <= limit:
 			_hearts.draw_colored_polygon(PackedVector2Array([centre, a, b]), col)
 
