@@ -10,6 +10,7 @@ extends CharacterBody3D
 ## cancels the draw — release and press LMB again) · push into ledges to climb · fall
 ## into a ledge to grab it (forward = pull up, back = drop).
 
+const HealthScript := preload("res://scenes/player/health.gd")
 const CameraRig := preload("res://scenes/player/camera_rig.gd")
 const Motor := preload("res://scenes/player/movement_motor.gd")
 const FocusTargeting := preload("res://scenes/player/focus_targeting.gd")
@@ -43,6 +44,9 @@ var sync_action_time := 0.0         ## its duration, for scaling anims
 var sync_action_seq := 0            ## +1 per move (lets remotes replay the anim)
 var sync_strafe := Vector2.ZERO     ## local velocity (x right, y forward) for strafe anims
 var sync_focus := false
+var sync_health := 100.0            ## owner-authoritative (Health component)
+var sync_dead := false
+var health: Node                    ## scenes/player/health.gd
 
 ## Move action codes (sync_action). Rolls use Motor.RollDir (0-3).
 const ACTION_SIDEHOP_LEFT := 10
@@ -70,6 +74,10 @@ func _ready() -> void:
 	motor.hopped.connect(_on_hopped)
 	motor.climbed.connect(func(kind: int, dur: float) -> void: _action(ACTION_CLIMB_BASE + kind, dur))
 	_build_model()
+	add_to_group("players")
+	health = HealthScript.new()
+	health.name = "Health"
+	add_child(health)
 	var sfx := PlayerAudio.new()
 	sfx.name = "Audio"
 	add_child(sfx)
@@ -93,7 +101,12 @@ func _physics_process(delta: float) -> void:
 
 
 func _simulate(delta: float) -> void:
-	var can_act := GameConfig.gameplay_input_enabled
+	health.tick(delta)
+	if sync_dead:
+		velocity = Vector3.ZERO
+		sync_position = global_position
+		return
+	var can_act := GameConfig.gameplay_input_enabled and health.hitstun <= 0.0
 	# Raw stick (no action deadzone): the motor applies OoT's own stick curve.
 	var stick := Input.get_vector("move_left", "move_right", "move_forward", "move_back", 0.05) \
 		if can_act else Vector2.ZERO
@@ -146,6 +159,7 @@ func _simulate(delta: float) -> void:
 		focus.free_yaw = motor.heading  # come out of the roll facing the way you rolled
 
 	if global_position.y < kill_height:
+		health.take_damage(25.0, Vector3.ZERO, "fall", "")
 		global_position = spawn_point
 		velocity = Vector3.ZERO
 		motor.reset(motor.facing)
@@ -205,6 +219,15 @@ func _follow_remote(delta: float) -> void:
 	else:
 		global_position = global_position.lerp(sync_position, t)
 	model_root.rotation.y = lerp_angle(model_root.rotation.y, sync_yaw, t)
+
+
+## Weapon hits (arrows, swords, bombs, punches...) land here on the attacker's peer.
+func react_to_hit_info(hit: Dictionary, cosmetic: bool) -> void:
+	health.receive_hit(hit, cosmetic)
+
+
+func react_to_hit(damage: float, dir: Vector3, cosmetic: bool) -> void:
+	health.receive_hit({ "damage": damage, "dir": dir }, cosmetic)
 
 
 ## Shield: does a hit travelling in `dir` land on the raised shield (frontal cone)?

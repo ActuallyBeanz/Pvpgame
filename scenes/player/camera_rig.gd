@@ -65,6 +65,16 @@ var _look_accum := 0.0
 @onready var camera: Camera3D = $Pivot/SpringArm3D/Camera3D
 
 
+## Spectating: follow another body (or your own again).
+func follow(body: CollisionObject3D) -> void:
+	if body == null or body == _target:
+		return
+	if is_instance_valid(_target):
+		arm.remove_excluded_object(_target.get_rid())
+	_target = body
+	arm.add_excluded_object(body.get_rid())
+
+
 func activate(owner_body: CollisionObject3D) -> void:
 	active = true
 	_target = owner_body

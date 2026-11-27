@@ -11,6 +11,7 @@ Godot_v*.exe
 
 # Reference material, not part of the game
 oot-main/
+tww-main/
 
 # Old manual backups (Git history replaces these)
 backups/

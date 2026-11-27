@@ -8,6 +8,8 @@ extends Node3D
 
 const PLAYER_SCENE := preload("res://scenes/player/player.tscn")
 const PickupScene := preload("res://scenes/items/pickup.tscn")
+var allow_respawn := false                ## battle royale: one life
+var _winner_sent := false
 
 @export_group("Layout (world metres, x east / z south)")
 @export var center := Vector2(0, -60)                 ## Wellspring Ring plaza
@@ -105,6 +107,26 @@ func _ready() -> void:
 	tree_exiting.connect(func() -> void:
 		Audio.stop_ambience(0.3)
 		Water.clear())
+
+
+## Host: last player standing wins (needs at least 2 players in the match).
+func _process(_delta: float) -> void:
+	if not multiplayer.is_server() or _winner_sent:
+		return
+	var all := get_tree().get_nodes_in_group("players")
+	if all.size() < 2:
+		return
+	var alive := all.filter(func(p: Node) -> bool: return not p.sync_dead)
+	if alive.size() <= 1:
+		_winner_sent = true
+		rpc_winner.rpc(str(alive[0].display_name) if alive.size() == 1 else "")
+
+
+@rpc("authority", "call_local", "reliable")
+func rpc_winner(winner: String) -> void:
+	var hud := get_node_or_null("MatchHud")
+	if hud and hud.has_method("show_banner"):
+		hud.show_banner(("%s wins!" % winner) if winner != "" else "Nobody survived...")
 
 
 func ground(x: float, z: float) -> float:

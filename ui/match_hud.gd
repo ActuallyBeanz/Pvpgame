@@ -40,6 +40,37 @@ func _ready() -> void:
 	settings.closed.connect(func() -> void: vbox.get_parent().show())
 
 
+## Kill feed line (fades out) and the big end-of-match banner.
+func show_feed(text: String) -> void:
+	var l := Label.new()
+	l.text = text
+	l.add_theme_font_size_override("font_size", 20)
+	l.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.9))
+	l.add_theme_constant_override("outline_size", 6)
+	l.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
+	l.position.y += 60 + 28 * get_tree().get_nodes_in_group("feed_lines").size()
+	l.add_to_group("feed_lines")
+	add_child(l)
+	var tw := l.create_tween()
+	tw.tween_interval(4.0)
+	tw.tween_property(l, "modulate:a", 0.0, 1.0)
+	tw.tween_callback(l.queue_free)
+
+
+func show_banner(text: String) -> void:
+	var l := Label.new()
+	l.text = text
+	l.add_theme_font_size_override("font_size", 56)
+	l.add_theme_color_override("font_color", Color(1.0, 0.85, 0.35))
+	l.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.95))
+	l.add_theme_constant_override("outline_size", 12)
+	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	l.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
+	l.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	l.position.y -= 120
+	add_child(l)
+
+
 func _exit_tree() -> void:
 	GameConfig.gameplay_input_enabled = true
 	GameConfig.inventory_open = false

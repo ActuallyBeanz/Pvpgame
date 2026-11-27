@@ -3,6 +3,7 @@ extends Node3D
 ## Host spawns one player per roster entry once every peer has loaded.
 
 const PLAYER_SCENE := preload("res://scenes/player/player.tscn")
+var allow_respawn := true                 ## test area: you come back a few seconds after dying
 
 @export var demo_prop_ids: PackedStringArray = [
 	"prop.crate.wood", "env.tree.oak_a", "env.rock.basic", "env.wall.cracked",

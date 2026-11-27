@@ -325,12 +325,12 @@ func split_stack(slot: int, n: int) -> bool:
 ## Throw `n` of the item in `slot` on the ground in front of you (n <= 0 = the whole stack).
 ## Every peer spawns the same named pickup, so anyone can grab it. Owner only.
 var _drop_seq := 0
-func drop_item(slot: int, n: int = 0) -> bool:
+func drop_item(slot: int, n: int = 0, scatter := false) -> bool:
 	var id := inventory[slot] if slot >= 0 and slot < inventory.size() else ""
 	if id == "":
 		return false
 	var it := ItemDB.get_item(id)
-	if (id == sync_weapon_id or id == sync_shield_id) and _weapon_busy():
+	if (id == sync_weapon_id or id == sync_shield_id) and _weapon_busy() and not scatter:
 		return false
 	var amount := 0
 	if is_stackable(id):
@@ -357,6 +357,9 @@ func drop_item(slot: int, n: int = 0) -> bool:
 	changed.emit()
 	var fwd: Vector3 = -_player.model_root.global_basis.z
 	var at: Vector3 = _player.global_position + fwd * 1.3
+	if scatter:   # death: spill everything around where you fell
+		var a := randf() * TAU
+		at = _player.global_position + Vector3(cos(a), 0.0, sin(a)) * randf_range(0.6, 2.2)
 	_drop_seq += 1
 	rpc_drop.rpc("Drop_%d_%d" % [multiplayer.get_unique_id(), _drop_seq], id, amount, at)
 	Audio.play("ui.select", -4.0, 0.8)
@@ -548,6 +551,10 @@ func _process(delta: float) -> void:
 
 func _local_update(delta: float) -> void:
 	_cooldown = maxf(0.0, _cooldown - delta)
+	if _player.sync_dead:
+		_stop_combat_input()
+		nearest_pickup = null
+		return
 	_update_nearest_pickup()
 	if not GameConfig.gameplay_input_enabled:
 		_stop_combat_input()

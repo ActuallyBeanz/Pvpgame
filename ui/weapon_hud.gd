@@ -28,6 +28,8 @@ var inventory: Control                     ## Tab bag panel (ui/inventory_panel.
 var _breath: ProgressBar                   ## air left while your head is underwater
 var _dot: Control                          ## centre dot crosshair (always on while playing)
 var _drop_zone: Control                    ## behind the inventory: drag an item out here to drop it
+var _hearts: Control                       ## OoT hearts, top left (1 heart = 10 hp)
+var _death_label: Label
 
 
 func _ready() -> void:
@@ -55,6 +57,22 @@ func _ready() -> void:
 	_drop_zone.set_drag_forwarding(Callable(), _can_drop_outside, _drop_outside)
 	add_child(_drop_zone)
 	move_child(_drop_zone, 0)
+	_hearts = Control.new()
+	_hearts.name = "Hearts"
+	_hearts.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_hearts.position = Vector2(24, 20)
+	_hearts.draw.connect(_draw_hearts)
+	add_child(_hearts)
+	_death_label = Label.new()
+	_death_label.add_theme_font_size_override("font_size", 26)
+	_death_label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.9))
+	_death_label.add_theme_constant_override("outline_size", 8)
+	_death_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_death_label.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM)
+	_death_label.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	_death_label.position.y -= 150
+	_death_label.visible = false
+	add_child(_death_label)
 	_dot = Control.new()
 	_dot.name = "CenterDot"
 	_dot.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -90,6 +108,43 @@ func _ready() -> void:
 		_bars.append(r)
 
 
+## Heart row: each heart is 10 hp, filled in thirds.
+func _draw_hearts() -> void:
+	if not is_instance_valid(_player) or not ("sync_health" in _player):
+		return
+	var hp: float = _player.sync_health
+	var max_hp: float = _player.health.max_health if _player.health else 100.0
+	var hearts := ceili(max_hp / 10.0)
+	for i in hearts:
+		var c := Vector2(14 + (i % 10) * 30, 14 + int(i / 10) * 28)
+		var fill := clampf((hp - i * 10.0) / 10.0, 0.0, 1.0)
+		fill = ceilf(fill * 3.0 - 0.001) / 3.0     # thirds (a scratched heart still shows its third)
+		_heart(c, 12.0, Color(0, 0, 0, 0.55), 1.0, 2.0)
+		_heart(c, 11.0, Color(0.25, 0.08, 0.08, 0.9), 1.0, 0.0)
+		if fill > 0.0:
+			_heart(c, 11.0, Color(0.95, 0.15, 0.18), fill, 0.0)
+
+
+func _heart(c: Vector2, r: float, col: Color, fill: float, grow: float) -> void:
+	var pts := PackedVector2Array()
+	var n := 28
+	for k in n:
+		var t := TAU * k / n
+		# classic heart curve, scaled into radius r
+		var x := 16.0 * pow(sin(t), 3)
+		var y := -(13.0 * cos(t) - 5.0 * cos(2 * t) - 2.0 * cos(3 * t) - cos(4 * t))
+		pts.append(c + Vector2(x, y) * ((r + grow) / 16.0))
+	if fill >= 1.0:
+		_hearts.draw_colored_polygon(pts, col)
+		return
+	# partial heart: clip to the left part (thirds)
+	var cut := c.x - (r + grow) + 2.0 * (r + grow) * fill
+	var clipped := PackedVector2Array()
+	for p in pts:
+		clipped.append(Vector2(minf(p.x, cut), p.y))
+	_hearts.draw_colored_polygon(clipped, col)
+
+
 ## Dropping a dragged slot anywhere outside the inventory / hotbar throws it on the ground.
 func _can_drop_outside(at: Vector2, data: Variant) -> bool:
 	if not (GameConfig.inventory_open and data is Dictionary and data.has("inv_slot")):
@@ -116,6 +171,14 @@ func _process(delta: float) -> void:
 	_update_bars(delta)
 	_dot.visible = not GameConfig.inventory_open and GameConfig.gameplay_input_enabled
 	_drop_zone.mouse_filter = Control.MOUSE_FILTER_STOP if GameConfig.inventory_open else Control.MOUSE_FILTER_IGNORE
+	_hearts.queue_redraw()
+	var dead: bool = _player.sync_dead
+	_death_label.visible = dead
+	if dead:
+		var hp: Node = _player.health
+		var allow: bool = bool(get_tree().current_scene.get("allow_respawn")) if "allow_respawn" in get_tree().current_scene else false
+		_death_label.text = ("You were defeated - respawning in %d" % ceili(hp._respawn_t)) if allow \
+			else "You were defeated - spectating  (LMB: next player)"
 	var motor: Variant = _player.get("motor") if _player else null
 	if motor and motor.profile:
 		var full: float = motor.profile.breath_max
