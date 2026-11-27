@@ -6,6 +6,7 @@
 [resource]
 script = ExtResource("1_item")
 id = "fan_galeleaf"
+description = "LMB: gust (pushes players and bombs, blows out fires). Hold Space while falling: glide - no fall damage."
 display_name = "Galeleaf Fan"
 model_id = "tool.fan.galeleaf"
 aim_anim = &"oot/OoT_Glide"

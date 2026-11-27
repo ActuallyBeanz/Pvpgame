@@ -5,6 +5,7 @@ extends Resource
 
 @export var id := ""
 @export var display_name := ""
+@export_multiline var description := ""    ## tooltip text (effects / how to use); recipes + element info are added automatically
 @export_enum("weapon", "ammo", "shield", "material") var kind := "weapon"   ## shield: off hand. material: stacks in the bag (reagents, food, ore, bombs...)
 @export var model_id := ""                 ## AssetRegistry id used in hands / on back
 @export var pickup_model_id := ""          ## AssetRegistry id shown on the ground (blank = model_id)

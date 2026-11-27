@@ -6,6 +6,7 @@
 [resource]
 script = ExtResource("1_item")
 id = "skytether"
+description = "A longer grapple: hold LMB to aim, release to pull yourself to wood / trees far away."
 display_name = "Skytether"
 model_id = "weapon.grapple.skytether"
 stats = ExtResource("2_stats")

@@ -6,6 +6,7 @@
 [resource]
 script = ExtResource("1_item")
 id = "staff_sandspire"
+description = "Hold LMB to aim, release: a sand pillar at the ring. Tap: a pillar under your feet that lifts you."
 display_name = "Sandspire Staff"
 model_id = "tool.staff.sandspire"
 aim_anim = &"Spellcasting"

@@ -5,6 +5,7 @@
 [resource]
 script = ExtResource("1_def")
 id = "bomb_arrows"
+description = "A Blastgourd tied to an arrow: a long, lobbing shot with an arc preview while you draw."
 display_name = "Bomb Arrows"
 kind = "ammo"
 model_id = "weapon.arrow.bomb"

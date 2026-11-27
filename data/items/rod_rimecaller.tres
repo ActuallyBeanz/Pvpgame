@@ -6,6 +6,7 @@
 [resource]
 script = ExtResource("1_item")
 id = "rod_rimecaller"
+description = "LMB: a frost blast on the ring. Hold on water: ice platform. Drag a plant or bomb on it to change the element."
 display_name = "Rimecaller Rod"
 model_id = "tool.rod.rimecaller"
 aim_anim = &"Spellcasting"

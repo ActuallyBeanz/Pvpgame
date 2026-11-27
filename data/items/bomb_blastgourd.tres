@@ -6,6 +6,7 @@
 [resource]
 script = ExtResource("1_item")
 id = "bomb_blastgourd"
+description = "LMB: pull one out (fuse starts). LMB again: throw - aim higher to lob. Q / roll: set it down. Breaks cracked walls."
 display_name = "Blastgourd Bomb"
 model_id = "item.bomb.blastgourd"
 pickup_scale = 1.6

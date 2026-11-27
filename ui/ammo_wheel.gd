@@ -160,6 +160,20 @@ func _draw() -> void:
 		label = hit.display_name if hit else ""
 	var f := ThemeDB.fallback_font
 	draw_string(f, c + Vector2(-inner_radius, 5), label, HORIZONTAL_ALIGNMENT_CENTER, inner_radius * 2.0, 13, Color.WHITE)
+	# what the hovered arrow does, under the wheel
+	if _hover >= 0 and _hover < n:
+		var hit2: Resource = ItemDB.get_item(_options[_hover])
+		var fx := ""
+		if hit2:
+			fx = str(WorldRules.rules.element_info.get(hit2.element, ""))
+			if hit2.explosive:
+				fx = "Explodes on impact - the fuse lights when you draw."
+			elif fx == "":
+				fx = "Plain arrows."
+		var w := 520.0
+		var y := c.y + outer_radius + 34.0
+		draw_rect(Rect2(Vector2(c.x - w * 0.5 - 8, y - 22), Vector2(w + 16, 52)), Color(0, 0, 0, 0.6))
+		draw_multiline_string(f, Vector2(c.x - w * 0.5, y), fx, HORIZONTAL_ALIGNMENT_CENTER, w, 15, 2, Color(1, 0.95, 0.85))
 	# where the mouse is pointing
 	if _pick.length() >= pick_deadzone:
 		draw_circle(c + _pick.normalized() * (inner_radius - 12.0), 4.0, Color(1, 0.85, 0.4))

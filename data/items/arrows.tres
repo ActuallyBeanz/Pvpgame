@@ -5,6 +5,7 @@
 [resource]
 script = ExtResource("1_xqvye")
 id = "arrows"
+description = "Plain arrows. Drag a plant or a brew vial onto them to make special arrows; mix two special stacks for brew arrows."
 display_name = "Arrows"
 kind = "ammo"
 model_id = "weapon.arrow.basic"

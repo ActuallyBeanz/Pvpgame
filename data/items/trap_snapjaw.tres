@@ -6,6 +6,7 @@
 [resource]
 script = ExtResource("1_item")
 id = "trap_snapjaw"
+description = "LMB: set a trap at your feet. Snaps shut on players: damage and they can't move for a moment."
 display_name = "Snapjaw Trap"
 model_id = "item.trap.snapjaw"
 pickup_scale = 1.2

@@ -8,6 +8,8 @@ extends Panel
 
 signal hover_changed(slot: int, on: bool)
 
+const Tooltip := preload("res://ui/item_tooltip.gd")
+
 const EQUIPPED := Color(1.0, 0.8, 0.25)
 const WORN := Color(0.35, 0.9, 0.95)
 const IN_USE := Color(1.0, 0.85, 0.45, 0.55)
@@ -118,6 +120,7 @@ func refresh() -> void:
 		_style.set_border_width_all(2)
 		scale = Vector2.ONE
 		return
+	tooltip_text = it.display_name if open else ""     # the real tooltip is _make_custom_tooltip
 	_icon.texture = icons.get_icon(id) if icons else null
 	_name.text = "" if _icon.texture else it.display_name
 	_count.text = str(equipment.count_in_slot(slot)) if equipment.is_stackable(id) else ""
@@ -147,6 +150,29 @@ func refresh() -> void:
 	_style.bg_color = FILLED_BG.lightened(0.12) if width >= 4 or _hover else FILLED_BG
 	_icon.modulate = Color(1, 1, 1, 0.35) if _dragging_me() else Color.WHITE
 	scale = Vector2.ONE * (1.08 if grow_equipped and id == equipment.sync_weapon_id and not open else 1.0)
+
+
+## Hover tooltip: everything the item does (ui/item_tooltip.gd builds it from data).
+func _make_custom_tooltip(_for_text: String) -> Object:
+	var id := item_id()
+	if id == "" or get_viewport().gui_is_dragging():
+		return null
+	var panel := PanelContainer.new()
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(0.06, 0.06, 0.09, 0.94)
+	sb.border_color = Color(1, 1, 1, 0.25)
+	sb.set_border_width_all(1)
+	sb.set_corner_radius_all(6)
+	sb.set_content_margin_all(10)
+	panel.add_theme_stylebox_override("panel", sb)
+	var rt := RichTextLabel.new()
+	rt.bbcode_enabled = true
+	rt.fit_content = true
+	rt.scroll_active = false
+	rt.custom_minimum_size = Vector2(340, 0)
+	rt.text = Tooltip.build(equipment, id)
+	panel.add_child(rt)
+	return panel
 
 
 func _dragging_me() -> bool:

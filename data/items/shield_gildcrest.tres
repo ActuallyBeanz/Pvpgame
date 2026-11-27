@@ -6,6 +6,7 @@
 [resource]
 script = ExtResource("1_item")
 id = "shield_gildcrest"
+description = "Hold RMB / F: block from the front. Attack while blocking with a one-hander: shield poke."
 display_name = "Gildcrest Shield"
 kind = "shield"
 model_id = "weapon.shield.gildcrest"
