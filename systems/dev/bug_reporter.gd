@@ -6,17 +6,18 @@ extends CanvasLayer
 ##   report_<time>.png  what you see (taken without the note box)
 ##   report_<time>.md   position, camera, what you're looking at, the ground there, and every
 ##                      object within `scan_radius` m (path, type, position, size, collision)
-## Esc cancels. tools/map/view_report.tscn re-renders a report's spot from several angles.
+## Esc cancels. While typing, every key goes to the note (the game ignores them).
+## tools/map/view_report.tscn re-renders a report's spot from several angles.
 
 const KEYS := [KEY_QUOTELEFT, KEY_F9]
 @export var scan_radius := 12.0
 @export var max_nodes := 120
 
 var _box: PanelContainer
-var _edit: LineEdit
+var _label: Label
+var _note := ""
 var _toast: Label
 var _open := false
-var _was_mouse := Input.MOUSE_MODE_VISIBLE
 var _was_input := true
 
 
@@ -26,17 +27,27 @@ func _ready() -> void:
 	_box = PanelContainer.new()
 	_box.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
 	_box.offset_top = 80
-	_box.custom_minimum_size = Vector2(560, 0)
+	_box.custom_minimum_size = Vector2(620, 0)
 	_box.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(0.05, 0.05, 0.08, 0.92)
+	sb.border_color = Color(1, 0.8, 0.3)
+	sb.set_border_width_all(2)
+	sb.set_corner_radius_all(6)
+	sb.set_content_margin_all(12)
+	_box.add_theme_stylebox_override("panel", sb)
 	var v := VBoxContainer.new()
+	v.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_box.add_child(v)
 	var t := Label.new()
-	t.text = "Bug report - what's wrong here?  Enter = save, Esc = cancel"
+	t.text = "BUG REPORT - type what's wrong here.   Enter = save   Esc = cancel"
+	t.add_theme_color_override("font_color", Color(1, 0.85, 0.4))
 	v.add_child(t)
-	_edit = LineEdit.new()
-	_edit.placeholder_text = "e.g. wall floats, rock clips through bridge, can't walk up here..."
-	_edit.text_submitted.connect(func(_t: String) -> void: _save())
-	v.add_child(_edit)
+	_label = Label.new()
+	_label.autowrap_mode = TextServer.AUTOWRAP_WORD
+	_label.custom_minimum_size = Vector2(590, 0)
+	v.add_child(_label)
 	_box.visible = false
 	add_child(_box)
 	_toast = Label.new()
@@ -50,41 +61,55 @@ func _ready() -> void:
 	add_child(_toast)
 
 
+func _process(_delta: float) -> void:
+	if _open:
+		var caret := "_" if int(Time.get_ticks_msec() / 400) % 2 == 0 else " "
+		_label.text = "> " + _note + caret
+
+
+## While the box is open this node is moved to the end of the tree so it sees every key FIRST,
+## and it eats them all - nothing else (pause menu, inventory, hotbar) reacts while you type.
 func _input(event: InputEvent) -> void:
 	var k := event as InputEventKey
-	if k == null or not k.pressed or k.echo:
+	if not _open:
+		if k and k.pressed and not k.echo and (k.physical_keycode in KEYS or k.keycode in KEYS):
+			get_viewport().set_input_as_handled()
+			_open_box()
 		return
-	if (k.physical_keycode in KEYS or k.keycode in KEYS) and not _open:
-		_open_box()
-		get_viewport().set_input_as_handled()
-	elif _open and k.physical_keycode == KEY_ESCAPE:
-		_close_box()
-		get_viewport().set_input_as_handled()
+	if event is InputEventMouseButton or event is InputEventMouseMotion:
+		return                                     # mouse still works (camera stays put)
+	get_viewport().set_input_as_handled()
+	if k == null or not k.pressed:
+		return
+	match k.keycode:
+		KEY_ESCAPE:
+			_close_box()
+		KEY_ENTER, KEY_KP_ENTER:
+			_save()
+		KEY_BACKSPACE:
+			_note = _note.substr(0, maxi(_note.length() - 1, 0))
+		_:
+			if k.unicode >= 32 and not (k.physical_keycode in KEYS):
+				_note += char(k.unicode)
 
 
 func _open_box() -> void:
 	_open = true
-	_was_mouse = Input.mouse_mode
+	_note = ""
 	_was_input = GameConfig.gameplay_input_enabled
 	GameConfig.gameplay_input_enabled = false
-	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
-	_edit.text = ""
+	get_tree().root.move_child(self, -1)          # first in line for input from now on
 	_box.visible = true
-	_edit.grab_focus()
-	await get_tree().process_frame
-	_edit.text = ""                              # the ` key itself must not land in the note
 
 
 func _close_box() -> void:
 	_open = false
 	_box.visible = false
-	_edit.release_focus()
 	GameConfig.gameplay_input_enabled = _was_input
-	Input.mouse_mode = _was_mouse
 
 
 func _save() -> void:
-	var note := _edit.text.strip_edges()
+	var note := _note.strip_edges()
 	_close_box()
 	await get_tree().process_frame                # the note box is gone from the picture
 	await get_tree().process_frame
@@ -93,7 +118,8 @@ func _save() -> void:
 	var stamp := Time.get_datetime_string_from_system().replace(":", "").replace("-", "").replace("T", "_")
 	var base := dir.path_join("report_" + stamp)
 	var img := get_viewport().get_texture().get_image()
-	img.save_png(base + ".png")
+	if img:
+		img.save_png(base + ".png")
 	var f := FileAccess.open(base + ".md", FileAccess.WRITE)
 	f.store_string(_describe(note, "report_" + stamp))
 	f.close()
