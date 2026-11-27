@@ -9,4 +9,5 @@ extends Resource
 @export var arrows_light_in_flight := true       ## OoT: an arrow flying through a lit torch becomes a fire arrow
 @export var element_colors: Dictionary[String, Color] = {
 	"fire": Color(1.0, 0.55, 0.15), "frost": Color(0.55, 0.85, 1.0), "shock": Color(1.0, 0.95, 0.4),
+	"blast": Color(1.0, 0.38, 0.12),
 }

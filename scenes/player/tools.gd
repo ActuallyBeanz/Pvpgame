@@ -15,6 +15,7 @@ const IceScript := preload("res://scenes/props/tools/ice_platform.gd")
 const TrapScript := preload("res://scenes/props/tools/snap_trap.gd")
 const FX := preload("res://systems/components/element_fx.gd")
 const OrbScript := preload("res://scenes/weapons/magic_orb.gd")
+const BombScript := preload("res://scenes/weapons/bomb_projectile.gd")
 
 var aiming := false
 var glide_left := 0.0
@@ -565,7 +566,27 @@ func _rod_blast(s: Resource, at: Vector3) -> void:
 	var origin := _player.global_position + Vector3.UP
 	var to := at - origin
 	var dir: Vector3 = Vector3(to.x, 0.0, to.z).normalized() if Vector3(to.x, 0.0, to.z).length() > 0.1 else -_player.model_root.global_basis.z
-	rpc_cast_fx.rpc(at, element, radius)
+	if element == "blast":
+		_eq.use_shot_element()                    # Blastgourd on the rod: a few explosive casts
+		rpc_cast_fx.rpc(at, element, radius, 0.0)  # the explosion itself does the damage (see _erupt)
+		return
+	if element == "fire":
+		# a small pop now, then the circle keeps burning for a few seconds
+		rpc_cast_fx.rpc(at, element, radius, float(s.burn_time))
+		_area_hit(at, radius, float(s.fire_pop_damage), element, dir)
+		var ticks := int(float(s.burn_time) / float(s.burn_tick))
+		for i in ticks:
+			get_tree().create_timer(float(s.burn_tick) * float(i + 1)).timeout.connect(
+				func() -> void: _area_hit(at, radius * 0.9, float(s.burn_damage), "fire", dir))
+		return
+	rpc_cast_fx.rpc(at, element, radius, 0.0)
+	_area_hit(at, radius, float(s.frost_damage), element, dir)
+
+
+## Damage + element to everything inside the circle (owner), pushed out from the middle.
+func _area_hit(at: Vector3, radius: float, damage: float, element: String, dir: Vector3) -> void:
+	if not is_inside_tree():
+		return
 	var shape := SphereShape3D.new()
 	shape.radius = radius
 	var q := PhysicsShapeQueryParameters3D.new()
@@ -586,14 +607,14 @@ func _rod_blast(s: Resource, at: Vector3) -> void:
 				away.y = 0.0
 				if away.length() > 0.2:
 					push = away.normalized()
-			WorldRules.deliver_hit(col, WorldRules.make_hit(s.frost_damage, "magic", element, push), false)
+			WorldRules.deliver_hit(col, WorldRules.make_hit(damage, "magic", element, push), false)
 
 
 ## Cast animation for the rod blast (every peer): the rod flashes, a bolt streaks to the aimed
 ## spot, then the circle erupts - a shockwave ring the size of the blast, with ice spikes /
 ## flame bursts / lightning around its edge and in the middle.
 @rpc("any_peer", "call_local", "unreliable")
-func rpc_cast_fx(at: Vector3, element: String, radius: float) -> void:
+func rpc_cast_fx(at: Vector3, element: String, radius: float, linger: float) -> void:
 	var scene := get_tree().current_scene
 	var col := WorldRules.element_color(element)
 	var hand: Vector3 = _eq._hand_origin() if is_instance_valid(_eq) else _player.global_position + Vector3.UP * 1.4
@@ -601,7 +622,7 @@ func rpc_cast_fx(at: Vector3, element: String, radius: float) -> void:
 	FX.burst(hand, scene, col, 10, 0.05, 3.0)
 	var travel := clampf(hand.distance_to(at) / 60.0, 0.05, 0.25)
 	_streak(hand, at, col, travel)
-	get_tree().create_timer(travel).timeout.connect(func() -> void: _erupt(at, element, col, radius))
+	get_tree().create_timer(travel).timeout.connect(func() -> void: _erupt(at, element, col, radius, linger))
 
 
 ## A glowing mote flying from the rod to the target.
@@ -625,10 +646,16 @@ func _streak(from: Vector3, to: Vector3, col: Color, t: float) -> void:
 	tw.tween_callback(mi.queue_free)
 
 
-func _erupt(at: Vector3, element: String, col: Color, radius: float) -> void:
+func _erupt(at: Vector3, element: String, col: Color, radius: float, linger: float) -> void:
 	if not is_inside_tree():
 		return
 	var scene := get_tree().current_scene
+	if element == "blast":
+		_explode(at, radius)
+		return
+	if element == "fire" and linger > 0.0:
+		_burn_field(at, col, radius, linger)
+		return
 	Audio.play_at("ice.hit" if element == "frost" else ("fire.ignite" if element == "fire" else "target.hit"), at, 4.0, 0.6)
 	_shockwave(at, col, radius)
 	FX.burst(at + Vector3.UP * 0.4, scene, col, 24, 0.07, 4.5)
@@ -647,6 +674,66 @@ func _erupt(at: Vector3, element: String, col: Color, radius: float) -> void:
 		var a := TAU * float(k) / float(n) + randf() * 0.3
 		var p := at + Vector3(cos(a), 0.0, sin(a)) * radius * randf_range(0.7, 0.95)
 		get_tree().create_timer(0.05 + 0.02 * k).timeout.connect(func() -> void: _spot(p, element, col, false))
+
+
+## Blastgourd-infused rod: a real bomb explosion on the spot, bigger and harder than a thrown bomb
+## (cracked walls, chain reactions, knockback). Only the caster's copy deals damage.
+func _explode(at: Vector3, radius: float) -> void:
+	var s := stats()
+	var b := BombScript.new()
+	b.name = "RodBlast"
+	var bs: Resource = ItemDB.get_item("bomb_blastgourd").stats.duplicate()
+	bs.blast_radius = maxf(radius, bs.blast_radius) * (s.bomb_radius_mult if s else 1.3)
+	bs.blast_damage = s.bomb_damage if s else 60.0
+	b.stats = bs
+	b.cosmetic = not _eq.is_local()
+	b.fuse = 0.0
+	_eq._projectiles_root().add_child(b, true)
+	b.global_position = _ground(at) + Vector3.UP * 0.3
+	b.explode()
+	_shockwave(at, Color(1.0, 0.45, 0.15), bs.blast_radius)
+
+
+## Fire: a small pop, then the circle burns for `linger` seconds (flames, and a fire zone that
+## lights arrows shot through it). Damage ticks come from the caster (_rod_blast).
+func _burn_field(at: Vector3, col: Color, radius: float, linger: float) -> void:
+	var scene := get_tree().current_scene
+	Audio.play_at("fire.ignite", at, 0.0, 0.9)
+	FX.burst(at + Vector3.UP * 0.3, scene, col, 12, 0.06, 3.0)
+	_shockwave(at, col, radius * 0.6)
+	var field := Node3D.new()
+	field.name = "BurnField"
+	scene.add_child(field)
+	field.global_position = _ground(at)
+	var spots: Array[Vector3] = [Vector3.ZERO]
+	for k in 7:
+		var a := TAU * float(k) / 7.0 + randf() * 0.4
+		spots.append(Vector3(cos(a), 0.0, sin(a)) * radius * randf_range(0.45, 0.85))
+	for i in spots.size():
+		var f := FX.flames(1.0 if i == 0 else randf_range(0.55, 0.8), i == 0)
+		field.add_child(f)
+		f.global_position = _ground(field.global_position + spots[i])
+		f.scale = Vector3.ONE * 0.2
+		f.create_tween().tween_property(f, "scale", Vector3.ONE, 0.25 + 0.04 * i)
+	var zone := Area3D.new()                     # arrows flying through catch fire
+	zone.collision_layer = WorldRules.FIRE_ZONE_LAYER
+	zone.collision_mask = 0
+	zone.monitoring = false
+	zone.set_meta("fire_zone", true)
+	var cs := CollisionShape3D.new()
+	var sph := SphereShape3D.new()
+	sph.radius = radius * 0.8
+	cs.shape = sph
+	zone.add_child(cs)
+	field.add_child(zone)
+	zone.position = Vector3.UP * 0.6
+	Audio.attach_loop("fire.loop", field)       # crackles until the field is freed
+	var tw := field.create_tween()
+	tw.tween_interval(maxf(linger - 0.5, 0.1))
+	tw.tween_property(field, "scale", Vector3(1, 0.05, 1), 0.5)
+	tw.tween_callback(func() -> void:
+		FX.smoke_puff(field.global_position + Vector3.UP * 0.4, scene, radius * 0.6)
+		field.queue_free())
 
 
 ## Expanding ground ring out to the blast's edge.

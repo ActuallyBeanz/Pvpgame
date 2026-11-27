@@ -37,6 +37,12 @@ extends Resource
 @export var max_ice := 6
 @export var frost_range := 6.0              ## (old cone reach, unused)
 @export var blast_radius := 3.0             ## the rod's blast: size of the circle where you aim
+@export var fire_pop_damage := 6.0          ## fire rod: the small first pop...
+@export var burn_time := 3.5                ## ...then the circle burns this long
+@export var burn_tick := 0.5
+@export var burn_damage := 4.0              ## per tick to anything standing in it (+ element bonus)
+@export var bomb_damage := 70.0             ## Blastgourd on the rod: explosion damage at the centre
+@export var bomb_radius_mult := 1.3         ## explosion radius = blast_radius x this
 @export var frost_damage := 10.0            ## blast damage (+ the element bonus)
 @export var frost_slow := 2.5               ## seconds a frost blast slows players
 

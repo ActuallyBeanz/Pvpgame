@@ -395,6 +395,12 @@ func _infusion(item_id: String) -> Dictionary:
 	return inf
 
 
+## Shots left on a counted infusion of the weapon in hand (0 = none / timed).
+func infusion_charges_left() -> int:
+	var inf := _infusion(sync_weapon_id)
+	return int(inf.charges) if not inf.is_empty() and float(inf.until) <= 0.0 else 0
+
+
 ## Seconds left on the timed infusion of the weapon in hand (0 = none).
 func infusion_time_left() -> float:
 	var inf := _infusion(sync_weapon_id)

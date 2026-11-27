@@ -15,6 +15,7 @@ recipes = Array[Dictionary]([
 { "a": "bomb_blastgourd", "b": "arrows", "a_count": 1, "b_count": 1, "result": "bomb_arrows", "result_count": 1, "batch": true },
 { "a": "cinderpepper", "b": "@rod", "a_count": 1, "b_count": 0, "infuse": { "element": "fire", "charges": 0, "time": 30.0 } },
 { "a": "sparkthistle", "b": "@rod", "a_count": 1, "b_count": 0, "infuse": { "element": "shock", "charges": 0, "time": 30.0 } },
+{ "a": "bomb_blastgourd", "b": "@rod", "a_count": 1, "b_count": 0, "infuse": { "element": "blast", "charges": 3, "time": 0.0 } },
 { "a": "frostcap", "b": "@rod", "a_count": 1, "b_count": 0, "infuse": { "element": "frost", "charges": 0, "time": 30.0 } },
 { "a": "stone", "b": "", "a_count": 1, "b_count": 0, "result": "slingstones", "result_count": 4 },
 { "a": "wood", "b": "smolderpuff", "a_count": 1, "b_count": 1, "result": "bomb_blastgourd", "result_count": 1 },

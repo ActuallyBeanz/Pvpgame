@@ -273,7 +273,13 @@ func _weapon_line(w: Resource, kind: String) -> String:
 		"rod":
 			var el: String = _equipment.tools.rod_element()
 			var left: float = _equipment.infusion_time_left()
-			var tag: String = ("%s orb (%ds)" % [el.capitalize(), ceili(left)]) if left > 0.0 else "%s orb" % el.capitalize()
+			var charges: int = _equipment.infusion_charges_left()
+			var el_name: String = "Explosive" if el == "blast" else el.capitalize()
+			var tag: String = "%s orb" % el_name
+			if left > 0.0:
+				tag += " (%ds)" % ceili(left)
+			elif charges > 0:
+				tag += " (x%d)" % charges
 			status = "LMB %s · hold on water: ice platform" % tag if el == "frost" else "LMB %s" % tag
 			if not _equipment.tools.stats() or not _equipment.tools.stats().rod_shoots_orb:
 				status = status.replace(" orb", " blast")
