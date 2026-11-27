@@ -22,6 +22,7 @@ var _bar := 0.0
 
 const Hotbar := preload("res://ui/hotbar.gd")
 const InventoryPanel := preload("res://ui/inventory_panel.gd")
+const AmmoWheel := preload("res://ui/ammo_wheel.gd")
 
 var _hotbar: Control
 var inventory: Control                     ## Tab bag panel (ui/inventory_panel.gd)
@@ -30,6 +31,7 @@ var _dot: Control                          ## centre dot crosshair (always on wh
 var _drop_zone: Control                    ## behind the inventory: drag an item out here to drop it
 var _hearts: Control                       ## OoT hearts, top left (1 heart = 10 hp)
 var _death_label: Label
+var _wheel: Control                        ## hold R: arrow-type wheel
 
 
 func _ready() -> void:
@@ -57,6 +59,10 @@ func _ready() -> void:
 	_drop_zone.set_drag_forwarding(Callable(), _can_drop_outside, _drop_outside)
 	add_child(_drop_zone)
 	move_child(_drop_zone, 0)
+	_wheel = AmmoWheel.new()
+	_wheel.name = "AmmoWheel"
+	_wheel.icons = _hotbar.icons
+	add_child(_wheel)
 	_hearts = Control.new()
 	_hearts.name = "Hearts"
 	_hearts.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -179,6 +185,7 @@ func _process(delta: float) -> void:
 		_equipment = _player.get_node_or_null("Equipment") if _player else null
 		_hotbar.equipment = _equipment
 		inventory.equipment = _equipment
+		_wheel.equipment = _equipment
 		if _equipment == null:
 			visible = false
 			return
@@ -235,7 +242,16 @@ func _weapon_line(w: Resource, kind: String) -> String:
 	var status := ""
 	match kind:
 		"shoot":
-			status = "fire arrow!" if _equipment.sync_arrow_element == "fire" else "hold LMB to draw"
+			var a: Resource = _equipment.current_ammo()
+			var fuse: float = _equipment.bomb_arrow_fuse()
+			var what: String = ("%s x%d" % [a.display_name, _equipment.ammo_count()]) if a else "no ammo"
+			if fuse >= 0.0:
+				status = "%s · FUSE %.1fs - let fly!" % [what, fuse]
+			elif _equipment.sync_arrow_element == "fire":
+				status = "%s · fire arrow!" % what
+			else:
+				var more: String = "   ·   [R] arrow type" if _equipment.ammo_options().size() > 1 else ""
+				status = "%s · hold LMB to draw%s" % [what, more]
 		"throw":
 			status = "returning..." if _equipment.sync_thrown else "hold LMB: sweep to pick targets"
 		"hook":

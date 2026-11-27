@@ -19,6 +19,7 @@ const Melee := preload("res://scenes/player/melee.gd")
 const HookTool := preload("res://scenes/player/hook_tool.gd")
 const Motor := preload("res://scenes/player/movement_motor.gd")
 const FX := preload("res://systems/components/element_fx.gd")
+const BombProjectile := preload("res://scenes/weapons/bomb_projectile.gd")
 
 @export var pickup_radius := 2.2
 @export var holster_swap_delay := 0.25     ## when the model moves hand <-> back during the anim
@@ -37,6 +38,7 @@ var sync_shield_id := ""                   ## shield worn on the off hand (separ
 var sync_blocking := false                 ## shield raised (F)
 var sync_hook_phase := 0                   ## HookTool.Phase: grapple claw idle / out / back / pulling
 var sync_hook_tip := Vector3.ZERO          ## grapple claw position while it's out
+var sync_ammo_id := ""                     ## ammo type on the string (remote peers draw the right arrow)
 
 var weapons: Array[String] = []            ## owned weapon ids, hotbar order (owner only)
 var inventory: Array[String] = []          ## item id per slot, "" = empty (owner only): [0, inventory_size) = hotbar, then bag
@@ -59,6 +61,12 @@ var _need_redraw := false                  ## a roll cancelled the bow draw: rel
 var _nock_vis: Node3D                      ## arrow shown on the string while aiming
 var _nock_flames: Node3D
 var _lit_timer := 0.0
+var selected_ammo: Dictionary = {}         ## weapon id -> chosen ammo id (fire arrows...) (owner)
+var _bomb_fuse := -1.0                     ## bomb arrow on the string: seconds left (-1 = none lit)
+var _lit_ammo_id := ""                     ## which ammo was lit (to use it up even after a weapon swap)
+var _nock_model_for := ""
+var _nock_sparks: Node3D
+var _bow_arc_on := false
 
 
 var _boom_aim: Node
@@ -120,8 +128,55 @@ func weapon_type() -> String:
 
 
 func ammo_count() -> int:
+	var id := current_ammo_id()
+	return int(ammo.get(id, 0)) if id != "" else 0
+
+
+## Ammo a weapon can shoot: its base ammo first, then special kinds (fire / frost / shock / bomb
+## arrows...) = ammo items whose ammo_family is that base ammo.
+func ammo_options(weapon_id := "") -> Array[String]:
+	var w: Resource = ItemDB.get_item(weapon_id) if weapon_id != "" else weapon()
+	var out: Array[String] = []
+	if w == null or w.ammo_item_id == "":
+		return out
+	var base: String = w.ammo_item_id
+	out.append(base)
+	for id: String in ItemDB.all_ids():
+		var it := ItemDB.get_item(id)
+		if it and it.kind == "ammo" and it.ammo_family == base:
+			out.append(id)
+	return out
+
+
+## Ammo the weapon in hand will shoot: the chosen type while you still have some, otherwise
+## the first type you do have (base ammo if none).
+func current_ammo_id() -> String:
 	var w := weapon()
-	return int(ammo.get(w.ammo_item_id, 0)) if w and w.ammo_item_id != "" else 0
+	if w == null or w.ammo_item_id == "":
+		return ""
+	var base: String = w.ammo_item_id
+	var sel: String = str(selected_ammo.get(w.id, base))
+	if int(ammo.get(sel, 0)) > 0:
+		return sel
+	for id in ammo_options():
+		if int(ammo.get(id, 0)) > 0:
+			return id
+	return base
+
+
+func current_ammo() -> Resource:
+	var id := current_ammo_id()
+	return ItemDB.get_item(id) if id != "" else null
+
+
+## Choose what a bow shoots (right-click menu / R wheel). Changing mid-draw takes the arrow off.
+func select_ammo(weapon_id: String, ammo_id: String) -> void:
+	if weapon_id == "" or not ammo_options(weapon_id).has(ammo_id):
+		return
+	if weapon_id == sync_weapon_id and (_drawing or charge > 0.0):
+		_release(false)
+	selected_ammo[weapon_id] = ammo_id
+	changed.emit()
 
 
 func is_aiming() -> bool:
@@ -200,6 +255,8 @@ func _group_match(token: String, item_id: String) -> bool:
 	match token:
 		"@bow":
 			return it.kind == "weapon" and it.action_tag == "shoot"
+		"@sling":                                  # shooters that don't take arrows (slingshot)
+			return it.kind == "weapon" and it.action_tag == "shoot" and it.ammo_item_id != "arrows"
 		"@melee":
 			return it.kind == "weapon" and it.action_tag == "slash"
 		"@shield":
@@ -280,6 +337,23 @@ func _do_recipe(r: Dictionary) -> bool:
 	var b: String = r.get("_b_is", "")
 	var an := int(r.get("a_count", 1))
 	var bn := int(r.get("b_count", 0)) if not str(r.get("b", "")).begins_with("@") else 0
+	var out_n := int(r.get("result_count", 1))
+	if bool(r.get("convert", false)) and b != "":
+		# convert: up to b_count of b (e.g. 5 arrows) become the result, one for one
+		bn = mini(bn, _count_of(b))
+		out_n = bn * out_n
+		if bn < 1:
+			Audio.play("ui.error")
+			return false
+	elif bool(r.get("batch", false)) and b != "" and an > 0 and bn > 0 and a != b:
+		# batch: as many as both stacks allow (5 bombs on 9 arrows = 5 bomb arrows)
+		var times := mini(_count_of(a) / an, _count_of(b) / bn)
+		if times < 1:
+			Audio.play("ui.error")
+			return false
+		an *= times
+		bn *= times
+		out_n *= times
 	if _count_of(a) < an or (b != "" and bn > 0 and _count_of(b) < bn) or (a == b and _count_of(a) < an + bn):
 		Audio.play("ui.error")
 		return false
@@ -292,7 +366,7 @@ func _do_recipe(r: Dictionary) -> bool:
 		if b != "":
 			_take(b, bn)
 		# stackables (ammo, materials, bombs) come in result_count; crafted gear gets no starting-ammo bonus
-		receive_item(str(r.result), int(r.get("result_count", 1)) if is_stackable(str(r.result)) else -1)
+		receive_item(str(r.result), out_n if is_stackable(str(r.result)) else -1)
 	_sync_totals()
 	changed.emit()
 	Audio.play("item.get", 0.0, 1.1)
@@ -800,6 +874,8 @@ func _process(delta: float) -> void:
 
 func _local_update(delta: float) -> void:
 	_cooldown = maxf(0.0, _cooldown - delta)
+	sync_ammo_id = current_ammo_id()
+	_tick_bomb_arrow(delta)
 	if _player.sync_dead:
 		_stop_combat_input()
 		nearest_pickup = null
@@ -900,6 +976,13 @@ func _update_bow(delta: float) -> void:
 	if wants_aim and ammo_count() > 0 and _cooldown <= 0.0:
 		_drawing = true
 		charge = minf(1.0, charge + delta / s.draw_time)
+		var a := current_ammo()
+		if a and a.explosive and a.fuse_time > 0.0 and _bomb_fuse < 0.0:
+			_bomb_fuse = a.fuse_time            # bomb arrow: the fuse is lit the moment you draw
+			_lit_ammo_id = a.id
+			sync_arrow_element = "bomb"
+			Audio.play_at("fire.ignite", _hand_origin(), -4.0, 1.6)
+	_update_bow_arc()
 	if _drawing and not holding:
 		# Let go mid-backflip / sidehop: the shot fizzles (no firing out of a move).
 		_release(charge >= s.min_charge_to_fire and not _player.motor.action_locked())
@@ -909,8 +992,66 @@ func _update_bow(delta: float) -> void:
 func _release(fire: bool) -> void:
 	if fire:
 		_fire()
+	elif _bomb_fuse >= 0.0:
+		_drop_lit_arrow()                          # let go / rolled / swapped: the lit bomb drops at your feet
 	_drawing = false
 	charge = 0.0
+
+
+# ---------------------------------------------------------------- bomb arrows
+## The lit fuse burns while the arrow is on the string; run out = it goes off in your hands.
+func _tick_bomb_arrow(delta: float) -> void:
+	if _bomb_fuse < 0.0:
+		_hide_bow_arc()
+		return
+	if weapon_type() != "shoot" or _player.sync_dead:
+		_drop_lit_arrow()
+		return
+	_bomb_fuse -= delta
+	if _bomb_fuse <= 0.0:
+		var at := _hand_origin()
+		_clear_bomb_arrow()
+		consume(_lit_ammo_id, 1)
+		bomb._spawn(at, Vector3.ZERO, 0.0)
+		_drawing = false
+		charge = 0.0
+		print("[bow] bomb arrow went off on the string")
+
+
+func _drop_lit_arrow() -> void:
+	var fuse := _bomb_fuse
+	var at := _hand_origin()
+	_clear_bomb_arrow()
+	consume(_lit_ammo_id, 1)
+	bomb._spawn(at + Vector3.DOWN * 0.3, -_player.model_root.global_basis.z * 1.5 + _player.velocity * 0.5, fuse)
+	print("[bow] lit bomb arrow dropped (%.1fs left)" % fuse)
+
+
+func _clear_bomb_arrow() -> void:
+	_bomb_fuse = -1.0
+	if sync_arrow_element == "bomb":
+		sync_arrow_element = ""
+
+
+func bomb_arrow_fuse() -> float:
+	return _bomb_fuse
+
+
+## Lobbing ammo (bomb arrows): show the flight arc while drawing, like a held bomb.
+func _update_bow_arc() -> void:
+	var a := current_ammo()
+	if not (_drawing and a and a.explosive and is_local()):
+		_hide_bow_arc()
+		return
+	var origin := _hand_origin()
+	bomb.draw_arc(origin, _shot_velocity(origin, a, charge), stats().gravity * a.gravity_mult, stats().drag)
+	_bow_arc_on = true
+
+
+func _hide_bow_arc() -> void:
+	if _bow_arc_on:
+		_bow_arc_on = false
+		bomb.hide_arc()
 
 
 func _set_drawn(on: bool) -> void:
@@ -966,21 +1107,25 @@ func _projectiles_root() -> Node:
 func _update_nock(delta: float) -> void:
 	var show := weapon_type() == "shoot" and sync_drawn and sync_aiming and _swap_timer < 0.0 \
 		and (not is_local() or ammo_count() > 0)
-	if is_local() and sync_arrow_element != "":
+	if is_local() and sync_arrow_element == "fire":
 		_lit_timer -= delta
 		if _lit_timer <= 0.0 or weapon_type() != "shoot" or not sync_drawn:
 			_extinguish_nock()
-	if not show:
+	var model_id := _ammo_model_id()
+	if not show or (_nock_vis and _nock_model_for != model_id):
 		if _nock_vis:
 			_nock_vis.queue_free()
 			_nock_vis = null
 			_nock_flames = null
-		return
+			_nock_sparks = null
+		if not show:
+			return
 	if _nock_vis == null:
 		_nock_vis = Node3D.new()
 		_nock_vis.name = "NockedArrow"
 		_nock_vis.top_level = true
-		_nock_vis.add_child(AssetRegistry.instantiate(_ammo_model_id()))
+		_nock_vis.add_child(AssetRegistry.instantiate(model_id))
+		_nock_model_for = model_id
 		add_child(_nock_vis)
 	var hand := _hand_origin()
 	var dir: Vector3
@@ -992,12 +1137,22 @@ func _update_nock(delta: float) -> void:
 	_nock_vis.global_position = tip
 	var up := Vector3.UP if absf(dir.y) < 0.99 else Vector3.FORWARD
 	_nock_vis.look_at(tip + dir, up)
-	if is_local() and sync_arrow_element == "" and (WorldRules.fire_zone_at(_player.get_world_3d(), tip) \
+	var nock_ammo: Resource = current_ammo() if is_local() else null
+	var plain: bool = nock_ammo == null or (nock_ammo.element == "" and not nock_ammo.explosive)
+	if is_local() and plain and sync_arrow_element == "" and (WorldRules.fire_zone_at(_player.get_world_3d(), tip) \
 			or WorldRules.fire_zone_on_segment(_player.get_world_3d(), hand + dir * 0.3, tip + dir * 0.15)):
 		sync_arrow_element = "fire"
 		_lit_timer = lit_arrow_burn_time
 		print("[bow] nocked arrow lit")
-	var lit := sync_arrow_element == "fire"
+	var lit := sync_arrow_element == "fire" or model_id == "weapon.arrow.fire"
+	var fused := sync_arrow_element == "bomb"
+	if fused and _nock_sparks == null:
+		_nock_sparks = BombProjectile.fuse_sparks()
+		_nock_vis.add_child(_nock_sparks)
+		_nock_sparks.position = Vector3(0, 0.08, 0.17)
+	elif not fused and _nock_sparks:
+		_nock_sparks.queue_free()
+		_nock_sparks = null
 	if lit and _nock_flames == null:
 		_nock_flames = FX.flames(0.35, true)
 		_nock_vis.add_child(_nock_flames)
@@ -1023,51 +1178,77 @@ func _fire() -> void:
 	var s := stats()
 	if w == null or ammo_count() <= 0:
 		return
+	var ammo_id := current_ammo_id()
+	var a := current_ammo()
 	var origin := _hand_origin()
-	var dir := (_crosshair_point(origin, 1000.0) - origin).normalized()
-	dir = _apply_spread(dir, float(s.spread_deg(charge)))
-	var vel: Vector3 = dir * s.launch_speed(charge)
-	var dmg: float = s.damage(charge)
-	consume(w.ammo_item_id, 1)
-	_cooldown = s.fire_cooldown
-	var element := sync_arrow_element
+	var vel := _shot_velocity(origin, a, charge)
+	vel = _apply_spread(vel.normalized(), float(s.spread_deg(charge))) * vel.length()
+	var dmg: float = s.damage(charge) * (a.damage_mult if a else 1.0)
+	var fuse := _bomb_fuse
+	var element := sync_arrow_element if sync_arrow_element != "bomb" else ""
+	if a and a.element != "":
+		element = a.element                   # fire / frost / shock arrows
 	if element == "":
-		element = use_shot_element()          # Cinderpepper / Frostcap / Sparkthistle on the bow
+		element = use_shot_element()          # Cinderpepper / Frostcap / Sparkthistle on a slingshot
+	_clear_bomb_arrow()
+	consume(ammo_id, 1)
+	_cooldown = s.fire_cooldown
 	sync_arrow_element = ""
 	_lit_timer = 0.0
-	_spawn_arrow(origin, vel, dmg, false, element)
+	_spawn_arrow(origin, vel, dmg, false, element, ammo_id, fuse)
 	Audio.play_at("bow.fire", origin)
 	if _model:
 		_model.play_shoot()
-	rpc_fire.rpc(origin, vel, element)
+	rpc_fire.rpc(origin, vel, element, ammo_id, fuse)
 	print("[bow] fired charge %.2f speed %.1f m/s dmg %.0f ammo left %d" % [charge, vel.length(), dmg, ammo_count()])
 	changed.emit()
 
 
 @rpc("authority", "call_remote", "unreliable_ordered")
-func rpc_fire(origin: Vector3, vel: Vector3, element: String) -> void:
-	_spawn_arrow(origin, vel, 0.0, true, element)
+func rpc_fire(origin: Vector3, vel: Vector3, element: String, ammo_id: String, fuse: float) -> void:
+	_spawn_arrow(origin, vel, 0.0, true, element, ammo_id, fuse)
 	Audio.play_at("bow.fire", origin)
 	if _model:
 		_model.play_shoot()
 
 
-func _spawn_arrow(origin: Vector3, vel: Vector3, dmg: float, cosmetic: bool, element := "") -> void:
+func _spawn_arrow(origin: Vector3, vel: Vector3, dmg: float, cosmetic: bool, element: String, ammo_id: String, fuse: float) -> void:
 	var arrow := ArrowScene.instantiate()
-	arrow.model_id = _ammo_model_id()
-	var ammo_it: Resource = ItemDB.get_item(weapon().ammo_item_id) if weapon() else null
+	var ammo_it: Resource = ItemDB.get_item(ammo_id) if ammo_id != "" else null
+	arrow.model_id = ammo_it.model_id if ammo_it and ammo_it.model_id != "" else "weapon.arrow.basic"
 	if ammo_it and ammo_it.material == "stone":
 		arrow.hit_action = "blunt"
 	arrow.cosmetic = cosmetic
 	arrow.element = element
+	if ammo_it and ammo_it.explosive:
+		arrow.explosive = true
+		arrow.fuse = fuse if fuse > 0.0 else ammo_it.fuse_time
 	_projectiles_root().add_child(arrow)
 	arrow.launch(origin, vel, stats(), dmg, _player.get_rid())
+	if ammo_it:
+		arrow.gravity *= ammo_it.gravity_mult
+
+
+## Launch velocity for a shot (before spread): toward the crosshair, special ammo changes the
+## speed, and lobbing ammo (bomb arrows) leaves a little above the crosshair.
+func _shot_velocity(origin: Vector3, a: Resource, draw: float) -> Vector3:
+	var dir := (_crosshair_point(origin, 1000.0) - origin).normalized()
+	var lift: float = a.aim_lift_deg if a else 0.0
+	if lift != 0.0:
+		var axis := dir.cross(Vector3.UP)
+		if axis.length() > 0.01:
+			dir = dir.rotated(axis.normalized(), deg_to_rad(lift))
+	var speed: float = stats().launch_speed(draw) * (a.speed_mult if a else 1.0)
+	return dir * speed
 
 
 ## What the current weapon shoots (arrow, slingstone...): the ammo item's model.
 func _ammo_model_id() -> String:
-	var w := weapon()
-	var a: Resource = ItemDB.get_item(w.ammo_item_id) if w and w.ammo_item_id != "" else null
+	var id := current_ammo_id() if is_local() else sync_ammo_id
+	if id == "":
+		var w := weapon()
+		id = w.ammo_item_id if w else ""
+	var a: Resource = ItemDB.get_item(id) if id != "" else null
 	return a.model_id if a and a.model_id != "" else "weapon.arrow.basic"
 
 

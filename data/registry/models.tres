@@ -61,9 +61,18 @@
 [ext_resource type="PackedScene" path="res://assets/models/items/flint_knife.glb" id="c2_flint"]
 [ext_resource type="PackedScene" path="res://assets/models/items/driftwood_club.glb" id="c3_driftwood"]
 [ext_resource type="PackedScene" path="res://assets/models/items/twig_bow.glb" id="c4_twig"]
+[ext_resource type="PackedScene" path="res://assets/models/weapons/arrow_fire.glb" id="ar_fire"]
+[ext_resource type="PackedScene" path="res://assets/models/weapons/arrow_frost.glb" id="ar_frost"]
+[ext_resource type="PackedScene" path="res://assets/models/weapons/arrow_shock.glb" id="ar_shock"]
+[ext_resource type="PackedScene" path="res://assets/models/weapons/arrow_bomb.glb" id="ar_bomb"]
+
 [resource]
 script = ExtResource("12_ckosp")
 models = Dictionary[String, PackedScene]({
+"weapon.arrow.fire": ExtResource("ar_fire"),
+"weapon.arrow.frost": ExtResource("ar_frost"),
+"weapon.arrow.shock": ExtResource("ar_shock"),
+"weapon.arrow.bomb": ExtResource("ar_bomb"),
 "item.material.stone": ExtResource("c0_stone"),
 "item.material.flint": ExtResource("c1_flint"),
 "weapon.knife.flint": ExtResource("c2_flint"),

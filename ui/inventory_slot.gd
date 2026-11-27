@@ -130,7 +130,7 @@ func refresh() -> void:
 	elif id == equipment.sync_shield_id:
 		border = WORN
 		width = 3
-	elif cur_w and it.kind == "ammo" and cur_w.ammo_item_id == id:
+	elif cur_w and it.kind == "ammo" and equipment.current_ammo_id() == id:
 		border = IN_USE
 		width = 3
 	if _hover:
@@ -157,7 +157,9 @@ func _dragging_me() -> bool:
 
 
 # ---------------------------------------------------------------- right-click menu
-enum Act { EQUIP, UNEQUIP, TO_HOTBAR, SPLIT_HALF, SPLIT_ONE, DROP_ONE, DROP_ALL, SPLIT_CHOOSE, EAT, CRAFT_BASE = 100 }
+enum Act { EQUIP, UNEQUIP, TO_HOTBAR, SPLIT_HALF, SPLIT_ONE, DROP_ONE, DROP_ALL, SPLIT_CHOOSE, EAT, CRAFT_BASE = 100, AMMO_BASE = 200, LOAD_BASE = 300 }
+var _ammo_ids: Array[String] = []          ## menu: arrow types listed for this bow
+var _load_bows: Array[String] = []         ## menu: bows these arrows can be loaded into
 var _menu: PopupMenu
 
 
@@ -178,6 +180,7 @@ func _open_menu() -> void:
 	if _menu == null:
 		_menu = PopupMenu.new()
 		_menu.id_pressed.connect(_on_menu)
+		_menu.add_theme_constant_override("icon_max_width", 32)
 		add_child(_menu)
 	_menu.clear()
 	var n: int = equipment.count_in_slot(slot)
@@ -190,6 +193,37 @@ func _open_menu() -> void:
 				_menu.add_item("Equip", Act.EQUIP)
 		else:
 			_menu.add_item("Move to hotbar", Act.TO_HOTBAR)
+	_ammo_ids.clear()
+	_load_bows.clear()
+	if it.kind == "weapon" and it.action_tag == "shoot":
+		# arrow type: pick with an icon (the one in use is ticked)
+		var opts: Array[String] = equipment.ammo_options(id)
+		if opts.size() > 1:
+			_menu.add_separator("Arrow type")
+			var cur: String = str(equipment.selected_ammo.get(id, opts[0]))
+			for a_id in opts:
+				var a: Resource = ItemDB.get_item(a_id)
+				var n_a := int(equipment.ammo.get(a_id, 0))
+				var k := _ammo_ids.size()
+				_ammo_ids.append(a_id)
+				var tex: Texture2D = icons.get_icon(a_id) if icons else null
+				var label: String = "%s (%d)" % [a.display_name if a else a_id, n_a]
+				if tex:
+					_menu.add_icon_radio_check_item(tex, label, Act.AMMO_BASE + k)
+				else:
+					_menu.add_radio_check_item(label, Act.AMMO_BASE + k)
+				var idx := _menu.get_item_index(Act.AMMO_BASE + k)
+				_menu.set_item_checked(idx, a_id == cur)
+				_menu.set_item_disabled(idx, n_a <= 0)
+			_menu.add_separator()
+	if it.kind == "ammo":
+		# special arrows: load them into a bow you carry
+		for w_id in equipment.inventory:
+			var w: Resource = ItemDB.get_item(w_id) if w_id != "" else null
+			if w and w.kind == "weapon" and not _load_bows.has(w_id) and equipment.ammo_options(w_id).size() > 1 \
+					and equipment.ammo_options(w_id).has(id):
+				_menu.add_item("Load into %s" % w.display_name, Act.LOAD_BASE + _load_bows.size())
+				_load_bows.append(w_id)
 	if it.heal > 0.0:
 		_menu.add_item("Eat (+%d)" % roundi(it.heal), Act.EAT)
 	var singles: Array = equipment.single_recipes(id)
@@ -229,15 +263,25 @@ func _on_menu(act: int) -> void:
 			return
 		Act.EAT:
 			ok = equipment.eat(slot)
-		_:
-			if act >= Act.CRAFT_BASE:
-				var singles: Array = equipment.single_recipes(id)
-				var k := act - Act.CRAFT_BASE
-				ok = k < singles.size() and equipment.craft_single(singles[k])
 		Act.DROP_ONE:
 			ok = equipment.drop_item(slot, 1)
 		Act.DROP_ALL:
 			ok = equipment.drop_item(slot, 0)
+		_:
+			if act >= Act.LOAD_BASE:
+				var b := act - Act.LOAD_BASE
+				ok = b < _load_bows.size()
+				if ok:
+					equipment.select_ammo(_load_bows[b], id)
+			elif act >= Act.AMMO_BASE:
+				var k := act - Act.AMMO_BASE
+				ok = k < _ammo_ids.size() and int(equipment.ammo.get(_ammo_ids[k], 0)) > 0
+				if ok:
+					equipment.select_ammo(id, _ammo_ids[k])
+			elif act >= Act.CRAFT_BASE:
+				var singles: Array = equipment.single_recipes(id)
+				var k := act - Act.CRAFT_BASE
+				ok = k < singles.size() and equipment.craft_single(singles[k])
 	Audio.play("ui.select" if ok else "ui.error")
 
 

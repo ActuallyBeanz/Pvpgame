@@ -41,6 +41,13 @@ extends Resource
 @export_group("Ammo")
 @export var amount := 0                    ## how much a pickup of this ammo gives
 @export var max_carry := 30
+@export var ammo_family := ""              ## special ammo: the base ammo it replaces ("arrows" for fire arrows...)
+@export var speed_mult := 1.0              ## special ammo flight: launch speed x
+@export var gravity_mult := 1.0            ## special ammo flight: gravity x (bomb arrows lob)
+@export var damage_mult := 1.0
+@export var aim_lift_deg := 0.0            ## shot leaves this many degrees above the crosshair (lobs)
+@export var explosive := false             ## blows up where it lands (bomb arrows)
+@export var fuse_time := 0.0               ## > 0: lit when you start drawing; held too long = boom in hand
 
 @export_group("Tags")
 @export var element := ""

@@ -79,6 +79,9 @@ properties/20/replication_mode = 2
 properties/21/path = NodePath("Equipment:sync_infusion")
 properties/21/spawn = false
 properties/21/replication_mode = 2
+properties/22/path = NodePath("Equipment:sync_ammo_id")
+properties/22/spawn = false
+properties/22/replication_mode = 2
 
 [node name="Player" type="CharacterBody3D"]
 collision_layer = 2

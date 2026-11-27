@@ -25,6 +25,7 @@ const KEYS := {
 	"roll": [KEY_CTRL, KEY_C],
 	"interact": [KEY_E],
 	"block": [KEY_F],
+	"ammo_wheel": [KEY_R],              # hold: arrow-type wheel
 }
 const MOUSE := {
 	"attack": MOUSE_BUTTON_LEFT,
@@ -41,6 +42,7 @@ const PAD_BUTTONS := {
 	"cycle_weapon": JOY_BUTTON_DPAD_RIGHT,
 	"interact": JOY_BUTTON_X,
 	"block": JOY_BUTTON_RIGHT_SHOULDER,
+	"ammo_wheel": JOY_BUTTON_DPAD_UP,
 }
 ## action -> [axis, direction]
 const PAD_AXES := {

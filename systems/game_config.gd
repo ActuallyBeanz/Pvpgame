@@ -14,6 +14,8 @@ var gameplay_input_enabled := true
 ## True while the Tab inventory is open: you can still walk / jump / roll, but the
 ## mouse belongs to the inventory (no camera look, attack, aim or focus).
 var inventory_open := false
+## True while the arrow wheel (hold R) is up: mouse picks a slice instead of turning the camera.
+var wheel_open := false
 
 
 ## Attack / aim / focus / block may read input (not paused, inventory closed).

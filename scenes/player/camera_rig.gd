@@ -136,7 +136,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	if event.is_action_pressed("toggle_camera"):
 		set_first_person(not first_person)
-	elif event is InputEventMouseMotion:
+	elif event is InputEventMouseMotion and not GameConfig.wheel_open:
 		var m := event as InputEventMouseMotion
 		_note_look(absf(m.relative.x) + absf(m.relative.y))
 		var sens := mouse_sensitivity * UserSettings.mouse_mult
@@ -155,7 +155,7 @@ func _unhandled_input(event: InputEvent) -> void:
 func _process(delta: float) -> void:
 	if not active or not is_instance_valid(_target):
 		return
-	if GameConfig.gameplay_input_enabled:
+	if GameConfig.gameplay_input_enabled and not GameConfig.wheel_open:
 		var stick := Input.get_vector("look_left", "look_right", "look_up", "look_down")
 		if stick.length() > 0.3:
 			_note_look(focus_look_cancel_px)

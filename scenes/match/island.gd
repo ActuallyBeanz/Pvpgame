@@ -1197,10 +1197,11 @@ const ChestScript := preload("res://scenes/props/loot/chest.gd")
 ## What each chest tier can hold (rolls = how many items come out).
 @export var chest_loot := {
 	"common": ["slingstones", "arrows", "slingshot_thornfork", "bow_basic", "hearthapple", "wood", "slingstones", "arrows"],
-	"uncommon": ["sword_dawnsteel", "bow_basic", "boomerang_basic", "shield_gildcrest", "slingshot_thornfork", "arrows", "slingstones"],
+	"uncommon": ["sword_dawnsteel", "bow_basic", "boomerang_basic", "shield_gildcrest", "slingshot_thornfork", "arrows", "slingstones",
+		"fire_arrows", "frost_arrows", "shock_arrows"],
 	"rare": ["greatsword_emberfang", "maul_quakeheart", "grappleclaw", "bomb_blastgourd", "trap_snapjaw", "fan_galeleaf",
-		"staff_sandspire", "rod_rimecaller", "arrows"],
-	"legendary": ["skytether", "greatsword_emberfang", "maul_quakeheart", "bomb_blastgourd", "rod_rimecaller", "starsilver_ore"],
+		"staff_sandspire", "rod_rimecaller", "arrows", "fire_arrows", "frost_arrows", "shock_arrows", "bomb_arrows"],
+	"legendary": ["skytether", "greatsword_emberfang", "maul_quakeheart", "bomb_blastgourd", "rod_rimecaller", "starsilver_ore", "bomb_arrows"],
 }
 @export var chest_rolls := { "common": Vector2i(1, 2), "uncommon": Vector2i(1, 2), "rare": Vector2i(2, 2), "legendary": Vector2i(2, 3) }
 

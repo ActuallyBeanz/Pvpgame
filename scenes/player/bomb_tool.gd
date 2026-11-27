@@ -123,19 +123,30 @@ func _update_arc() -> void:
 			_arc.visible = false
 			_ring.visible = false
 		return
+	var vel := launch_velocity(s.throw_speed, s.throw_up)
+	draw_arc(_hand() + Vector3(vel.x, 0.0, vel.z).normalized() * 0.35, vel, s.gravity, 0.0)
+
+
+func hide_arc() -> void:
+	if _arc:
+		_arc.visible = false
+		_ring.visible = false
+
+
+## Dotted flight path + landing ring (also used by the bow for bomb arrows).
+func draw_arc(pos: Vector3, vel: Vector3, gravity: float, drag: float) -> void:
 	if _arc == null:
 		_build_arc()
-	var vel := launch_velocity(s.throw_speed, s.throw_up)
-	var pos := _hand() + Vector3(vel.x, 0.0, vel.z).normalized() * 0.35
 	var space := _player.get_world_3d().direct_space_state
 	var dt := 1.0 / 30.0
 	var mm := _arc.multimesh
 	var n := 0
 	var landed := false
 	var hit_n := Vector3.UP
-	for step in 120:
+	for step in 150:
 		var nxt := pos + vel * dt
-		vel.y -= s.gravity * dt
+		vel.y -= gravity * dt
+		vel *= maxf(0.0, 1.0 - drag * dt)
 		var q := PhysicsRayQueryParameters3D.create(pos, nxt, 1)
 		q.exclude = [_player.get_rid()]
 		var hit := space.intersect_ray(q)

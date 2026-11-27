@@ -20,12 +20,15 @@ var cosmetic := false                      ## remote copies: visuals only, no da
 var headshot_mult := 1.0                   ## from the bow / slingshot stats
 var hit_action := "pierce"                 ## "blunt" for slingstones (shatters ice, no sticking-in look needed)
 var element := ""                          ## "fire" etc. Set by special ammo, or by flying through a fire zone
+var explosive := false                     ## bomb arrow: blows up on impact (or when the fuse runs out)
+var fuse := 4.0                            ## bomb arrow: seconds left (lit when the bow was drawn)
 
 var _age := 0.0
 var _stuck := false
 
 
 const FX := preload("res://systems/components/element_fx.gd")
+const BombScript := preload("res://scenes/weapons/bomb_projectile.gd")
 
 var _flames: Node3D
 
@@ -34,6 +37,10 @@ func _ready() -> void:
 	add_child(AssetRegistry.instantiate(model_id))
 	if element != "":
 		_show_element()
+	if explosive:
+		var sp := BombScript.fuse_sparks()
+		add_child(sp)
+		sp.position = Vector3(0, 0.08, 0.17)
 
 
 ## Light the arrow (fire zone, or fire ammo). Every peer does this from its own copy.
@@ -47,10 +54,39 @@ func set_element(e: String) -> void:
 
 
 func _show_element() -> void:
-	if element == "fire" and _flames == null and is_inside_tree():
+	if _flames != null or not is_inside_tree():
+		return
+	if element == "fire":
 		_flames = FX.flames(0.35, true)
 		add_child(_flames)
 		_flames.position = Vector3(0, 0, 0.05)
+	elif element == "frost" or element == "shock":
+		_flames = _sparkle(WorldRules.element_color(element))
+		add_child(_flames)
+		_flames.position = Vector3(0, 0, 0.08)
+
+
+## Frost / shock arrows: a little trail of glowing motes.
+func _sparkle(col: Color) -> CPUParticles3D:
+	var p := CPUParticles3D.new()
+	p.amount = 16
+	p.lifetime = 0.35
+	p.local_coords = false
+	p.emission_shape = CPUParticles3D.EMISSION_SHAPE_SPHERE
+	p.emission_sphere_radius = 0.05
+	p.gravity = Vector3.ZERO
+	p.initial_velocity_max = 0.5
+	p.scale_amount_min = 0.5
+	var q := QuadMesh.new()
+	q.size = Vector2(0.05, 0.05)
+	var m := StandardMaterial3D.new()
+	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	m.billboard_mode = BaseMaterial3D.BILLBOARD_PARTICLES
+	m.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+	m.albedo_color = col
+	q.material = m
+	p.mesh = q
+	return p
 
 
 func launch(from: Vector3, vel: Vector3, stats: Resource, dmg: float, shooter: RID) -> void:
@@ -73,7 +109,12 @@ func _physics_process(delta: float) -> void:
 		if _age > stick_time:
 			queue_free()
 		return
-	if _age > lifetime:
+	if explosive:
+		fuse -= delta
+		if fuse <= 0.0:
+			_boom(global_position)
+			return
+	if _age > lifetime and not explosive:
 		queue_free()
 		return
 	velocity.y -= gravity * delta
@@ -100,6 +141,9 @@ func _physics_process(delta: float) -> void:
 
 
 func _stick(res: Dictionary) -> void:
+	if explosive:
+		_boom(res.position - velocity.normalized() * 0.15)   # bomb arrows go off on whatever they hit (shields too)
+		return
 	var col0: Object = res.collider
 	if col0 and col0.has_method("blocks_hit") and col0.blocks_hit(velocity.normalized()):
 		_deflect(res)
@@ -176,6 +220,19 @@ func _deflect(res: Dictionary) -> void:
 		_flames = null
 	if not cosmetic:
 		print("[arrow] blocked by %s's shield" % (res.collider as Node).name)
+
+
+## Bomb arrow: a Blastgourd blast right here (every peer shows it; only the shooter's copy hurts).
+func _boom(at: Vector3) -> void:
+	var b := BombScript.new()
+	b.name = "ArrowBlast"
+	b.stats = ItemDB.get_item("bomb_blastgourd").stats
+	b.cosmetic = cosmetic
+	b.fuse = 0.0
+	get_parent().add_child(b, true)
+	b.global_position = at
+	b.explode()
+	queue_free()
 
 
 func _face(dir: Vector3) -> void:
