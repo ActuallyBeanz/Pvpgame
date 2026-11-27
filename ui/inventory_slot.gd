@@ -143,7 +143,7 @@ func _dragging_me() -> bool:
 
 
 # ---------------------------------------------------------------- right-click menu
-enum Act { EQUIP, UNEQUIP, TO_HOTBAR, SPLIT_HALF, SPLIT_ONE, DROP_ONE, DROP_ALL }
+enum Act { EQUIP, UNEQUIP, TO_HOTBAR, SPLIT_HALF, SPLIT_ONE, DROP_ONE, DROP_ALL, SPLIT_CHOOSE }
 var _menu: PopupMenu
 
 
@@ -177,8 +177,8 @@ func _open_menu() -> void:
 		else:
 			_menu.add_item("Move to hotbar", Act.TO_HOTBAR)
 	if stack and it.kind != "weapon" and n > 1:
+		_menu.add_item("Split...", Act.SPLIT_CHOOSE)
 		_menu.add_item("Split in half (%d)" % (n / 2), Act.SPLIT_HALF)
-		_menu.add_item("Split off 1", Act.SPLIT_ONE)
 	if stack and it.kind != "weapon" and n > 1:
 		_menu.add_item("Drop 1", Act.DROP_ONE)
 	_menu.add_item("Drop all (%d)" % n if stack and n > 1 else "Drop", Act.DROP_ALL)
@@ -205,11 +205,72 @@ func _on_menu(act: int) -> void:
 			ok = equipment.split_stack(slot, equipment.count_in_slot(slot) / 2)
 		Act.SPLIT_ONE:
 			ok = equipment.split_stack(slot, 1)
+		Act.SPLIT_CHOOSE:
+			_open_split_picker()
+			return
 		Act.DROP_ONE:
 			ok = equipment.drop_item(slot, 1)
 		Act.DROP_ALL:
 			ok = equipment.drop_item(slot, 0)
 	Audio.play("ui.select" if ok else "ui.error")
+
+
+## Split picker: slider (+ number box) for how many to move into a new stack.
+var _split_pop: PopupPanel
+
+
+func _open_split_picker() -> void:
+	var n: int = equipment.count_in_slot(slot)
+	if n < 2:
+		return
+	if _split_pop:
+		_split_pop.queue_free()
+	_split_pop = PopupPanel.new()
+	add_child(_split_pop)
+	var box := VBoxContainer.new()
+	box.custom_minimum_size = Vector2(260, 0)
+	box.add_theme_constant_override("separation", 8)
+	_split_pop.add_child(box)
+	var it: Resource = ItemDB.get_item(item_id())
+	var title := Label.new()
+	title.text = "Split %s (%d)" % [it.display_name if it else item_id(), n]
+	box.add_child(title)
+	var row := HBoxContainer.new()
+	box.add_child(row)
+	var slider := HSlider.new()
+	slider.min_value = 1
+	slider.max_value = n - 1
+	slider.step = 1
+	slider.value = maxi(1, n / 2)
+	slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	slider.custom_minimum_size = Vector2(150, 24)
+	row.add_child(slider)
+	var num := SpinBox.new()
+	num.min_value = 1
+	num.max_value = n - 1
+	num.step = 1
+	num.value = slider.value
+	row.add_child(num)
+	slider.value_changed.connect(func(v: float) -> void: num.set_value_no_signal(v))
+	num.value_changed.connect(func(v: float) -> void: slider.set_value_no_signal(v))
+	var buttons := HBoxContainer.new()
+	buttons.alignment = BoxContainer.ALIGNMENT_END
+	box.add_child(buttons)
+	var cancel := Button.new()
+	cancel.text = "Cancel"
+	cancel.pressed.connect(func() -> void: _split_pop.hide())
+	buttons.add_child(cancel)
+	var ok := Button.new()
+	ok.text = "Split"
+	ok.pressed.connect(func() -> void:
+		var good: bool = is_instance_valid(equipment) and equipment.split_stack(slot, int(slider.value))
+		Audio.play("ui.select" if good else "ui.error")
+		_split_pop.hide())
+	buttons.add_child(ok)
+	_split_pop.reset_size()
+	_split_pop.position = Vector2i(get_viewport().get_mouse_position())
+	_split_pop.popup()
+	slider.grab_focus()
 
 
 # ---------------------------------------------------------------- drag & drop (Godot GUI)
