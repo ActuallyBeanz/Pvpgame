@@ -17,3 +17,9 @@ extends Resource
 @export var blast_damage := 40.0            ## at the centre, falling off to 40 % at the edge
 @export var chain_radius := 3.0             ## other bombs this close go off too
 @export var lock_on_range := 12.0
+
+@export_group("Brew vial (shatters instead of exploding)")
+@export var shatter_element := ""            ## set = a vial: no fuse, breaks on impact into this element's effect
+@export var impact_size := 1.0               ## scales the effect's radius (ElementImpacts)
+@export var impact_damage := 4.0             ## direct hit damage when it smashes into someone
+@export var projectile_model := ""           ## model while flying ("" = the item's model)

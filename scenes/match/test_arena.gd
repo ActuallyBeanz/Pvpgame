@@ -27,7 +27,7 @@ var allow_respawn := true                 ## test area: you come back a few seco
 @export_group("Armory (items)")
 ## Stalls in order; each item goes to the first stall whose rule matches (see _stall_of).
 @export var stall_order: PackedStringArray = ["Melee & Shields", "Bows & Throwing", "Tools & Bombs",
-	"Ammo", "Plants", "Food", "Materials"]
+	"Brews", "Ammo", "Plants", "Food", "Materials"]
 @export var armory_rows: Array[float] = [-22.0, -42.0]     ## z of each stall row (first 3 stalls, then the rest)
 @export var stall_cols := 4
 @export var item_gap := 2.6
@@ -318,6 +318,8 @@ func _build_hub() -> void:
 # ================================================================ ARMORY
 ## Which stall an item belongs on (by its data, so new items sort themselves).
 func _stall_of(it: Resource) -> String:
+	if it.category == "brew":
+		return "Brews"
 	if it.kind == "shield" or (it.kind == "weapon" and it.action_tag == "slash"):
 		return "Melee & Shields"
 	if it.kind == "weapon" and it.action_tag in ["shoot", "throw"]:
@@ -346,9 +348,9 @@ func _build_armory() -> void:
 		if not by_stall.has(stall):
 			by_stall[stall] = []
 		(by_stall[stall] as Array).append(str(id))
-	var colors := [Color(1, 0.7, 0.5), Color(1, 0.85, 0.5), Color(0.75, 0.8, 1), Color(0.9, 0.9, 0.7),
+	var colors := [Color(1, 0.7, 0.5), Color(1, 0.85, 0.5), Color(0.75, 0.8, 1), Color(0.95, 0.6, 1), Color(0.9, 0.9, 0.7),
 		Color(0.65, 1, 0.65), Color(1, 0.65, 0.7), Color(0.8, 0.75, 0.7)]
-	var split := 3                                 # first row: weapons & tools; second: the stackables
+	var split := 4                                 # first row: weapons, tools, brews; second: the stackables
 	var rows := [stall_order.slice(0, split), stall_order.slice(split)]
 	var n_pickup := 0
 	for r in rows.size():

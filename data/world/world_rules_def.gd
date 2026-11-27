@@ -12,4 +12,7 @@ extends Resource
 	"blast": Color(1.0, 0.38, 0.12),
 	"water": Color(0.35, 0.6, 1.0), "smoke": Color(0.6, 0.6, 0.64), "flash": Color(1.0, 1.0, 0.85),
 	"muddle": Color(0.75, 0.45, 1.0), "light": Color(1.0, 0.92, 0.55),
+	"emberfog": Color(1.0, 0.45, 0.25), "muddlehaze": Color(0.7, 0.5, 0.95), "rimemist": Color(0.6, 0.9, 1.0),
+	"stormdrop": Color(0.75, 0.85, 1.0), "chainspark": Color(1.0, 0.95, 0.5), "steamburst": Color(0.92, 0.92, 0.95),
+	"sunburst": Color(1.0, 0.95, 0.7), "mendingdew": Color(0.45, 1.0, 0.6),
 }

@@ -72,10 +72,26 @@
 [ext_resource type="PackedScene" path="res://assets/models/weapons/arrow_light.glb" id="ar_light"]
 [ext_resource type="PackedScene" path="res://scenes/props/world/barrel_wood.tscn" id="pw_barrel"]
 [ext_resource type="PackedScene" path="res://scenes/props/world/shack_wood.tscn" id="pw_shack"]
+[ext_resource type="PackedScene" path="res://assets/models/items/vial_emberfog.glb" id="vm_emberfog"]
+[ext_resource type="PackedScene" path="res://assets/models/items/vial_muddlehaze.glb" id="vm_muddlehaze"]
+[ext_resource type="PackedScene" path="res://assets/models/items/vial_rimemist.glb" id="vm_rimemist"]
+[ext_resource type="PackedScene" path="res://assets/models/items/vial_stormdrop.glb" id="vm_stormdrop"]
+[ext_resource type="PackedScene" path="res://assets/models/items/vial_chainspark.glb" id="vm_chainspark"]
+[ext_resource type="PackedScene" path="res://assets/models/items/vial_steamburst.glb" id="vm_steamburst"]
+[ext_resource type="PackedScene" path="res://assets/models/items/vial_sunburst.glb" id="vm_sunburst"]
+[ext_resource type="PackedScene" path="res://assets/models/items/vial_mendingdew.glb" id="vm_mendingdew"]
 
 [resource]
 script = ExtResource("12_ckosp")
 models = Dictionary[String, PackedScene]({
+"item.vial.emberfog": ExtResource("vm_emberfog"),
+"item.vial.muddlehaze": ExtResource("vm_muddlehaze"),
+"item.vial.rimemist": ExtResource("vm_rimemist"),
+"item.vial.stormdrop": ExtResource("vm_stormdrop"),
+"item.vial.chainspark": ExtResource("vm_chainspark"),
+"item.vial.steamburst": ExtResource("vm_steamburst"),
+"item.vial.sunburst": ExtResource("vm_sunburst"),
+"item.vial.mendingdew": ExtResource("vm_mendingdew"),
 "prop.barrel.wood": ExtResource("pw_barrel"),
 "prop.shack.wood": ExtResource("pw_shack"),
 "weapon.arrow.water": ExtResource("ar_water"),

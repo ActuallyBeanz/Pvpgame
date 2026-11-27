@@ -6,6 +6,7 @@ extends Node3D
 
 const FX := preload("res://systems/components/element_fx.gd")
 const RADIUS := 0.14
+const Impacts := preload("res://systems/element_impacts.gd")
 
 var velocity := Vector3.ZERO
 var fuse := 4.0
@@ -13,6 +14,7 @@ var stats: Resource
 var cosmetic := false
 var shooter_rid := RID()
 var exploded := false
+var model_id := "item.bomb.blastgourd"
 var _rest := false
 var _model: Node3D
 var _flash: StandardMaterial3D
@@ -22,7 +24,7 @@ var _t := 0.0
 
 func _ready() -> void:
 	add_to_group("bombs")
-	_model = AssetRegistry.instantiate("item.bomb.blastgourd")
+	_model = AssetRegistry.instantiate(model_id)
 	add_child(_model)
 	_flash = StandardMaterial3D.new()
 	_flash.albedo_color = Color(1, 0.2, 0.1, 0.0)
@@ -31,9 +33,10 @@ func _ready() -> void:
 	_flash.emission = Color(1.0, 0.15, 0.05)
 	for m in _model.find_children("*", "GeometryInstance3D", true, false):
 		(m as GeometryInstance3D).material_overlay = _flash
-	_sparks = fuse_sparks()
-	_model.add_child(_sparks)
-	_sparks.position = Vector3(0, 0.22, 0)
+	if not _vial():
+		_sparks = fuse_sparks()
+		_model.add_child(_sparks)
+		_sparks.position = Vector3(0, 0.22, 0)
 
 
 static func fuse_sparks() -> CPUParticles3D:
@@ -64,6 +67,9 @@ func _physics_process(delta: float) -> void:
 	if exploded:
 		return
 	_t += delta
+	if _vial():
+		_move(delta)                               # vials: no fuse, they break when they hit something
+		return
 	fuse -= delta
 	# OoT: the bomb flashes red faster and faster near the end
 	var rate := 3.0 if fuse > 1.5 else lerpf(14.0, 5.0, clampf(fuse / 1.5, 0.0, 1.0))
@@ -93,12 +99,15 @@ func _move(delta: float) -> void:
 	if Water.depth_at(global_position) > 0.2:
 		velocity = velocity.move_toward(Vector3(0, -0.5, 0), 6.0 * delta)   # sinks, fuse keeps going
 	var to := global_position + velocity * delta
-	var q := PhysicsRayQueryParameters3D.create(global_position, to + velocity.normalized() * RADIUS, 1)
+	var q := PhysicsRayQueryParameters3D.create(global_position, to + velocity.normalized() * RADIUS, 3 if _vial() else 1)
 	if shooter_rid.is_valid():
 		q.exclude = [shooter_rid]
 	var hit := space.intersect_ray(q)
 	if hit.is_empty():
 		global_position = to
+	elif _vial():
+		_shatter(hit.position, hit.collider)
+		return
 	else:
 		var n: Vector3 = hit.normal
 		global_position = hit.position + n * RADIUS
@@ -108,6 +117,26 @@ func _move(delta: float) -> void:
 			_rest = true
 	if velocity.length() > 0.2:
 		_model.rotate(Vector3.UP.cross(velocity.normalized()).normalized() if Vector3(velocity.x, 0, velocity.z).length() > 0.1 else Vector3.RIGHT, velocity.length() * delta / RADIUS * 0.3)
+
+
+func _vial() -> bool:
+	return stats != null and "shatter_element" in stats and stats.shatter_element != ""
+
+
+## Brew vial: glass breaks, the brew's effect happens here (every peer runs its own copy).
+func _shatter(at: Vector3, col: Object) -> void:
+	if exploded:
+		return
+	exploded = true
+	var el: String = stats.shatter_element
+	var scene := get_tree().current_scene
+	FX.burst(at, scene, Color(0.85, 0.95, 1.0, 0.8), 12, 0.04, 3.0)          # glass
+	FX.burst(at, scene, WorldRules.element_color(el), 18, 0.06, 3.5)
+	Audio.play_at("ice.shatter", at, -2.0, 1.6)
+	if col and not cosmetic and stats.impact_damage > 0.0:
+		WorldRules.deliver_hit(col, WorldRules.make_hit(stats.impact_damage, "blunt", "", velocity.normalized()), false)
+	Impacts.impact(get_tree(), el, at, stats.impact_size, not cosmetic)
+	queue_free()
 
 
 func explode() -> void:

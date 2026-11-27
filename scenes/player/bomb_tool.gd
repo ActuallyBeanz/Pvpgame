@@ -42,9 +42,10 @@ func update(delta: float) -> void:
 	var pressed := Input.is_action_just_pressed("attack")
 	var can_use: bool = _eq.sync_drawn and _eq._swap_timer < 0.0 and not _player.motor.action_locked()
 	if holding:
-		fuse_left -= delta
+		if s.shatter_element == "":
+			fuse_left -= delta                          # vials have no fuse
 		_eq.sync_aiming = true                          # hold pose
-		if fuse_left <= 0.0:
+		if fuse_left <= 0.0 and s.shatter_element == "":
 			_spawn(_hand(), Vector3.ZERO, 0.0)          # it went off in your hands
 			_stop_holding()
 		elif Input.is_action_just_pressed("toggle_weapon") or _player.motor.state == Motor.State.ROLL:
@@ -60,12 +61,15 @@ func update(delta: float) -> void:
 		holding = true                              # first: so using up the last one doesn't unequip mid-pull
 		_eq.consume(w.ammo_item_id, 1)
 		fuse_left = s.fuse_time
-		_sparks = BombScript.fuse_sparks()
-		var vis: Node3D = _eq._weapon_vis
-		if vis:
-			vis.add_child(_sparks)
-			_sparks.position = Vector3(0, 0.22, 0)
-		Audio.play_at("fire.ignite", _hand(), -4.0, 1.6)
+		if s.shatter_element == "":
+			_sparks = BombScript.fuse_sparks()
+			var vis: Node3D = _eq._weapon_vis
+			if vis:
+				vis.add_child(_sparks)
+				_sparks.position = Vector3(0, 0.22, 0)
+			Audio.play_at("fire.ignite", _hand(), -4.0, 1.6)
+		else:
+			Audio.play_at("item.get", _hand(), -6.0, 1.4)   # uncork
 		if _eq._model:
 			_eq._model.play_action(&"Use_Item", 0.3)
 
@@ -218,21 +222,27 @@ func _stop_holding() -> void:
 
 
 func _spawn(origin: Vector3, vel: Vector3, fuse: float) -> void:
-	_make_bomb(origin, vel, fuse, false)
-	rpc_bomb.rpc(origin, vel, fuse)
+	var w: Resource = _eq.weapon()
+	var id: String = w.id if w and w.action_tag == "bomb" else "bomb_blastgourd"
+	_make_bomb(origin, vel, fuse, false, id)
+	rpc_bomb.rpc(origin, vel, fuse, id)
 
 
 @rpc("authority", "call_remote", "reliable")
-func rpc_bomb(origin: Vector3, vel: Vector3, fuse: float) -> void:
-	_make_bomb(origin, vel, fuse, true)
+func rpc_bomb(origin: Vector3, vel: Vector3, fuse: float, item_id: String) -> void:
+	_make_bomb(origin, vel, fuse, true, item_id)
 
 
-func _make_bomb(origin: Vector3, vel: Vector3, fuse: float, cosmetic: bool) -> void:
+func _make_bomb(origin: Vector3, vel: Vector3, fuse: float, cosmetic: bool, item_id := "bomb_blastgourd") -> void:
+	var it: Resource = ItemDB.get_item(item_id)
+	if it == null or it.stats == null:
+		it = ItemDB.get_item("bomb_blastgourd")
 	var b := BombScript.new()
 	b.name = "Bomb"
 	b.velocity = vel
 	b.fuse = fuse
-	b.stats = ItemDB.get_item("bomb_blastgourd").stats
+	b.stats = it.stats
+	b.model_id = it.stats.projectile_model if it.stats.projectile_model != "" else it.model_id
 	b.cosmetic = cosmetic
 	b.shooter_rid = _player.get_rid()
 	_eq._projectiles_root().add_child(b, true)

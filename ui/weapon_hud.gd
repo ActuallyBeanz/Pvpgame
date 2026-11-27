@@ -284,7 +284,11 @@ func _weapon_line(w: Resource, kind: String) -> String:
 				status = "hold LMB aim · release: fire (%.0fm)" % _equipment.stats().max_range
 		"bomb":
 			var bt: Node = _equipment.bomb
-			status = ("fuse %.1fs · LMB throw · Q set down" % bt.fuse_left) if bt.holding else ("x%d · LMB pull one out" % _equipment.ammo_count())
+			var vial: bool = bt.stats() != null and bt.stats().shatter_element != ""
+			if vial:
+				status = "LMB throw · Q smash at your feet" if bt.holding else ("x%d · LMB take one out" % _equipment.ammo_count())
+			else:
+				status = ("fuse %.1fs · LMB throw · Q set down" % bt.fuse_left) if bt.holding else ("x%d · LMB pull one out" % _equipment.ammo_count())
 		"fan":
 			var tl: Node = _equipment.tools
 			status = ("gliding %.1fs" % tl.glide_left) if tl.gliding else "LMB gust · hold Space in the air: glide"

@@ -1,0 +1,13 @@
+[gd_resource type="Resource" format=3]
+
+[ext_resource type="Script" path="res://data/items/bomb_stats.gd" id="1_s"]
+
+[resource]
+script = ExtResource("1_s")
+fuse_time = 0.0
+throw_speed = 13.0
+throw_lift_deg = 24.0
+gravity = 14.0
+shatter_element = "muddlehaze"
+impact_size = 1.0
+impact_damage = 4.0

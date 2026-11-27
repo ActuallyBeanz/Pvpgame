@@ -1,0 +1,23 @@
+[gd_resource type="Resource" format=3]
+
+[ext_resource type="Script" path="res://data/items/item_def.gd" id="1_item"]
+[ext_resource type="Resource" path="res://data/items/vial_stormdrop_stats.tres" id="2_stats"]
+
+[resource]
+script = ExtResource("1_item")
+id = "vial_stormdrop"
+display_name = "Stormdrop Vial"
+model_id = "item.vial.stormdrop"
+pickup_scale = 1.8
+stats = ExtResource("2_stats")
+ammo_item_id = "vial_stormdrop"
+starting_ammo = 2
+max_carry = 10
+aim_anim = &"1H_Ranged_Aiming"
+shoot_anim = &"Throw"
+hand_position = Vector3(0, 0.05, 0)
+back_position = Vector3(0.15, 0.0, -0.3)
+material = "glass"
+element = "stormdrop"
+action_tag = "bomb"
+category = "brew"

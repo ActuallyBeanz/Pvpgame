@@ -5,6 +5,9 @@ extends Node3D
 
 @export var radius := 3.0
 @export var life := 7.0
+@export var tint := Color(0.52, 0.52, 0.55)   ## brews tint it (Emberfog orange-grey, Muddlehaze violet)
+@export var status_inside := ""            ## brews: status given to anyone standing in it (refreshed)
+@export var damage_inside := 0.0           ## per second to anyone inside (fire-type)
 
 var _t := 0.0
 var _parts: Array[CPUParticles3D] = []
@@ -30,7 +33,7 @@ func _ready() -> void:
 		m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 		m.billboard_mode = BaseMaterial3D.BILLBOARD_PARTICLES
 		m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-		m.albedo_color = Color(0.52, 0.52, 0.55, 0.55) if layer == 0 else Color(0.38, 0.38, 0.4, 0.5)
+		m.albedo_color = Color(tint.r, tint.g, tint.b, 0.55) if layer == 0 else Color(tint.r * 0.75, tint.g * 0.75, tint.b * 0.75, 0.5)
 		m.albedo_texture = _soft_dot()
 		q.material = m
 		p.mesh = q
@@ -45,13 +48,33 @@ func density() -> float:
 	return clampf((life - _t) / 2.0, 0.0, 1.0)
 
 
+var _tick := 0.0
+
+
 func _process(delta: float) -> void:
 	_t += delta
+	_tick -= delta
+	if _tick <= 0.0 and (status_inside != "" or damage_inside > 0.0) and density() > 0.3:
+		_tick = 0.5
+		_affect_local()
 	if _t > life - 2.0:
 		for p in _parts:
 			p.emitting = false
 	if _t > life + 2.3:
 		queue_free()
+
+
+## Each peer checks its own player (statuses are owner-authoritative).
+func _affect_local() -> void:
+	for p in get_tree().get_nodes_in_group("players"):
+		if not p.is_local() or p.sync_dead:
+			continue
+		var d: Vector3 = (p as Node3D).global_position - global_position
+		if Vector2(d.x, d.z).length() <= radius and d.y < radius * 1.2 and d.y > -1.0:
+			if status_inside != "":
+				p.status.apply(status_inside)
+			if damage_inside > 0.0:
+				p.health.take_damage(damage_inside * 0.5, Vector3.ZERO, "dot_fire", "")
 
 
 static var _dot: Texture2D
