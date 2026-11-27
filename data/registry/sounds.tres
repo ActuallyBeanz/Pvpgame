@@ -1,4 +1,4 @@
-[gd_resource type="Resource" load_steps=136 format=3]
+[gd_resource type="Resource" load_steps=151 format=3]
 
 [ext_resource type="Script" path="res://data/registry/sound_registry.gd" id="1_reg"]
 [ext_resource type="Script" path="res://data/audio/sound_def.gd" id="2_def"]
@@ -86,6 +86,16 @@
 [ext_resource type="AudioStream" path="res://assets/audio/sfx/weapons/hook_chain.wav" id="84_snd"]
 [ext_resource type="AudioStream" path="res://assets/audio/sfx/weapons/hook_latch.wav" id="85_snd"]
 [ext_resource type="AudioStream" path="res://assets/audio/sfx/weapons/hook_deflect.wav" id="86_snd"]
+[ext_resource type="AudioStream" path="res://assets/audio/sfx/world/water_splash_1.wav" id="87_snd"]
+[ext_resource type="AudioStream" path="res://assets/audio/sfx/world/water_splash_2.wav" id="88_snd"]
+[ext_resource type="AudioStream" path="res://assets/audio/sfx/player/swim_stroke_1.wav" id="89_snd"]
+[ext_resource type="AudioStream" path="res://assets/audio/sfx/player/swim_stroke_2.wav" id="90_snd"]
+[ext_resource type="AudioStream" path="res://assets/audio/sfx/player/swim_stroke_3.wav" id="91_snd"]
+[ext_resource type="AudioStream" path="res://assets/audio/sfx/player/wade_1.wav" id="92_snd"]
+[ext_resource type="AudioStream" path="res://assets/audio/sfx/player/wade_2.wav" id="93_snd"]
+[ext_resource type="AudioStream" path="res://assets/audio/sfx/player/wade_3.wav" id="94_snd"]
+[ext_resource type="AudioStream" path="res://assets/audio/sfx/player/dive.wav" id="95_snd"]
+[ext_resource type="AudioStream" path="res://assets/audio/sfx/player/surface.wav" id="96_snd"]
 
 [sub_resource type="Resource" id="sd_0"]
 script = ExtResource("2_def")
@@ -675,6 +685,66 @@ max_distance = 40.0
 max_voices = 4
 loop = false
 
+[sub_resource type="Resource" id="sd_49"]
+script = ExtResource("2_def")
+streams = Array[AudioStream]([ExtResource("87_snd"), ExtResource("88_snd")])
+volume_db = -3.0
+pitch_min = 0.92
+pitch_max = 1.08
+bus = &"SFX"
+spatial = true
+max_distance = 45.0
+max_voices = 6
+loop = false
+
+[sub_resource type="Resource" id="sd_50"]
+script = ExtResource("2_def")
+streams = Array[AudioStream]([ExtResource("89_snd"), ExtResource("90_snd"), ExtResource("91_snd")])
+volume_db = -8.0
+pitch_min = 0.92
+pitch_max = 1.08
+bus = &"SFX"
+spatial = true
+max_distance = 25.0
+max_voices = 4
+loop = false
+
+[sub_resource type="Resource" id="sd_51"]
+script = ExtResource("2_def")
+streams = Array[AudioStream]([ExtResource("92_snd"), ExtResource("93_snd"), ExtResource("94_snd")])
+volume_db = -8.0
+pitch_min = 0.9
+pitch_max = 1.1
+bus = &"SFX"
+spatial = true
+max_distance = 25.0
+max_voices = 4
+loop = false
+
+[sub_resource type="Resource" id="sd_52"]
+script = ExtResource("2_def")
+streams = Array[AudioStream]([ExtResource("95_snd")])
+volume_db = -5.0
+pitch_min = 0.95
+pitch_max = 1.05
+bus = &"SFX"
+spatial = true
+max_distance = 30.0
+max_voices = 4
+loop = false
+
+[sub_resource type="Resource" id="sd_53"]
+script = ExtResource("2_def")
+streams = Array[AudioStream]([ExtResource("96_snd")])
+volume_db = -7.0
+pitch_min = 0.95
+pitch_max = 1.05
+bus = &"SFX"
+spatial = true
+max_distance = 25.0
+max_voices = 4
+loop = false
+
 [resource]
 script = ExtResource("1_reg")
 sounds = Dictionary[String, Resource]({
@@ -726,5 +796,10 @@ sounds = Dictionary[String, Resource]({
 "hook.fire": SubResource("sd_45"),
 "hook.chain": SubResource("sd_46"),
 "hook.latch": SubResource("sd_47"),
-"hook.deflect": SubResource("sd_48")
+"hook.deflect": SubResource("sd_48"),
+"water.splash": SubResource("sd_49"),
+"water.stroke": SubResource("sd_50"),
+"water.wade": SubResource("sd_51"),
+"water.dive": SubResource("sd_52"),
+"water.surface": SubResource("sd_53")
 })

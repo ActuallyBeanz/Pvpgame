@@ -14,6 +14,21 @@ const VIEWS := [
 	["forest", Vector3(-120, 25, 40), Vector3(-165, 10, 10)],
 ]
 
+## `-- fixes` renders these instead (the Nov 27 bug-report spots)
+const FIX_VIEWS := [
+	["fix_mesaA", Vector3(178, 27, 36), Vector3(204, 14, 55)],
+	["fix_mesaB", Vector3(33, 21, 50), Vector3(55, 12, 70)],
+	["fix_mesaC", Vector3(62, 23, 156), Vector3(85, 13, 172)],
+	["fix_islet", Vector3(-106, 13, 194), Vector3(-130, 3, 216)],
+	["fix_bridge1", Vector3(-92, 19, -128), Vector3(-73, 9, -113)],
+	["fix_trench", Vector3(-91, 9, -88), Vector3(-91, 5, -118)],
+	["fix_bridge3", Vector3(-92, 10, -14), Vector3(-77, 3, -24)],
+	["fix_bridge6", Vector3(-18, 11, 172), Vector3(-7, 6, 163)],
+	["fix_gorge", Vector3(-122, 19, -96), Vector3(-105, 13, -96)],
+	["fix_shore", Vector3(-134, 6, 192), Vector3(-125, 1, 178)],
+	["fix_canyonW", Vector3(-179, 5, -82), Vector3(-179, 3, -104)],
+]
+
 
 func _ready() -> void:
 	var island: Node = load("res://scenes/match/island.tscn").instantiate()
@@ -25,10 +40,11 @@ func _ready() -> void:
 	cam.current = true
 	var dir := ProjectSettings.globalize_path("res://_shots")
 	DirAccess.make_dir_recursive_absolute(dir)
-	var views := VIEWS.duplicate()
+	var fixes := "fixes" in OS.get_cmdline_user_args()
+	var views := (FIX_VIEWS if fixes else VIEWS).duplicate()
 	await get_tree().process_frame
 	var spots := island.get_node_or_null("SecretSpots")
-	if spots:
+	if spots and not fixes:
 		for c in spots.get_children():
 			var n3 := c as Node3D
 			if c.name == "Cave_0" or c.name == "Cave_4":

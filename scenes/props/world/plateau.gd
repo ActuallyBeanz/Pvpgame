@@ -18,6 +18,7 @@ extends Node3D
 			_build()
 @export var post_angle_deg := 20.0         ## turn the ring of posts
 @export_enum("uncommon", "rare", "legendary") var tier := "rare"
+@export var terrain_path: NodePath = ^"../../Terrain"   ## posts sit on the real ground (pulled in off edges)
 
 
 func _ready() -> void:
@@ -43,10 +44,25 @@ func _build() -> void:
 		cs.position.y = 1.3
 		body.add_child(cs)
 		add_child(body)
-		body.position = Vector3(cos(a), 0, sin(a)) * (radius - 1.2)
+		body.position = _rim_spot(Vector3(cos(a), 0, sin(a)))
 		body.rotation.y = -a + PI * 0.5
 	var spot := Marker3D.new()
 	spot.name = "_ChestSpot"
 	spot.add_to_group("secret_spots")
 	spot.set_meta("tier", tier)
 	add_child(spot)
+
+
+## Furthest point toward `dir` (up to radius - 1.2) that's still on the top, at ground height.
+func _rim_spot(dir: Vector3) -> Vector3:
+	var t := get_node_or_null(terrain_path)
+	var rr := radius - 1.2
+	if t == null or not t.has_method("height_at"):
+		return dir * rr
+	while rr > 1.0:
+		var g := global_position + dir * rr
+		var h: float = t.height_at(g.x, g.z)
+		if h > global_position.y - 0.7:
+			return dir * rr + Vector3.UP * (h - global_position.y - 0.05)
+		rr -= 0.75
+	return dir * 1.0

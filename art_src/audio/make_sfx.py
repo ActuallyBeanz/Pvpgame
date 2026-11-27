@@ -672,6 +672,71 @@ def hook_deflect(v):
     return finish(x, peak=0.55, hi=8000, verb=0.08)
 
 
+
+# ------------------------------------------------------------------ water
+def bubble(f0, f1, dur):
+    """A rising 'bloop': sine glide f0 -> f1 with a quick decay."""
+    t = t_axis(dur)
+    f = f0 * (f1 / f0) ** (t / dur)
+    ph = 2 * np.pi * np.cumsum(f) / SR
+    return np.sin(ph) * env_ad(len(t), 0.002, dur * 0.5, 4)
+
+
+def droplets(x, n, start, spread, gain):
+    for _ in range(n):
+        f = RNG.uniform(500, 1400)
+        place(x, bubble(f, f * RNG.uniform(1.4, 2.2), RNG.uniform(0.03, 0.07)), start + RNG.uniform(0, spread), gain * RNG.uniform(0.3, 1.0))
+
+
+def water_splash(v):
+    d = 0.9
+    x = silence(d)
+    body = svf_sweep(noise(0.5), 2600 + 300 * v, 500, q=0.9, curve=0.6) * env_ad(int(0.5 * SR), 0.006, 0.22, 3)
+    place(x, body, 0, 1.0)
+    place(x, fft_filter(noise(0.35), lo=3000) * env_ad(int(0.35 * SR), 0.002, 0.12, 4), 0.01, 0.35)
+    place(x, thump(110, 55, 0.18), 0, 0.6)
+    droplets(x, 10, 0.12, 0.45, 0.25)
+    return finish(x, peak=0.8, hi=9000, verb=0.10)
+
+
+def water_stroke(v):
+    d = 0.55
+    x = silence(d)
+    swish = svf_sweep(noise(0.42), 700 + 120 * v, 1900 + 200 * v, q=1.2, curve=1.0) * env_ad(int(0.42 * SR), 0.12, 0.16, 3)
+    place(x, swish, 0, 0.9)
+    droplets(x, 4, 0.25, 0.22, 0.18)
+    return finish(x, peak=0.6, hi=7000, verb=0.06)
+
+
+def water_wade(v):
+    d = 0.35
+    x = silence(d)
+    slosh = svf_sweep(noise(0.25), 1600 + 200 * v, 600, q=1.0) * env_ad(int(0.25 * SR), 0.01, 0.09, 3)
+    place(x, slosh, 0, 1.0)
+    place(x, thump(130, 70, 0.08), 0, 0.35)
+    droplets(x, 3, 0.05, 0.15, 0.15)
+    return finish(x, peak=0.55, hi=8000, verb=0.05)
+
+
+def water_dive(v):
+    d = 1.0
+    x = silence(d)
+    plunge = fft_filter(noise(0.4), lo=150, hi=1400) * env_ad(int(0.4 * SR), 0.01, 0.18, 3)
+    place(x, plunge, 0, 1.0)
+    for k in range(7):                                              # bubbles rising after the plunge
+        f = RNG.uniform(220, 520)
+        place(x, bubble(f, f * 2.0, RNG.uniform(0.06, 0.12)), 0.15 + k * RNG.uniform(0.05, 0.1), 0.45)
+    return finish(x, peak=0.7, hi=5000, verb=0.12)
+
+
+def water_surface(v):
+    d = 0.6
+    x = silence(d)
+    place(x, svf_sweep(noise(0.3), 500, 2400, q=1.1) * env_ad(int(0.3 * SR), 0.03, 0.12, 3), 0, 0.8)
+    droplets(x, 6, 0.05, 0.35, 0.22)
+    return finish(x, peak=0.6, hi=8000, verb=0.08)
+
+
 CATALOGUE = [
     ("player.footstep.grass", "player", "step_grass", footstep_grass, 4, dict(volume_db=-6, pitch=(0.9, 1.1), max_distance=30, max_voices=6)),
     ("player.footstep.stone", "player", "step_stone", footstep_stone, 4, dict(volume_db=-6, pitch=(0.92, 1.08), max_distance=30, max_voices=6)),
@@ -723,6 +788,11 @@ CATALOGUE = [
     ("hook.chain", "weapons", "hook_chain", hook_chain, 1, dict(volume_db=-8, pitch=(1.0, 1.0), max_distance=30, loop=True)),
     ("hook.latch", "weapons", "hook_latch", hook_latch, 1, dict(volume_db=-3, pitch=(0.95, 1.05), max_distance=45)),
     ("hook.deflect", "weapons", "hook_deflect", hook_deflect, 1, dict(volume_db=-4, pitch=(0.95, 1.05), max_distance=40)),
+    ("water.splash", "world", "water_splash", water_splash, 2, dict(volume_db=-3, pitch=(0.92, 1.08), max_distance=45, max_voices=6)),
+    ("water.stroke", "player", "swim_stroke", water_stroke, 3, dict(volume_db=-8, pitch=(0.92, 1.08), max_distance=25, max_voices=4)),
+    ("water.wade", "player", "wade", water_wade, 3, dict(volume_db=-8, pitch=(0.9, 1.1), max_distance=25, max_voices=4)),
+    ("water.dive", "player", "dive", water_dive, 1, dict(volume_db=-5, pitch=(0.95, 1.05), max_distance=30)),
+    ("water.surface", "player", "surface", water_surface, 1, dict(volume_db=-7, pitch=(0.95, 1.05), max_distance=25)),
 ]
 
 

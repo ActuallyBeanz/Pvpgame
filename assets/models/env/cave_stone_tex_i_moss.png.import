@@ -3,9 +3,10 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://bnfcjxifl6b7x"
-path="res://.godot/imported/cave_stone_tex_i_moss.png-5c45e8012bfd07146e982ccd9d308b08.ctex"
+path.s3tc="res://.godot/imported/cave_stone_tex_i_moss.png-5c45e8012bfd07146e982ccd9d308b08.s3tc.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "14973a3a6241ee6ca1ec38e48691c4f6"
@@ -14,11 +15,11 @@ generator_parameters={
 [deps]
 
 source_file="res://assets/models/env/cave_stone_tex_i_moss.png"
-dest_files=["res://.godot/imported/cave_stone_tex_i_moss.png-5c45e8012bfd07146e982ccd9d308b08.ctex"]
+dest_files=["res://.godot/imported/cave_stone_tex_i_moss.png-5c45e8012bfd07146e982ccd9d308b08.s3tc.ctex"]
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0
@@ -40,4 +41,4 @@ process/normal_map_invert_y=false
 process/hdr_as_srgb=false
 process/hdr_clamp_exposure=false
 process/size_limit=0
-detect_3d/compress_to=1
+detect_3d/compress_to=0

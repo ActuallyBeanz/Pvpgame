@@ -806,19 +806,47 @@ func _tick_swim(body: CharacterBody3D, has_input: bool, target_yaw: float, tilt:
 	facing = rotate_toward(facing, face_goal, deg_to_rad(p.swim_turn_rate_deg) * delta)
 	heading = wrapf(heading, -PI, PI)
 	facing = wrapf(facing, -PI, PI)
-	# climb out onto a low bank you're swimming into
-	if state == State.SWIM and has_input and body.is_on_wall():
-		var probe_top := lvl + p.climb_out_height + 0.4
-		var from := Vector3(body.global_position.x, probe_top, body.global_position.z) + dir_of(facing) * 0.9
-		var d := _ray_depth(body, from, p.climb_out_height + 1.5)
-		if d < INF:
-			var ledge_y := probe_top - d
-			if ledge_y > lvl - 0.3 and ledge_y - lvl < p.climb_out_height:
-				body.velocity.y = p.climb_out_up
-				speed = p.climb_out_push
-				heading = facing
-				_set_state(State.AIR)
-				jumped.emit(true)
+	# climb out onto a bank you're swimming into: pull up onto the first walkable spot in reach
+	if state == State.SWIM and has_input and _swim_push(body, delta):
+		var bank := _find_bank(body, lvl)
+		if bank != Vector3.INF:
+			_start_climb(body, bank, Climb.CLIMB, p.climb_out_duration, -dir_of(facing))
+			jumped.emit(true)
+
+
+var _bank_push := 0.0
+
+## True once you've been swimming into something (wall, steep bank, shallow bed) for a moment.
+func _swim_push(body: CharacterBody3D, delta: float) -> bool:
+	var blocked := body.is_on_wall() or body.is_on_floor() or body.get_real_velocity().length() < 0.6
+	_bank_push = _bank_push + delta if blocked else 0.0
+	return _bank_push >= profile.climb_out_push_time
+
+
+## Walkable ground ahead of the swimmer, low enough to pull up onto. Vector3.INF = none.
+func _find_bank(body: CharacterBody3D, lvl: float) -> Vector3:
+	var p := profile
+	var fwd := dir_of(facing)
+	var min_ny := cos(deg_to_rad(p.climb_out_max_slope_deg))
+	var space := body.get_world_3d().direct_space_state
+	var d := 0.5
+	while d <= p.climb_out_reach:
+		var from := body.global_position + fwd * d
+		from.y = lvl + p.climb_out_height + 0.5
+		var q := PhysicsRayQueryParameters3D.create(from, Vector3(from.x, lvl - 0.6, from.z), 1)
+		q.exclude = [body.get_rid()]
+		var hit := space.intersect_ray(q)
+		if not hit.is_empty():
+			var hp: Vector3 = hit.position
+			var col = hit.collider
+			var ok_col := not (col is Node and (col as Node).is_in_group("no_climb"))
+			if ok_col and (hit.normal as Vector3).y >= min_ny and hp.y > lvl - 0.2 and hp.y - lvl <= p.climb_out_height:
+				var dest := hp + Vector3.UP * 0.03
+				if _space_free(body, dest):
+					_bank_push = 0.0
+					return dest
+		d += 0.35
+	return Vector3.INF
 
 
 func _set_state(s: State) -> void:

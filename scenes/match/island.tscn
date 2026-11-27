@@ -14,6 +14,7 @@
 [ext_resource type="Script" path="res://systems/world/bridge.gd" id="12_o102a"]
 [ext_resource type="Script" path="res://scenes/props/world/cave.gd" id="13_q2ule"]
 [ext_resource type="Script" path="res://scenes/props/world/plateau.gd" id="14_v2sa5"]
+[ext_resource type="Script" path="res://scenes/props/world/grapple_post.gd" id="15_v2sa5"]
 
 [sub_resource type="Curve3D" id="Curve3D_emd0j"]
 _data = {
@@ -248,3 +249,38 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -53.25451, 18.476685, 24.7869
 script = ExtResource("14_v2sa5")
 radius = 7.364387
 post_angle_deg = 55.26219
+
+[node name="MesaTop_0" type="Node3D" parent="SecretSpots" unique_id=2047661041]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 204.26042, 16.95889, 55.304688)
+script = ExtResource("14_v2sa5")
+radius = 11.055812783082736
+post_angle_deg = 30.0
+
+[node name="MesaTop_1" type="Node3D" parent="SecretSpots" unique_id=2032568151]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 54.99482, 14.017471, 69.601036)
+script = ExtResource("14_v2sa5")
+radius = 7.837972188868215
+post_angle_deg = 70.0
+
+[node name="MesaTop_2" type="Node3D" parent="SecretSpots" unique_id=213931030]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 84.69756, 14.649748, 172.46341)
+script = ExtResource("14_v2sa5")
+radius = 11.423968370726268
+post_angle_deg = 110.0
+
+[node name="Islet" type="Node3D" parent="SecretSpots" unique_id=476272021]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -130.08824, 3.8690977, 216.65442)
+script = ExtResource("14_v2sa5")
+radius = 9.304852983362556
+
+[node name="GrapplePoints" type="Node3D" parent="." unique_id=1383661008]
+
+[node name="GorgePost_0" type="StaticBody3D" parent="GrapplePoints" unique_id=1237218159]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -106, 13.832067, -84)
+script = ExtResource("15_v2sa5")
+metadata/material = "wood"
+
+[node name="GorgePost_1" type="StaticBody3D" parent="GrapplePoints" unique_id=946344852]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -104, 13.427428, -108.5)
+script = ExtResource("15_v2sa5")
+metadata/material = "wood"

@@ -308,15 +308,69 @@ func _build_water() -> void:
 		else:
 			var mi := MeshInstance3D.new()
 			mi.name = "Lake_%d" % i
-			var lp := PlaneMesh.new()
-			lp.size = Vector2(l.z * 2.4, l.z * 2.4)
-			lp.subdivide_width = 12
-			lp.subdivide_depth = 12
-			mi.mesh = lp
+			mi.mesh = _disc_mesh(l.z + 0.6, 6, 40)       # round, just past the swimmable radius
 			mi.material_override = water_mat
 			mi.position = Vector3(l.x, l.w, l.y)
 			add_child(mi)
 	# lava: LavaPool / LavaFlow nodes under "Lava" in the scene (editable; see tools/map/build_lava.gd)
+
+
+## Flat round water surface (rings x segments), centred on the node. UVs = world-ish metres.
+func _disc_mesh(r: float, rings: int, seg: int) -> ArrayMesh:
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var pt := func(ri: int, si: int) -> Vector3:
+		var rr := r * float(ri) / rings
+		var a := TAU * float(si) / seg
+		return Vector3(cos(a) * rr, 0.0, sin(a) * rr)
+	for ri in rings:
+		for si in seg:
+			var a0: Vector3 = pt.call(ri, si)
+			var a1: Vector3 = pt.call(ri, si + 1)
+			var b0: Vector3 = pt.call(ri + 1, si)
+			var b1: Vector3 = pt.call(ri + 1, si + 1)
+			for v in ([a0, b1, b0, a0, a1, b1] if ri > 0 else [a0, b1, b0]):
+				st.set_normal(Vector3.UP)
+				st.set_uv(Vector2(v.x, v.z) * 0.1)
+				st.add_vertex(v)
+	return st.commit()
+
+
+# ---------------------------------------------------------------- spacing
+## Every solid prop (cover, trees, rocks, chests, bridge ends) claims a circle so nothing
+## spawns inside anything else. Spatial hash: 6 m cells -> [x, z, radius].
+const SOLID_CELL := 6.0
+var _solid := {}
+
+
+func _claim(p: Vector2, r: float) -> void:
+	var k := Vector2i(floori(p.x / SOLID_CELL), floori(p.y / SOLID_CELL))
+	if not _solid.has(k):
+		_solid[k] = []
+	_solid[k].append(Vector3(p.x, p.y, r))
+
+
+## True when a circle of radius r at p touches no claimed prop.
+func _clear_of(p: Vector2, r: float) -> bool:
+	var reach := ceili((r + 3.0) / SOLID_CELL)
+	var c := Vector2i(floori(p.x / SOLID_CELL), floori(p.y / SOLID_CELL))
+	for dx in range(-reach, reach + 1):
+		for dz in range(-reach, reach + 1):
+			for o in _solid.get(c + Vector2i(dx, dz), []):
+				var q: Vector3 = o
+				if Vector2(q.x, q.y).distance_to(p) < r + q.z:
+					return false
+	return true
+
+
+## Sit something on sloped ground: tilt to the terrain normal (capped), keep the yaw.
+func _ground_basis(p: Vector2, yaw: float, max_tilt_deg := 14.0) -> Basis:
+	var e := 0.6
+	var n := Vector3(ground(p.x - e, p.y) - ground(p.x + e, p.y), 2.0 * e, ground(p.x, p.y - e) - ground(p.x, p.y + e)).normalized()
+	var ang := minf(acos(clampf(n.y, -1.0, 1.0)), deg_to_rad(max_tilt_deg))
+	var axis := Vector3.UP.cross(n)
+	var tilt := Basis() if axis.length() < 0.001 else Basis(axis.normalized(), ang)
+	return tilt * Basis(Vector3.UP, yaw)
 
 
 # ---------------------------------------------------------------- landmarks (greybox)
@@ -638,6 +692,19 @@ var crossings: Array = []                     ## [a: Vector2, b: Vector2] per au
 func _build_bridges() -> void:
 	var placed := get_node_or_null("Bridges")
 	if placed and placed.get_child_count() > 0:
+		for b in placed.get_children():
+			for m in ["A", "B"]:
+				var e := b.get_node_or_null(m) as Node3D
+				if e:
+					_claim(Vector2(e.global_position.x, e.global_position.z), 5.0)
+			var ea := b.get_node_or_null("A") as Node3D
+			var eb := b.get_node_or_null("B") as Node3D
+			if ea and eb:                             # and off the deck itself
+				var a2 := Vector2(ea.global_position.x, ea.global_position.z)
+				var b2 := Vector2(eb.global_position.x, eb.global_position.z)
+				var steps := int(a2.distance_to(b2) / 3.0)
+				for k in steps:
+					_claim(a2.lerp(b2, float(k) / maxf(steps, 1)), 3.0)
 		print("[island] %d bridges (placed in the scene)" % placed.get_child_count())
 		return                                    # editable Bridge nodes (tools/map/build_bridges.tscn)
 	var g := _group("Bridges")
@@ -770,30 +837,61 @@ func _place_cover() -> void:
 		var side := 1.0 if i % 2 == 0 else -1.0
 		var p := pos + dir.orthogonal() * side * rng.randf_range(4.0, 6.5)
 		i += 1
-		if _in_landmark(p, 4.0) or not _dry_flat(p, 22.0):
+		if _in_landmark(p, 4.0) or not _dry_flat(p, 22.0) or not _clear_of(p, 2.0):
 			continue
 		var biome: String = terrain.biome_at(p.x, p.y)
 		var rot := dir.angle() * -1.0 + rng.randf_range(-0.3, 0.3)
+		var roll := rng.randf()
+		var prop: Node3D
+		var sink := 0.08
 		match biome:
 			"snow":
-				_block(g, _on_ground(p.x, p.y, 0.4), Vector3(3.2, 1.6, 1.0), "icestone", rot)
-			"ash":
-				_block(g, _on_ground(p.x, p.y, 0.4), Vector3(2.6, 2.0, 1.6), "basalt", rot + 0.6)
+				prop = _make_cover("cover_ruin_snow", "stone") if roll < 0.7 else _make_rock("rock_snow", "")
+			"ash", "lava":
+				prop = _make_cover("cover_basalt", "stone") if roll < 0.75 else _make_rock("rock_basalt", "")
 			"sand", "mesa", "beach":
-				_block(g, _on_ground(p.x, p.y, 0.4), Vector3(2.4, 1.5, 1.4), "sandstone", rot)
+				prop = _make_cover("cover_ruin_sand", "stone") if roll < 0.7 else _make_rock("rock_sand", "")
 			_:
-				var prop: Node3D
-				var roll := rng.randf()
-				if roll < 0.3:
+				if roll < 0.28:
 					prop = AssetRegistry.instantiate("prop.crate.wood")      # burnable soft cover
-				elif roll < 0.45:
+					sink = 0.02
+				elif roll < 0.42:
 					prop = AssetRegistry.instantiate("prop.barrel.wood")
+					sink = 0.02
+				elif roll < 0.7:
+					prop = _make_cover("cover_ruin_stone", "stone")
 				else:
-					prop = _make_rock(["rock_boulder_a", "rock_boulder_b", "rock_mossy"][i % 3], "Cover_%d" % i)
-				prop.name = "Cover_%d" % i                                     # fixed names (Reactive sync)
-				g.add_child(prop)
-				prop.position = _on_ground(p.x, p.y, 0.05)
-				prop.rotation.y = rot
+					prop = _make_rock(["rock_boulder_a", "rock_boulder_b", "rock_cluster"][i % 3], "")
+		if prop == null:
+			continue
+		prop.name = "Cover_%d" % i                                         # fixed names (Reactive sync)
+		g.add_child(prop)
+		prop.position = _on_ground(p.x, p.y, sink)
+		prop.basis = _ground_basis(p, rot, 8.0)
+		_claim(p, 1.8)
+
+
+const ENV := "res://assets/models/env/%s.glb"
+
+## A path-side cover piece (art_src/env/make_cover.py): model + box collision from its bounds.
+func _make_cover(id: String, mat_meta: String) -> Node3D:
+	var path := ENV % id
+	if not ResourceLoader.exists(path):
+		return null
+	var body := StaticBody3D.new()
+	body.set_meta("material", mat_meta)
+	var model := (load(path) as PackedScene).instantiate()
+	model.name = "Model"
+	body.add_child(model)
+	var box := _aabb_of(model)
+	var cs := CollisionShape3D.new()
+	var sh := BoxShape3D.new()
+	sh.size = Vector3(box.size.x * 0.9, box.size.y * 0.92, box.size.z * 0.7)
+	cs.shape = sh
+	cs.position = box.get_center()
+	cs.position.y = sh.size.y * 0.5
+	body.add_child(cs)
+	return body
 
 
 const NATURE := "res://assets/models/nature/%s.glb"
@@ -935,7 +1033,8 @@ func _make_rock(id: String, nm: String) -> Node3D:
 	if ps == null:
 		return AssetRegistry.instantiate(rock_id)
 	var body := StaticBody3D.new()
-	body.name = nm
+	if nm != "":
+		body.name = nm
 	body.set_meta("material", "stone")
 	body.add_to_group("harvest_rock")            # hit it for Stone (and sometimes Flint)
 	var model := ps.instantiate()
@@ -966,7 +1065,7 @@ func _place_trees_and_rocks() -> void:
 		var b: String = terrain.biome_at(p.x, p.y)
 		if not tree_sets.has(b) or rng.randf() > float(tree_density.get(b, 0.0)):
 			continue
-		if not _dry_flat(p, 30.0) or _in_landmark(p, 3.0) or _dist_to_paths(p) < 4.0:
+		if not _dry_flat(p, 30.0) or _in_landmark(p, 3.0) or _dist_to_paths(p) < 4.0 or not _clear_of(p, 1.6):
 			continue
 		var ok := true
 		for t in taken:
@@ -979,6 +1078,7 @@ func _place_trees_and_rocks() -> void:
 		if tree == null:
 			continue
 		taken.append(p)
+		_claim(p, 1.2)
 		g.add_child(tree)
 		tree.position = _on_ground(p.x, p.y, 0.2)
 		tree.rotation.y = rng.randf() * TAU
@@ -992,12 +1092,16 @@ func _place_trees_and_rocks() -> void:
 		var b: String = terrain.biome_at(p.x, p.y)
 		if not rock_sets.has(b) or not _dry_flat(p, 38.0) or _in_landmark(p, 2.0) or _dist_to_paths(p) < 3.0:
 			continue
+		var sc := rng.randf_range(0.6, 1.7)
+		if not _clear_of(p, 1.2 * sc + 0.6):
+			continue
 		var list: Array = rock_sets[b]
 		var rock := _make_rock(str(list[rng.randi() % list.size()]), "Rock_%d" % rocks)
 		g.add_child(rock)
 		rock.position = _on_ground(p.x, p.y, 0.25)
 		rock.rotation.y = rng.randf() * TAU
-		rock.scale = Vector3.ONE * rng.randf_range(0.6, 1.7)
+		rock.scale = Vector3.ONE * sc
+		_claim(p, 1.1 * sc)
 		rocks += 1
 	print("[island] %d trees, %d rocks" % [trees, rocks])
 	_place_ground_cover()
@@ -1027,6 +1131,9 @@ func _place_ground_cover() -> void:
 					continue
 				var h := ground(p.x, p.y)
 				if h < 0.4 or terrain.slope_deg(p.x, p.y) > 40.0 or Water.kind_at(Vector3(p.x, h + 0.1, p.y)) != "":
+					break
+				var big := str(e[0]).begins_with("bush") or str(e[0]) in ["fern", "grass_tall", "shrub_dry", "mushrooms"]
+				if not _clear_of(p, 0.7 if big else 0.25):
 					break
 				var key := "%d,%d,%s" % [int(floor(p.x / cover_chunk)), int(floor(p.y / cover_chunk)), e[0]]
 				var basis := Basis(Vector3.UP, rng.randf() * TAU).scaled(Vector3.ONE * rng.randf_range(0.75, 1.3))
@@ -1111,7 +1218,7 @@ func _place_forage() -> void:
 			var p := Vector2(x + rng.randf() * cell, z + rng.randf() * cell)
 			z += cell
 			var b: String = terrain.biome_at(p.x, p.y)
-			if not forage_sets.has(b) or not _dry_flat(p, 35.0) or _in_landmark(p, 1.0):
+			if not forage_sets.has(b) or not _dry_flat(p, 35.0) or _in_landmark(p, 1.0) or not _clear_of(p, 0.4):
 				continue
 			for e in forage_sets[b]:
 				if rng.randf() > float(e[1]) * cell * cell / 1000.0:
@@ -1231,7 +1338,7 @@ func _place_loot() -> void:
 			var p := Vector2.INF
 			for t in 20:
 				var q := _random_dry_spot(rng, float(bias[tier]))
-				if q == Vector2.INF:
+				if q == Vector2.INF or not _clear_of(q, 1.4) or terrain.slope_deg(q.x, q.y) > 16.0:
 					continue
 				var ok := true
 				for c in chest_spots:
@@ -1250,7 +1357,12 @@ func _place_loot() -> void:
 	for sp in spawn_points:
 		var a := rng.randf() * TAU
 		var p := Vector2(sp.x, sp.z) + Vector2(cos(a), sin(a)) * rng.randf_range(7.0, 12.0)
-		if _dry_flat(p, 30.0):
+		for t in 8:
+			if _dry_flat(p, 18.0) and _clear_of(p, 1.4):
+				break
+			a = rng.randf() * TAU
+			p = Vector2(sp.x, sp.z) + Vector2(cos(a), sin(a)) * rng.randf_range(7.0, 12.0)
+		if _dry_flat(p, 18.0) and _clear_of(p, 1.4):
 			_spawn_chest(root, "common", p, rng, n)
 			n += 1
 	# starter materials next to every spawn (stone + flint to make a first weapon)
@@ -1292,9 +1404,10 @@ func _spawn_chest(root: Node, tier: String, p: Vector2, rng: RandomNumberGenerat
 	c.tier = tier
 	c.loot_pool = chest_loot.get(tier, [])
 	c.rolls = chest_rolls.get(tier, Vector2i(1, 2))
-	c.position = Vector3(p.x, ground(p.x, p.y) - 0.05, p.y)
-	c.rotation.y = rng.randf() * TAU
+	c.position = Vector3(p.x, ground(p.x, p.y) - 0.04, p.y)
+	c.basis = _ground_basis(p, rng.randf() * TAU)          # flush on slopes (no floating corner)
 	root.add_child(c)
+	_claim(p, 1.0)
 
 
 func _roll_item(rng: RandomNumberGenerator, p: Vector2) -> String:

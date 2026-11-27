@@ -7,6 +7,7 @@ extends Node3D
 ##   moves      : jump, land (heavier after a long fall), roll, sidehop, backflip,
 ##                ledge grab, climb, bonk
 ##   equipment  : draw / holster, bow draw, boomerang throw / catch
+##   water      : splash in, swim strokes, dive / surface, wading steps in the shallows
 
 @export var walk_stride := 1.15             ## metres per step at walking speed
 @export var run_stride := 1.9               ## metres per step at full run
@@ -17,8 +18,11 @@ extends Node3D
 @export var land_min_air_time := 0.18
 @export var heavy_land_speed := 11.0        ## falling m/s for the heavy landing
 @export var foot_height := 0.1
+@export var stroke_interval := Vector2(0.95, 0.55)   ## seconds between swim strokes: slow .. dash
+@export var wade_depth := 0.15                       ## water over the feet deeper than this: wading steps
 
-const MotorState := { "BONK": 3, "HANG": 5 }
+const MotorState := { "BONK": 3, "HANG": 5, "SWIM": 6, "DIVE": 7 }
+var _stroke_left := 0.0
 
 var _body: CharacterBody3D
 var _equip: Node
@@ -34,6 +38,7 @@ var _drawn := false
 var _aiming := false
 var _thrown := false
 var _ready_done := false
+var _state_prev := 0
 
 
 func _ready() -> void:
@@ -53,6 +58,7 @@ func _physics_process(delta: float) -> void:
 		_ready_done = true
 		_seq = _body.sync_action_seq
 		_state = _body.sync_move_state
+		_state_prev = _state
 		if _equip:
 			_drawn = _equip.sync_drawn
 			_aiming = _equip.sync_aiming
@@ -62,6 +68,7 @@ func _physics_process(delta: float) -> void:
 	_check_state()
 	_check_air(delta, acted)
 	_check_steps(delta)
+	_check_swim(delta)
 	_check_equipment()
 
 
@@ -95,6 +102,19 @@ func _check_state() -> void:
 	if s == _state:
 		return
 	_state = s
+	var was := _state_prev
+	_state_prev = s
+	var wet_now := s == MotorState.SWIM or s == MotorState.DIVE
+	var wet_before := was == MotorState.SWIM or was == MotorState.DIVE
+	if wet_now and not wet_before:
+		Audio.play_at("water.splash", _feet(), remap(clampf(_max_fall, 0.0, 12.0), 0.0, 12.0, -6.0, 0.0))
+		_stroke_left = 0.5
+	elif s == MotorState.DIVE and was == MotorState.SWIM:
+		Audio.play_at("water.dive", _feet())
+	elif s == MotorState.SWIM and was == MotorState.DIVE:
+		Audio.play_at("water.surface", _feet() + Vector3.UP * 1.2)
+	elif wet_before and not wet_now:
+		Audio.play_at("water.surface", _feet(), -4.0)       # climbing / hopping out
 	if s == MotorState.HANG:
 		Audio.play_at("player.ledge_grab", _feet() + Vector3.UP * 1.6)
 	elif s == MotorState.BONK:
@@ -134,7 +154,26 @@ func _check_steps(delta: float) -> void:
 	if _stride_left <= 0.0:
 		_stride_left += lerpf(walk_stride, run_stride, k)
 		var vol := lerpf(-9.0, 0.0, k)
-		Audio.play_at("player.footstep." + _surface(), _feet(), vol, lerpf(0.95, 1.05, k))
+		if Water.depth_at(_feet()) > wade_depth:
+			Audio.play_at("water.wade", _feet(), vol + 2.0, lerpf(0.95, 1.05, k))
+		else:
+			Audio.play_at("player.footstep." + _surface(), _feet(), vol, lerpf(0.95, 1.05, k))
+
+
+## Swim strokes while moving in the water (faster strokes when dashing).
+func _check_swim(delta: float) -> void:
+	if _state != MotorState.SWIM and _state != MotorState.DIVE:
+		return
+	var speed: float = _body.sync_speed
+	if speed < 0.5:
+		_stroke_left = minf(_stroke_left, 0.2)
+		return
+	_stroke_left -= delta
+	if _stroke_left <= 0.0:
+		var k := clampf((speed - 1.0) / 4.0, 0.0, 1.0)
+		_stroke_left = lerpf(stroke_interval.x, stroke_interval.y, k)
+		var under := _state == MotorState.DIVE
+		Audio.play_at("water.stroke", _feet() + Vector3.UP * 0.8, -6.0 if under else lerpf(-2.0, 0.0, k), 0.7 if under else 1.0)
 
 
 ## Material under the feet: collider (or an ancestor) metadata "material".
