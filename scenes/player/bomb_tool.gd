@@ -117,7 +117,7 @@ var _ring: MeshInstance3D
 
 func _update_arc() -> void:
 	var s := stats()
-	var show := holding and s != null and s.arc_preview and _eq.is_local()
+	var show: bool = holding and s != null and s.arc_preview and _eq.is_local()
 	if not show:
 		if _arc:
 			_arc.visible = false
