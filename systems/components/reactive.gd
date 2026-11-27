@@ -121,6 +121,24 @@ func _apply_hit(hit: Dictionary) -> void:
 	_push()
 
 
+## Gentle heat from a flaming weapon held close (no hit sound / debris). Call on any peer.
+func warm(amount: float) -> void:
+	if dead:
+		return
+	if multiplayer.is_server():
+		add_heat(amount)
+		_push()
+	else:
+		_srv_warm.rpc_id(1, amount)
+
+
+@rpc("any_peer", "call_remote", "unreliable")
+func _srv_warm(amount: float) -> void:
+	if multiplayer.is_server() and not dead:
+		add_heat(amount)
+		_push()
+
+
 ## Host only. Fire spread, lit arrows and braziers all come through here.
 func add_heat(amount: float) -> void:
 	if dead or mat == null or always_burning:

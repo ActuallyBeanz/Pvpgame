@@ -27,6 +27,8 @@ const BombProjectile := preload("res://scenes/weapons/bomb_projectile.gd")
 @export var bag_size := 18                  ## extra slots shown when the inventory (Tab) is open
 @export var lit_arrow_burn_time := 8.0     ## a lit nocked arrow burns out after this (OoT deku-stick style)
 @export var nock_forward := 0.62           ## nocked arrow tip distance in front of the bow hand
+@export var fire_aura_radius := 2.2        ## a flaming weapon (Cinderpepper / lit arrow) melts ice this close
+@export var fire_aura_heat := 10.0         ## heat per second given to nearby ice (ice blocks have 40 hp)
 
 # Synced to everyone through player.tscn > Sync.
 var sync_weapon_id := ""
@@ -424,6 +426,52 @@ func eat(slot: int) -> bool:
 	consume(id, 1)
 	Audio.play("item.get", -2.0, 0.8)
 	return true
+
+
+var _aura_t := 0.0
+
+
+## Holding a flaming weapon near ice melts it (steam on every peer; the owner sends the heat to
+## the host for ice blocks; Rimecaller slabs melt on every peer by themselves).
+func _update_fire_aura(delta: float) -> void:
+	var on: bool = sync_drawn and is_instance_valid(_weapon_vis) \
+		and (sync_infusion == "fire" or sync_arrow_element == "fire")
+	if not on:
+		_aura_t = 0.0
+		return
+	_aura_t -= delta
+	if _aura_t > 0.0:
+		return
+	_aura_t = 0.5
+	var at := _weapon_vis.global_position
+	var shape := SphereShape3D.new()
+	shape.radius = fire_aura_radius
+	var q := PhysicsShapeQueryParameters3D.new()
+	q.shape = shape
+	q.transform = Transform3D(Basis(), at)
+	q.collision_mask = 1
+	q.exclude = [_player.get_rid()]
+	var seen := {}
+	var scene := get_tree().current_scene
+	for res in _player.get_world_3d().direct_space_state.intersect_shape(q, 24):
+		var col: Object = res.collider
+		if col == null or not (col is Node3D):
+			continue
+		if (col as Node).is_in_group("ice_platforms"):
+			if not seen.has(col):
+				seen[col] = true
+				col.warm()
+				FX.smoke_puff(((col as Node3D).global_position + at) * 0.5, scene, 0.35)
+			continue
+		var r: Node = WorldRules.reactive_of(col)
+		if r == null or seen.has(r) or r.dead or r.mat == null or not r.mat.melts_from_heat:
+			continue
+		seen[r] = true
+		if is_local():
+			r.warm(fire_aura_heat * 0.5)
+		var steam: Vector3 = (r.center() + at) * 0.5
+		FX.smoke_puff(steam, scene, 0.35)
+		Audio.play_at("fire.extinguish", steam, -14.0, 1.5)
 
 
 ## Every peer: a little element effect on the weapon in hand while it's infused.
@@ -870,6 +918,7 @@ func _process(delta: float) -> void:
 			_model.set_aiming((sync_aiming or on_chain or two_handed_drawn()) and sync_drawn, w.aim_anim if w else &"", w.shoot_anim if w else &"")
 	hook.update_visuals()
 	_update_infusion_vis()
+	_update_fire_aura(delta)
 
 
 func _local_update(delta: float) -> void:

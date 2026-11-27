@@ -56,6 +56,11 @@ func _physics_process(delta: float) -> void:
 		melt()
 
 
+## A flaming weapon is held close: melts within melt_near_fire seconds (every peer runs this).
+func warm() -> void:
+	_left = minf(_left, melt_near_fire)
+
+
 func melt() -> void:
 	if not is_inside_tree():
 		return
