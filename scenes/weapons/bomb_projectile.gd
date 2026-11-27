@@ -162,10 +162,12 @@ func explode() -> void:
 		for w in get_tree().get_nodes_in_group("cracked_walls"):
 			if w.broken:
 				continue
-			var mid: Vector3 = (w as Node3D).global_position + Vector3.UP * 1.6
+			var wt: Transform3D = (w as Node3D).global_transform
+			var local := wt.affine_inverse() * at
+			var mid := wt * Vector3(clampf(local.x, -1.8, 1.8), clampf(local.y, 0.0, 3.2), clampf(local.z, -0.4, 0.4))
 			var dist := mid.distance_to(at)
-			print("[bomb] cracked wall %s is %.1fm away (reach %.1fm)" % [w.name, dist, r + 1.2])
-			if dist <= r + 1.2:
+			print("[bomb] cracked wall %s is %.1fm away (reach %.1fm)" % [w.name, dist, r])
+			if dist <= r:
 				var wh := WorldRules.make_hit(40.0, "blunt", "", (mid - at).normalized())
 				wh["blast"] = true
 				w.react_to_hit_info(wh, false)

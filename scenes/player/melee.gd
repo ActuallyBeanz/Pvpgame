@@ -270,6 +270,7 @@ func _tick_swing(delta: float) -> void:
 		if not _shock_done and s and s.shockwave_radius > 0.0 and _kind != Kind.POKE and _kind != Kind.BASH:
 			_shock_done = true
 			_shockwave(s)
+			_smash_walls(s)
 	if _t >= _dur:
 		swinging = false
 		_trail.active = false
@@ -316,6 +317,26 @@ func _do_hits() -> void:
 		_eq.harvest_tree(col, (col as Node3D).global_position + Vector3.UP, 1)   # chopping a tree drops wood
 		Audio.play_at("sword.hit", (col as Node3D).global_position + Vector3.UP, -2.0, randf_range(0.9, 1.1))
 		print("[sword] hit %s for %.0f" % [(col as Node).name, hit_info.damage])
+
+
+## Hammer: any cracked wall near the impact point breaks, wherever it is (checked by distance,
+## independent of the swing arc / overlap query).
+func _smash_walls(s: Resource) -> void:
+	var at := _player.global_position + _forward() * 1.6 + Vector3.UP * 0.8
+	var reach: float = maxf(s.shockwave_radius, s.reach) + 1.0
+	for w in get_tree().get_nodes_in_group("cracked_walls"):
+		if w.broken:
+			continue
+		# nearest point on the wall's face (3.6 m wide, 3.2 m tall) to the impact
+		var wt: Transform3D = (w as Node3D).global_transform
+		var local := wt.affine_inverse() * at
+		var closest := wt * Vector3(clampf(local.x, -1.8, 1.8), clampf(local.y, 0.0, 3.2), clampf(local.z, -0.4, 0.4))
+		var dist := closest.distance_to(at)
+		print("[hammer] cracked wall %s is %.1fm from the impact (reach %.1fm)" % [w.name, dist, reach])
+		if dist <= reach:
+			var hit := WorldRules.make_hit(s.shockwave_damage, "blunt", "", _forward())
+			hit["smash"] = true
+			w.react_to_hit_info(hit, false)
 
 
 ## Hammer slam: everything around the impact point takes a blunt hit (OoT Megaton Hammer).
