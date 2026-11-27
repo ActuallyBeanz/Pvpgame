@@ -309,6 +309,9 @@ func _do_hits() -> void:
 			return
 		var action := "blunt" if _kind == Kind.BASH else _action
 		var hit_info := WorldRules.make_hit(_dmg, action, "", dir)
+		var ss := sword_stats()
+		if ss and ss.style == "hammer" and _kind != Kind.BASH:
+			hit_info["smash"] = true                 # Megaton-style: smashes cracked walls
 		WorldRules.deliver_hit(col, hit_info, false)
 		_eq.harvest_tree(col, (col as Node3D).global_position + Vector3.UP, 1)   # chopping a tree drops wood
 		Audio.play_at("sword.hit", (col as Node3D).global_position + Vector3.UP, -2.0, randf_range(0.9, 1.1))
@@ -332,7 +335,9 @@ func _shockwave(s: Resource) -> void:
 		_hit_ids[col.get_instance_id()] = true
 		var dir: Vector3 = ((col as Node3D).global_position - at)
 		dir.y = 0.0
-		WorldRules.deliver_hit(col, WorldRules.make_hit(s.shockwave_damage, "blunt", "", dir.normalized() if dir.length() > 0.05 else _forward()), false)
+		var sh := WorldRules.make_hit(s.shockwave_damage, "blunt", "", dir.normalized() if dir.length() > 0.05 else _forward())
+		sh["smash"] = true
+		WorldRules.deliver_hit(col, sh, false)
 		_eq.harvest_tree(col, (col as Node3D).global_position + Vector3.UP, 1)
 	_shock_fx(at)
 	rpc_shock.rpc(at)

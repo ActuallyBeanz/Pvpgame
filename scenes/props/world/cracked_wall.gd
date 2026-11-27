@@ -1,5 +1,5 @@
 extends StaticBody3D
-## Bombable wall (OoT cracked wall). Only an explosion breaks it: swords, arrows, hammers and
+## Bombable wall (OoT cracked wall). Explosions and the hammer break it: swords, arrows and
 ## fire just clink off. When a bomb goes off close enough it bursts into rubble on every peer
 ## and stays open for the rest of the match. Fixed node names, so the break syncs by path.
 
@@ -27,11 +27,13 @@ func _ready() -> void:
 	add_child(cs)
 
 
-## Hits route here (WorldRules.deliver_hit). Only bomb blasts ("blast" in the hit) count.
+## Hits route here (WorldRules.deliver_hit). Bomb blasts ("blast") and hammer blows ("smash")
+## break it; anything else clinks off.
 func react_to_hit_info(hit: Dictionary, cosmetic: bool) -> void:
 	if broken:
 		return
-	if not bool(hit.get("blast", false)):
+	print("[secret] %s hit (blast=%s smash=%s cosmetic=%s)" % [name, hit.get("blast", false), hit.get("smash", false), cosmetic])
+	if not bool(hit.get("blast", false)) and not bool(hit.get("smash", false)):
 		Audio.play_at("shield.block", global_position + Vector3.UP * 1.5, -6.0, 0.7)    # clink
 		return
 	if not cosmetic:

@@ -156,6 +156,19 @@ func explode() -> void:
 			var hit := WorldRules.make_hit(dmg, "blunt", "", dir)
 			hit["blast"] = true                  # cracked walls only open for explosions
 			WorldRules.deliver_hit(col, hit, false)
+	# cracked walls: checked directly by distance to the wall's middle (don't rely on the
+	# overlap query alone - big maps can crowd it out)
+	if not cosmetic:
+		for w in get_tree().get_nodes_in_group("cracked_walls"):
+			if w.broken:
+				continue
+			var mid: Vector3 = (w as Node3D).global_position + Vector3.UP * 1.6
+			var dist := mid.distance_to(at)
+			print("[bomb] cracked wall %s is %.1fm away (reach %.1fm)" % [w.name, dist, r + 1.2])
+			if dist <= r + 1.2:
+				var wh := WorldRules.make_hit(40.0, "blunt", "", (mid - at).normalized())
+				wh["blast"] = true
+				w.react_to_hit_info(wh, false)
 	# chain reaction
 	var chain: float = stats.chain_radius if stats else 3.0
 	for b in get_tree().get_nodes_in_group("bombs"):
