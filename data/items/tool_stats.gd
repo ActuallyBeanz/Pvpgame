@@ -35,7 +35,8 @@ extends Resource
 @export var ice_life := 22.0
 @export var ice_melt_near_fire := 3.0       ## seconds left once a flame touches it
 @export var max_ice := 6
-@export var frost_range := 6.0              ## blast reach in front of you (the rod's attack)
+@export var frost_range := 6.0              ## (old cone reach, unused)
+@export var blast_radius := 3.0             ## the rod's blast: size of the circle where you aim
 @export var frost_damage := 10.0            ## blast damage (+ the element bonus)
 @export var frost_slow := 2.5               ## seconds a frost blast slows players
 

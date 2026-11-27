@@ -129,8 +129,10 @@ func update(delta: float) -> void:
 						_freeze(s, tr.pos)                  # held + aimed at water: ice platform
 					elif s.rod_shoots_orb:
 						_shoot_orb(s)
+					elif tr.ok:
+						_rod_blast(s, tr.pos)                # blast lands on the ring
 					else:
-						_rod_blast(s, tr.pos if tr.ok else _player.global_position - _player.model_root.global_basis.z * 4.0)
+						Audio.play("ui.error", -6.0)
 				elif can_use:
 					var t := _aim_point(s, tag)
 					if t.ok:
@@ -360,13 +362,20 @@ func _update_ring(s: Resource, tag: String) -> void:
 		_ring.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		add_child(_ring)
 	var t2 := _aim_point(s, tag)
-	if tag == "rod" and not (t2.ok and t2.water and rod_element() == "frost"):
-		_ring.visible = false                        # rod: the ring only marks where ice would form
-		return
 	_ring.visible = true
+	# rod: the ring is the blast circle (ice-platform size on water while frost)
+	var r_scale := 1.0
+	if tag == "rod":
+		var freezes: bool = t2.ok and t2.water and rod_element() == "frost" and _hold_t >= 0.2
+		r_scale = (s.ice_size * 0.5) if freezes else s.blast_radius
+	_ring.scale = Vector3(r_scale, 1.0, r_scale)
 	if t2.ok:
 		_ring.global_position = t2.pos + Vector3.UP * 0.06
-		_ring_mat.albedo_color = Color(0.5, 0.85, 1.0, 0.85) if t2.water else Color(1.0, 0.85, 0.4, 0.85)
+		if tag == "rod":
+			var ec := WorldRules.element_color(rod_element())
+			_ring_mat.albedo_color = Color(ec.r, ec.g, ec.b, 0.85)
+		else:
+			_ring_mat.albedo_color = Color(0.5, 0.85, 1.0, 0.85) if t2.water else Color(1.0, 0.85, 0.4, 0.85)
 	else:
 		var cam: Camera3D = _player.camera_rig.camera
 		_ring.global_position = cam.global_position - cam.global_basis.z * minf(s.max_range, 8.0)
@@ -552,79 +561,148 @@ func _rod_blast(s: Resource, at: Vector3) -> void:
 	if _eq._model:
 		_eq._model.play_action(&"Spellcast_Shoot", 0.4)
 	var element := rod_element()
+	var radius: float = s.blast_radius
 	var origin := _player.global_position + Vector3.UP
 	var to := at - origin
 	var dir: Vector3 = Vector3(to.x, 0.0, to.z).normalized() if Vector3(to.x, 0.0, to.z).length() > 0.1 else -_player.model_root.global_basis.z
-	rpc_cast_fx.rpc(origin, dir, element, float(s.frost_range))
-	var space := _player.get_world_3d().direct_space_state
+	rpc_cast_fx.rpc(at, element, radius)
 	var shape := SphereShape3D.new()
-	shape.radius = 2.0
+	shape.radius = radius
+	var q := PhysicsShapeQueryParameters3D.new()
+	q.shape = shape
+	q.transform = Transform3D(Basis(), at + Vector3.UP * 0.5)
+	q.collision_mask = 3
+	q.exclude = [_player.get_rid()]
 	var hits := {}
-	for k in 4:
-		var c: Vector3 = origin + dir * (1.5 + k * float(s.frost_range) / 4.0)
-		var q := PhysicsShapeQueryParameters3D.new()
-		q.shape = shape
-		q.transform = Transform3D(Basis(), c)
-		q.collision_mask = 3
-		q.exclude = [_player.get_rid()]
-		for r in space.intersect_shape(q, 16):
-			var col: Object = r.collider
-			if col == null or hits.has(col.get_instance_id()):
-				continue
-			if col.has_method("react_to_hit_info") or col.has_method("react_to_hit") or WorldRules.reactive_of(col) != null:
-				hits[col.get_instance_id()] = true
-				WorldRules.deliver_hit(col, WorldRules.make_hit(s.frost_damage, "magic", element, dir), false)
+	for r in _player.get_world_3d().direct_space_state.intersect_shape(q, 32):
+		var col: Object = r.collider
+		if col == null or hits.has(col.get_instance_id()):
+			continue
+		if col.has_method("react_to_hit_info") or col.has_method("react_to_hit") or WorldRules.reactive_of(col) != null:
+			hits[col.get_instance_id()] = true
+			var push := dir
+			if col is Node3D:
+				var away: Vector3 = (col as Node3D).global_position - at
+				away.y = 0.0
+				if away.length() > 0.2:
+					push = away.normalized()
+			WorldRules.deliver_hit(col, WorldRules.make_hit(s.frost_damage, "magic", element, push), false)
 
 
-## Cast animation for the rod blast (every peer): a flash ring at the rod, then a wave of
-## ice spikes / fire bursts / sparks running out along the ground in front of the caster.
+## Cast animation for the rod blast (every peer): the rod flashes, a bolt streaks to the aimed
+## spot, then the circle erupts - a shockwave ring the size of the blast, with ice spikes /
+## flame bursts / lightning around its edge and in the middle.
 @rpc("any_peer", "call_local", "unreliable")
-func rpc_cast_fx(origin: Vector3, dir: Vector3, element: String, reach: float) -> void:
+func rpc_cast_fx(at: Vector3, element: String, radius: float) -> void:
 	var scene := get_tree().current_scene
 	var col := WorldRules.element_color(element)
-	var hand: Vector3 = _eq._hand_origin() if is_instance_valid(_eq) else origin
+	var hand: Vector3 = _eq._hand_origin() if is_instance_valid(_eq) else _player.global_position + Vector3.UP * 1.4
 	_flash_ring(hand, col)
 	FX.burst(hand, scene, col, 10, 0.05, 3.0)
-	Audio.play_at("ice.hit" if element == "frost" else ("fire.ignite" if element == "fire" else "target.hit"), origin, 2.0, 0.6)
-	for k in 4:
-		var c: Vector3 = origin + dir * (1.5 + k * reach / 4.0)
-		get_tree().create_timer(0.06 * k).timeout.connect(func() -> void: _wave_step(c, dir, element, col, k))
+	var travel := clampf(hand.distance_to(at) / 60.0, 0.05, 0.25)
+	_streak(hand, at, col, travel)
+	get_tree().create_timer(travel).timeout.connect(func() -> void: _erupt(at, element, col, radius))
+
+
+## A glowing mote flying from the rod to the target.
+func _streak(from: Vector3, to: Vector3, col: Color, t: float) -> void:
+	var mi := MeshInstance3D.new()
+	var sm := SphereMesh.new()
+	sm.radius = 0.16
+	sm.height = 0.32
+	sm.radial_segments = 8
+	sm.rings = 4
+	var m := StandardMaterial3D.new()
+	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	m.albedo_color = col.lightened(0.4)
+	sm.material = m
+	mi.mesh = sm
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	get_tree().current_scene.add_child(mi)
+	mi.global_position = from
+	var tw := mi.create_tween()
+	tw.tween_property(mi, "global_position", to + Vector3.UP * 0.3, t)
+	tw.tween_callback(mi.queue_free)
+
+
+func _erupt(at: Vector3, element: String, col: Color, radius: float) -> void:
+	if not is_inside_tree():
+		return
+	var scene := get_tree().current_scene
+	Audio.play_at("ice.hit" if element == "frost" else ("fire.ignite" if element == "fire" else "target.hit"), at, 4.0, 0.6)
+	_shockwave(at, col, radius)
+	FX.burst(at + Vector3.UP * 0.4, scene, col, 24, 0.07, 4.5)
+	var l := OmniLight3D.new()
+	l.light_color = col
+	l.light_energy = 5.0
+	l.omni_range = radius * 2.5
+	scene.add_child(l)
+	l.global_position = at + Vector3.UP * 1.0
+	var lt := l.create_tween()
+	lt.tween_property(l, "light_energy", 0.0, 0.4)
+	lt.tween_callback(l.queue_free)
+	_spot(at, element, col, true)
+	var n := 8
+	for k in n:
+		var a := TAU * float(k) / float(n) + randf() * 0.3
+		var p := at + Vector3(cos(a), 0.0, sin(a)) * radius * randf_range(0.7, 0.95)
+		get_tree().create_timer(0.05 + 0.02 * k).timeout.connect(func() -> void: _spot(p, element, col, false))
+
+
+## Expanding ground ring out to the blast's edge.
+func _shockwave(at: Vector3, col: Color, radius: float) -> void:
+	var mi := MeshInstance3D.new()
+	var t := TorusMesh.new()
+	t.inner_radius = 0.85
+	t.outer_radius = 1.0
+	t.rings = 32
+	t.ring_segments = 4
+	var m := StandardMaterial3D.new()
+	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	m.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+	m.albedo_color = col
+	t.material = m
+	mi.mesh = t
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	get_tree().current_scene.add_child(mi)
+	mi.global_position = _ground(at) + Vector3.UP * 0.1
+	mi.scale = Vector3(0.2, 0.3, 0.2)
+	var tw := mi.create_tween()
+	tw.tween_property(mi, "scale", Vector3(radius, 0.3, radius), 0.22).set_ease(Tween.EASE_OUT)
+	tw.parallel().tween_property(m, "albedo_color:a", 0.0, 0.45)
+	tw.tween_callback(mi.queue_free)
+
+
+## One element effect on the ground: ice spikes / a flame burst / a lightning bolt.
+func _spot(c: Vector3, element: String, col: Color, center: bool) -> void:
+	if not is_inside_tree():
+		return
+	var scene := get_tree().current_scene
+	var g := _ground(c)
+	FX.burst(g + Vector3.UP * 0.3, scene, col, 6, 0.06, 2.5)
+	match element:
+		"fire":
+			var f := FX.flames(1.2 if center else 0.7, center)
+			scene.add_child(f)
+			f.global_position = g
+			get_tree().create_timer(0.6).timeout.connect(f.queue_free)
+		"shock":
+			if center or randf() < 0.5:
+				_bolt(g + Vector3.UP * 2.6, g, col)
+		_:
+			if center:
+				for k in 3:
+					var a := randf() * TAU
+					_ice_spike(g + Vector3(cos(a), 0.0, sin(a)) * 0.3, randf_range(1.0, 1.5))
+			else:
+				_ice_spike(g, randf_range(0.6, 1.0))
 
 
 func _ground(p: Vector3) -> Vector3:
 	var q := PhysicsRayQueryParameters3D.create(p + Vector3.UP * 1.5, p + Vector3.DOWN * 4.0, 1)
 	var hit := _player.get_world_3d().direct_space_state.intersect_ray(q)
 	return hit.position if not hit.is_empty() else p + Vector3.DOWN
-
-
-func _wave_step(c: Vector3, dir: Vector3, element: String, col: Color, k: int) -> void:
-	if not is_inside_tree():
-		return
-	var scene := get_tree().current_scene
-	var g := _ground(c)
-	FX.burst(g + Vector3.UP * 0.3, scene, col, 8, 0.06, 2.5)
-	match element:
-		"fire":
-			var f := FX.flames(0.9, k == 1)
-			scene.add_child(f)
-			f.global_position = g
-			get_tree().create_timer(0.55).timeout.connect(f.queue_free)
-		"shock":
-			var l := OmniLight3D.new()
-			l.light_color = col
-			l.light_energy = 4.0
-			l.omni_range = 4.0
-			scene.add_child(l)
-			l.global_position = g + Vector3.UP * 0.6
-			var tw := l.create_tween()
-			tw.tween_property(l, "light_energy", 0.0, 0.25)
-			tw.tween_callback(l.queue_free)
-			_bolt(g + Vector3.UP * 2.2, g, col)
-		_:
-			var side := dir.cross(Vector3.UP).normalized()
-			for n in 3:
-				var off := side * (float(n) - 1.0) * 0.6 + dir * randf_range(-0.3, 0.3)
-				_ice_spike(g + off, randf_range(0.6, 1.1) * (1.2 if n == 1 else 0.85))
 
 
 ## One ice spike: pops out of the ground, holds, sinks away.
