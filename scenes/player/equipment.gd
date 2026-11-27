@@ -67,6 +67,8 @@ var melee: Node
 var hook: Node                              ## grapple tool logic (scenes/player/hook_tool.gd)
 var bomb: Node                              ## Blastgourd bombs (scenes/player/bomb_tool.gd)
 const BombTool := preload("res://scenes/player/bomb_tool.gd")
+const ToolsScript := preload("res://scenes/player/tools.gd")
+var tools: Node                             ## fan / staff / rod / trap (scenes/player/tools.gd)
 const PickupDropScene := preload("res://scenes/items/pickup.tscn")
 var _shield_vis: Node3D
 
@@ -93,6 +95,10 @@ func _ready() -> void:
 	bomb.name = "Bomb"
 	add_child(bomb)
 	bomb.setup(self, _player)
+	tools = ToolsScript.new()
+	tools.name = "Tools"
+	add_child(tools)
+	tools.setup(self, _player)
 
 
 func is_local() -> bool:
@@ -119,7 +125,7 @@ func ammo_count() -> int:
 
 
 func is_aiming() -> bool:
-	return sync_aiming and weapon_type() in ["shoot", "throw", "hook"]
+	return sync_aiming and weapon_type() in ["shoot", "throw", "hook", "staff", "rod"]
 
 
 func move_speed_mult() -> float:
@@ -626,6 +632,8 @@ func _local_update(delta: float) -> void:
 			hook.update(delta)
 		"bomb":
 			bomb.update(delta)
+		"fan", "staff", "rod", "trap":
+			tools.update(delta)
 
 
 ## Paused / inventory open: let go of everything that's held (draw, aim, charge, block).
@@ -637,6 +645,8 @@ func _stop_combat_input() -> void:
 		hook.stop_aim()
 	if bomb:
 		bomb.cancel()
+	if tools:
+		tools.stop()
 	sync_aiming = false
 	sync_blocking = false
 	_player.camera_rig.set_aim(false)

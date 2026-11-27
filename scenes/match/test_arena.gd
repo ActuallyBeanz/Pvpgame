@@ -46,6 +46,15 @@ const PickupScene := preload("res://scenes/items/pickup.tscn")
 	{ "id": "skytether", "pos": Vector3(-10.0, 0, 3.5) },
 	]
 
+@export_group("Water + sand (tool / swimming tests)")
+## Raised pool (walls you can walk up on stairs) with deep water: swim, dive, freeze ice bridges.
+@export var pool_center := Vector3(27, 0, -27)
+@export var pool_size := Vector2(16, 16)
+@export var pool_depth := 3.2                  ## water depth (walls are a little taller)
+## Sand patch with dunes next to it (Sandspire pillars, bombs, traps).
+@export var sand_center := Vector3(-27, 0, -27)
+@export var sand_size := Vector2(16, 16)
+
 @export_group("Targets")
 @export var target_id := "prop.target.archery"
 @export var target_positions: PackedVector3Array = [Vector3(10, 0, -6), Vector3(20, 0, -2), Vector3(32, 0, 2.5)]
@@ -85,6 +94,9 @@ func _ready() -> void:
 	_place_targets()
 	_place_dummies()
 	_place_pickups()
+	Water.clear()
+	_build_pool()
+	_build_sand()
 	_place_trees()
 	if multiplayer.is_server():
 		Lobby.all_peers_loaded.connect(_spawn_all_players, CONNECT_ONE_SHOT)
@@ -92,7 +104,9 @@ func _ready() -> void:
 	Lobby.report_match_loaded()
 	Audio.play_ambience("amb.field")
 	Audio.play("ui.match_start")
-	tree_exiting.connect(func() -> void: Audio.stop_ambience(0.3))
+	tree_exiting.connect(func() -> void:
+		Audio.stop_ambience(0.3)
+		Water.clear())
 
 
 # Server only.
@@ -180,11 +194,86 @@ func _place_trees() -> void:
 func _try_spot(pos: Vector3, taken: Array[Vector3], out: Array[Vector3], limit: int) -> void:
 	if out.size() >= limit:
 		return
+	for c in [[pool_center, pool_size], [sand_center, sand_size]]:     # keep the pool / sand clear
+		var cc: Vector3 = c[0]
+		var sz: Vector2 = c[1]
+		if absf(pos.x - cc.x) < sz.x * 0.5 + 4.0 and absf(pos.z - cc.z) < sz.y * 0.5 + 4.0:
+			return
 	for t in taken:
 		if Vector2(t.x - pos.x, t.z - pos.z).length() < tree_spacing:
 			return
 	taken.append(pos)
 	out.append(pos)
+
+
+func _box(parent: Node, at: Vector3, size: Vector3, color: Color, meta := "stone") -> StaticBody3D:
+	var body := StaticBody3D.new()
+	body.set_meta("material", meta)
+	var mi := MeshInstance3D.new()
+	var bm := BoxMesh.new()
+	bm.size = size
+	mi.mesh = bm
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = color
+	mat.roughness = 0.95
+	mi.material_override = mat
+	body.add_child(mi)
+	var cs := CollisionShape3D.new()
+	var sh := BoxShape3D.new()
+	sh.size = size
+	cs.shape = sh
+	body.add_child(cs)
+	parent.add_child(body)
+	body.position = at
+	return body
+
+
+## Raised stone pool: deep enough to swim and dive, stairs up the side, a ramp out of the water.
+func _build_pool() -> void:
+	var g := Node3D.new()
+	g.name = "Pool"
+	$Course.add_child(g)
+	var c := pool_center
+	var wall_h := pool_depth + 0.6
+	var stone := Color(0.62, 0.6, 0.56)
+	var hx := pool_size.x * 0.5
+	var hz := pool_size.y * 0.5
+	for side in [-1, 1]:
+		_box(g, c + Vector3(side * (hx + 0.5), wall_h * 0.5, 0), Vector3(1.0, wall_h, pool_size.y + 2.0), stone)
+		_box(g, c + Vector3(0, wall_h * 0.5, side * (hz + 0.5)), Vector3(pool_size.x, wall_h, 1.0), stone)
+	for k in int(wall_h / 0.5):                       # stairs up the outside (west wall)
+		_box(g, c + Vector3(-hx - 1.5 - k * 0.6, (k + 0.5) * 0.5, -hz + 2.0), Vector3(0.6, (k + 1) * 0.5, 2.4), stone)
+	# a ramp inside so swimmers can walk back out
+	var ramp := _box(g, c + Vector3(hx - 2.0, pool_depth * 0.5 - 0.2, hz - 3.5), Vector3(3.0, 0.4, 7.5), stone)
+	ramp.rotation.x = -atan2(pool_depth, 7.0)
+	var level := c.y + pool_depth
+	Water.add_body(Vector2(c.x, c.z), minf(hx, hz) * 1.4, level, "water")
+	var water := MeshInstance3D.new()
+	var pm := PlaneMesh.new()
+	pm.size = pool_size
+	pm.subdivide_width = 16
+	pm.subdivide_depth = 16
+	water.mesh = pm
+	var wm := ShaderMaterial.new()
+	wm.shader = load("res://assets/shaders/water.gdshader")
+	water.material_override = wm
+	g.add_child(water)
+	water.position = Vector3(c.x, level, c.z)
+
+
+## Sand patch with a few dunes.
+func _build_sand() -> void:
+	var g := Node3D.new()
+	g.name = "Sand"
+	$Course.add_child(g)
+	var sand := Color(0.88, 0.76, 0.52)
+	_box(g, sand_center + Vector3(0, 0.05, 0), Vector3(sand_size.x, 0.1, sand_size.y), sand, "sand")
+	var dunes := [[Vector3(-4, 0, -3), Vector3(5, 1.2, 3)], [Vector3(3, 0, 4), Vector3(4, 0.8, 5)], [Vector3(4, 0, -5), Vector3(3, 1.8, 3)]]
+	for d in dunes:
+		var off: Vector3 = d[0]
+		var sz: Vector3 = d[1]
+		var b := _box(g, sand_center + off + Vector3(0, sz.y * 0.5, 0), sz, sand.darkened(0.06), "sand")
+		b.rotation.y = off.x * 0.2
 
 
 # Local scenery with fixed names (Reactive state syncs by node path).

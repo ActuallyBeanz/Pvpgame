@@ -25,6 +25,8 @@ const Motor := preload("res://scenes/player/movement_motor.gd")
 var health := 100.0
 var dead := false
 var hitstun := 0.0
+var root_left := 0.0                       ## snared (trap): can't move
+var slow_left := 0.0                       ## frost: half speed
 var spectate_index := 0
 var _player: CharacterBody3D
 var _air_peak := -INF
@@ -76,6 +78,9 @@ func _apply_hit(damage: float, dir: Vector3, element: String, by_peer: int) -> v
 	if by_peer != multiplayer.get_unique_id():
 		_last_attacker = attacker
 	take_damage(damage, dir, "fire" if element == "fire" else "hit", attacker)
+	if element == "frost":
+		slow_left = maxf(slow_left, 2.5)
+		FX.burst(_player.global_position + Vector3.UP, get_tree().current_scene, Color(0.75, 0.95, 1.0), 10, 0.06, 2.5)
 
 
 ## Owner only: lose health, get knocked back / stunned, maybe die.
@@ -100,9 +105,17 @@ func take_damage(amount: float, dir: Vector3, kind: String, source: String) -> v
 		_die(source if source != "" else (_last_attacker if kind != "fall" else "the fall"))
 
 
+## Owner: held in place (trap).
+func apply_root(t: float) -> void:
+	root_left = maxf(root_left, t)
+	_player.velocity = Vector3.ZERO
+
+
 # ---------------------------------------------------------------- environment (owner, every physics tick)
 func tick(delta: float) -> void:
 	hitstun = maxf(0.0, hitstun - delta)
+	root_left = maxf(0.0, root_left - delta)
+	slow_left = maxf(0.0, slow_left - delta)
 	if dead:
 		_tick_dead(delta)
 		return

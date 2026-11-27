@@ -38,6 +38,9 @@ class Intent:
 	var jump_held := false
 	var roll_pressed := false
 	var roll_held := false         ## swimming: Ctrl held = swim down
+	var glide := false             ## Galeleaf Fan open in the air (Deku Leaf): slow fall, steer
+	var glide_fall := 1.6
+	var glide_speed := 6.0
 	var sprint := false
 	var speed_mult := 1.0
 	var focus := false             ## face focus_yaw and strafe
@@ -226,6 +229,12 @@ func step(body: CharacterBody3D, wish: Vector3, delta: float, intent: Intent) ->
 
 	if not was_on_floor:
 		body.velocity.y = maxf(body.velocity.y - p.gravity * delta, -p.max_fall_speed)
+		if intent.glide and state == State.AIR:
+			# Deku Leaf glide: capped fall, steady forward drift you can steer
+			body.velocity.y = maxf(body.velocity.y, -intent.glide_fall)
+			speed = move_toward(speed, intent.glide_speed * (1.0 if has_input else 0.6), 6.0 * delta)
+			if has_input:
+				heading = rotate_toward(heading, target_yaw, deg_to_rad(160.0) * delta)
 
 	var horiz := dir_of(heading) * speed
 	body.velocity.x = horiz.x

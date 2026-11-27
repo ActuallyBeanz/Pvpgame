@@ -1,0 +1,6 @@
+[gd_resource type="Resource" format=3]
+
+[ext_resource type="Script" path="res://data/items/tool_stats.gd" id="1_tool"]
+
+[resource]
+script = ExtResource("1_tool")

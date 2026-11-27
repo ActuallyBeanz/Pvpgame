@@ -1,6 +1,7 @@
 [gd_resource type="Resource" format=3]
 
 [ext_resource type="Script" path="res://data/items/item_def.gd" id="1_item"]
+[ext_resource type="Resource" path="res://data/items/fan_galeleaf_stats.tres" id="2_stats"]
 
 [resource]
 script = ExtResource("1_item")
@@ -15,6 +16,7 @@ back_position = Vector3(0.05, 0.45, -0.42)
 back_rotation_deg = Vector3(0, 0, 150)
 icon_roll_deg = -45.0
 material = "wood"
-action_tag = "tool"
+action_tag = "fan"
+stats = ExtResource("2_stats")
 element = "wind"
 category = "tool"

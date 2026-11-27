@@ -127,6 +127,14 @@ func _simulate(delta: float) -> void:
 	it.jump_held = can_act and Input.is_action_pressed("jump")
 	it.roll_pressed = roll_pressed
 	it.roll_held = can_act and Input.is_action_pressed("roll")
+	it.glide = equipment.tools.wants_glide(delta)
+	it.glide_fall = equipment.tools.glide_fall()
+	it.glide_speed = equipment.tools.glide_speed()
+	if health.root_left > 0.0:          # snared by a trap: can't move or jump
+		wish = Vector3.ZERO
+		it.jump_pressed = false
+	if health.slow_left > 0.0:          # frost: half speed
+		it.speed_mult *= 0.5
 	it.camera_yaw = camera_rig.get_yaw()
 	it.sprint = can_act and Input.is_action_pressed("sprint") and not aiming
 	it.speed_mult = equipment.move_speed_mult()

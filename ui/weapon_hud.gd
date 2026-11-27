@@ -249,8 +249,15 @@ func _weapon_line(w: Resource, kind: String) -> String:
 		"bomb":
 			var bt: Node = _equipment.bomb
 			status = ("fuse %.1fs · LMB throw · Q set down" % bt.fuse_left) if bt.holding else ("x%d · LMB pull one out" % _equipment.ammo_count())
-		"tool":
-			status = "power not built yet (held only)"
+		"fan":
+			var tl: Node = _equipment.tools
+			status = ("gliding %.1fs" % tl.glide_left) if tl.gliding else "LMB gust · hold Space in the air: glide"
+		"staff":
+			status = "hold LMB aim · release: sand pillar"
+		"rod":
+			status = "hold LMB aim · water: ice platform · land: frost blast"
+		"trap":
+			status = "x%d · LMB set a trap at your feet" % _equipment.ammo_count()
 		"slash":
 			status = "charged! release" if _equipment.melee.charged else ("charging..." if _equipment.melee.charging else "LMB combo · hold: spin")
 	var sh: Resource = _equipment.shield_item()
