@@ -32,6 +32,8 @@ extends Node3D
 @export var anim_hang := &"oot/OoT_LedgeHang"
 @export var anim_hook := &"oot/OoT_HookPull"         ## reeled in by the grapple (loop)
 @export var anim_hook_fallback := &"Jump_Idle"     ## used until oot_moves.glb has OoT_HookPull
+@export var anim_glide := &"oot/OoT_Glide"         ## Galeleaf Fan glide (both hands up on the leaf)
+@export var anim_glide_fallback := &"Jump_Idle"
 @export var anim_swim := &"oot/OoT_Swim"           ## breaststroke (body tipped forward in code)
 @export var anim_tread := &"oot/OoT_Tread"         ## floating still
 @export var swim_lean_deg := 62.0                  ## body tip while swimming along the surface
@@ -89,7 +91,7 @@ var _hook_arm_w := 0.0
 var _was_swimming := false
 
 const HOOK_PHASE_PULL := 3                ## HookTool.Phase.PULL
-const LOOPING := ["anim_idle", "anim_walk", "anim_run", "anim_air", "anim_strafe_left", "anim_strafe_right", "anim_back", "anim_hook", "anim_swim", "anim_tread"]
+const LOOPING := ["anim_idle", "anim_walk", "anim_run", "anim_air", "anim_strafe_left", "anim_strafe_right", "anim_back", "anim_hook", "anim_swim", "anim_tread", "anim_glide"]
 const STATE_SWIM := 6                     ## Motor.State.SWIM
 const STATE_DIVE := 7
 const FX := preload("res://systems/components/element_fx.gd")
@@ -114,6 +116,8 @@ func _ready() -> void:
 		_add_moves_library()
 		if not anim.has_animation(anim_hook):
 			anim_hook = anim_hook_fallback
+		if not anim.has_animation(anim_glide):
+			anim_glide = anim_glide_fallback
 		if not anim.has_animation(anim_swim):
 			anim_swim = anim_walk
 		if not anim.has_animation(anim_tread):
@@ -138,6 +142,8 @@ func get_attach_point(slot: String) -> Node3D:
 
 func set_aiming(on: bool, aim_anim: StringName = &"", shoot_anim: StringName = &"") -> void:
 	_aiming = on
+	if aim_anim != &"" and anim and not anim.has_animation(aim_anim):
+		aim_anim = anim_glide if aim_anim == &"oot/OoT_Glide" else &"1H_Ranged_Aiming"
 	if on and aim_anim != &"" and _aim_node and _aim_node.animation != aim_anim:
 		_aim_node.animation = aim_anim
 		var a := anim.get_animation(aim_anim)
@@ -207,7 +213,7 @@ func _add_moves_library() -> void:
 			_moves_lib = AnimationLibrary.new()
 			for n in ap.get_animation_list():
 				var a := ap.get_animation(n).duplicate() as Animation
-				a.loop_mode = Animation.LOOP_LINEAR if n in ["OoT_LedgeHang", "OoT_HookPull", "OoT_Swim", "OoT_Tread"] else Animation.LOOP_NONE
+				a.loop_mode = Animation.LOOP_LINEAR if n in ["OoT_LedgeHang", "OoT_HookPull", "OoT_Swim", "OoT_Tread", "OoT_Glide"] else Animation.LOOP_NONE
 				_moves_lib.add_animation(n, a)
 		src.free()
 	if _moves_lib and not anim.has_animation_library(&"oot"):
@@ -233,6 +239,8 @@ func _process(delta: float) -> void:
 		var moving := speed > 0.4 or ms == STATE_DIVE
 		state = "swim" if moving else "tread"
 		swim_lean = deg_to_rad(dive_lean_deg if ms == STATE_DIVE else swim_lean_deg * clampf(speed / 2.5, 0.0, 1.0))
+	if state == "air" and _gliding():
+		state = "glide"
 	tree.set("parameters/ground_air/transition_request", state)
 	_update_lean(pull_dir, delta, swim_lean)
 	if "sync_focus" in _owner_body:
@@ -256,6 +264,12 @@ func _process(delta: float) -> void:
 	var goal := 1.0 if (_aiming or _action_left > 0.0) else 0.0
 	_upper = lerpf(_upper, goal, 1.0 - exp(-upper_blend_speed * delta))
 	tree.set("parameters/upper/blend_amount", _upper)
+
+
+## Fan out in the air with the leaf open (synced: weapon + aiming + airborne).
+func _gliding() -> bool:
+	var eq: Node = _owner_body.get("equipment") if _owner_body else null
+	return eq != null and eq.sync_aiming and eq.weapon_type() == "fan" and not _owner_body.sync_on_floor
 
 
 ## World-space direction the grapple is reeling this body in (ZERO when not being pulled).
@@ -341,6 +355,7 @@ func _build_tree() -> void:
 	ground_air.add_input("hook")
 	ground_air.add_input("swim")
 	ground_air.add_input("tread")
+	ground_air.add_input("glide")
 	ground_air.xfade_time = air_blend_time
 	bt.add_node("ground_air", ground_air)
 
@@ -380,6 +395,8 @@ func _build_tree() -> void:
 	bt.connect_node("ground_air", 4, "swim_anim")
 	bt.add_node("tread_anim", _clip(anim_tread))
 	bt.connect_node("ground_air", 5, "tread_anim")
+	bt.add_node("glide_anim", _clip(anim_glide))
+	bt.connect_node("ground_air", 6, "glide_anim")
 	bt.connect_node("shoot", 0, "aim_pose")
 	bt.connect_node("shoot", 1, "shoot_anim")
 	bt.connect_node("action", 0, "shoot")

@@ -241,13 +241,15 @@ func _build_pool() -> void:
 	for side in [-1, 1]:
 		_box(g, c + Vector3(side * (hx + 0.5), wall_h * 0.5, 0), Vector3(1.0, wall_h, pool_size.y + 2.0), stone)
 		_box(g, c + Vector3(0, wall_h * 0.5, side * (hz + 0.5)), Vector3(pool_size.x, wall_h, 1.0), stone)
-	for k in int(wall_h / 0.5):                       # stairs up the outside (west wall)
-		_box(g, c + Vector3(-hx - 1.5 - k * 0.6, (k + 0.5) * 0.5, -hz + 2.0), Vector3(0.6, (k + 1) * 0.5, 2.4), stone)
+	var steps := int(ceil(wall_h / 0.5))
+	for k in steps:                                   # stairs up the outside of the west wall: tallest against it
+		var h := (steps - k) * 0.5
+		_box(g, c + Vector3(-hx - 1.3 - k * 0.6, h * 0.5, -hz + 2.0), Vector3(0.6, h, 2.4), stone)
 	# a ramp inside so swimmers can walk back out
 	var ramp := _box(g, c + Vector3(hx - 2.0, pool_depth * 0.5 - 0.2, hz - 3.5), Vector3(3.0, 0.4, 7.5), stone)
 	ramp.rotation.x = -atan2(pool_depth, 7.0)
 	var level := c.y + pool_depth
-	Water.add_body(Vector2(c.x, c.z), minf(hx, hz) * 1.4, level, "water")
+	Water.add_rect_body(Vector2(c.x, c.z), Vector2(hx, hz), level, "water")
 	var water := MeshInstance3D.new()
 	var pm := PlaneMesh.new()
 	pm.size = pool_size

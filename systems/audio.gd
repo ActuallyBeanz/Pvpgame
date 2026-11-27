@@ -74,19 +74,21 @@ func register(id: String, def: Resource) -> void:
 
 # ---------------------------------------------------------------- playback
 ## volume_db / pitch are added on top of the SoundDef's own values.
-func play_at(id: String, pos: Vector3, volume_db := 0.0, pitch := 1.0) -> void:
+## Returns the 3D voice playing it (null for non-spatial sounds) so a caller can stop it early.
+func play_at(id: String, pos: Vector3, volume_db := 0.0, pitch := 1.0) -> AudioStreamPlayer3D:
 	var d: Resource = _defs.get(id)
 	if d == null:
 		_warn_missing(id)
-		return
+		return null
 	if not d.spatial:
 		play(id, volume_db, pitch)
-		return
+		return null
 	var p := _voice_3d(id, d)
 	p.global_position = pos
 	_start(p, id, d, volume_db, pitch)
 	p.max_distance = d.max_distance
 	p.unit_size = maxf(1.0, d.max_distance / 8.0)
+	return p
 
 
 func play(id: String, volume_db := 0.0, pitch := 1.0) -> void:

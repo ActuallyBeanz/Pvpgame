@@ -220,6 +220,13 @@ def tread(t):
                 l=legs(-30 + 30 * t, 60 - 40 * t, -30 * t, 20 + 40 * t), t=torso(3, 0, -5))
 key("OoT_Tread", [(0, tread(0)), (15, tread(1)), (30, tread(0))], loop=True)
 
+# ---- gliding under the Galeleaf Fan (loop, Wind Waker Deku Leaf): both hands up gripping the
+# leaf overhead, legs hanging a little forward, gentle sway
+def glide(t):
+    return pose(0, 0.0, a=arms((0.12, 0.05, 1.0), 8),
+                l=legs(-18 - 6 * t, 30 + 8 * t, -10 + 6 * t, 22 - 6 * t), t=torso(-4, -4, 6))
+key("OoT_Glide", [(0, glide(0)), (15, glide(1)), (30, glide(0))], loop=True)
+
 arm.animation_data.action = None
 
 if PREVIEW:
@@ -239,7 +246,7 @@ if PREVIEW:
     sc.render.engine = "BLENDER_WORKBENCH"
     sc.display.shading.light = "STUDIO"; sc.display.shading.color_type = "TEXTURE"
     shots = {"OoT_Roll": [0, 4, 8, 12, 16, 20, 24], "OoT_Backflip": [0, 3, 6, 9, 12, 15, 20],
-             "OoT_LedgeHopUp": [0, 4, 9, 12, 15], "OoT_LedgeClimb": [0, 8, 14, 19, 24], "OoT_LedgeHang": [0, 15], "OoT_HookPull": [0, 6], "OoT_Swim": [0, 8, 14, 19], "OoT_Tread": [0, 15]}
+             "OoT_LedgeHopUp": [0, 4, 9, 12, 15], "OoT_LedgeClimb": [0, 8, 14, 19, 24], "OoT_LedgeHang": [0, 15], "OoT_HookPull": [0, 6], "OoT_Swim": [0, 8, 14, 19], "OoT_Tread": [0, 15], "OoT_Glide": [0, 15]}
     for name, frames in shots.items():
         arm.animation_data.action = bpy.data.actions[name]
         for f in frames:

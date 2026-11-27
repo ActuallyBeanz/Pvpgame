@@ -30,6 +30,16 @@ func setup(equipment: Node, player: CharacterBody3D) -> void:
 	_player = player
 
 
+## Hide previews / aim rings as soon as the tool isn't the drawn weapon any more.
+func _process(_delta: float) -> void:
+	if _eq == null or not _eq.is_local():
+		return
+	var tag: String = _eq.weapon_type()
+	if not _eq.sync_drawn or not (tag in ["staff", "rod", "trap"]):
+		if (_ring and _ring.visible) or (_trap_ghost and _trap_ghost.visible):
+			stop()
+
+
 func stats() -> Resource:
 	var s: Resource = _eq.stats()
 	return s if s and "gust_range" in s else null
@@ -39,6 +49,9 @@ func stop() -> void:
 	aiming = false
 	if _ring:
 		_ring.visible = false
+	if _trap_ghost:
+		_trap_ghost.visible = false
+		_trap_circle.visible = false
 
 
 ## Equipment: every frame on the owner while a tool is the weapon.
@@ -81,6 +94,7 @@ func update(delta: float) -> void:
 	if _player.camera_rig:
 		_player.camera_rig.set_aim(aiming, s)
 	_update_ring(s, tag)
+	_update_trap_preview(s, tag == "trap" and _eq.sync_drawn and _eq.ammo_count() > 0)
 
 
 # ---------------------------------------------------------------- fan: glide (player.gd asks every tick)
@@ -119,7 +133,7 @@ func _gust(s: Resource) -> void:
 		var c: Vector3 = -_player.camera_rig.camera.global_basis.z
 		fwd = Vector3(c.x, 0.0, c.z).normalized()
 	if _eq._model:
-		_eq._model.play_action(&"1H_Melee_Attack_Slice_Horizontal", 0.4)
+		_eq._model.play_action(&"1H_Melee_Attack_Slice_Horizontal", GUST_TIME)
 	rpc_gust.rpc(_player.global_position + Vector3.UP, fwd)
 
 
@@ -130,9 +144,14 @@ func rpc_gust(origin: Vector3, fwd: Vector3) -> void:
 	var half := deg_to_rad((s.gust_angle_deg if s else 45.0) * 0.5)
 	var push: float = s.gust_push if s else 11.0
 	var mine := multiplayer.get_remote_sender_id() == 0 or multiplayer.get_remote_sender_id() == multiplayer.get_unique_id()
-	Audio.play_at("boomerang.spin", origin, 2.0, 0.6)
-	for k in 10:
-		FX.burst(origin + fwd * (1.0 + k * rng / 10.0), get_tree().current_scene, Color(0.85, 1.0, 0.9, 0.7), 2, 0.05, 3.0)
+	# whoosh, cut off when the swing ends
+	var snd := Audio.play_at("boomerang.spin", origin, 2.0, 0.7)
+	if snd:
+		var stream := snd.stream
+		get_tree().create_timer(GUST_TIME).timeout.connect(func() -> void:
+			if is_instance_valid(snd) and snd.playing and snd.stream == stream:
+				snd.stop())
+	_gust_fx(origin, fwd, rng)
 	var in_cone := func(p: Vector3) -> bool:
 		var to := p - origin
 		var flat := Vector3(to.x, 0.0, to.z)
@@ -152,6 +171,70 @@ func rpc_gust(origin: Vector3, fwd: Vector3) -> void:
 		for r in get_tree().get_nodes_in_group("reactive"):
 			if r.burning and not r.always_burning and in_cone.call(r.center()):
 				r.receive_hit(WorldRules.make_hit(0.0, "blunt", "frost", fwd), false)
+
+
+const GUST_TIME := 0.45        ## swing length: the whoosh and the wind effect last this long
+
+
+## Wind Waker-style gust: a few swirling wind rings rushing out to the gust's range, plus
+## streaks of air. Purely visual, every peer.
+func _gust_fx(origin: Vector3, fwd: Vector3, rng: float) -> void:
+	var root := _world_root()
+	var basis := Basis.looking_at(fwd, Vector3.UP)
+	var mat := StandardMaterial3D.new()
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	mat.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+	mat.albedo_color = Color(0.8, 1.0, 0.9, 0.55)
+	mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+	for k in 4:
+		var ring := MeshInstance3D.new()
+		var t := TorusMesh.new()
+		t.inner_radius = 0.55
+		t.outer_radius = 0.62
+		t.rings = 24
+		t.ring_segments = 3
+		t.material = mat
+		ring.mesh = t
+		ring.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		root.add_child(ring)
+		# torus lies flat (XZ); stand it up so it faces along the gust
+		ring.global_transform = Transform3D(basis * Basis(Vector3.RIGHT, PI * 0.5), origin + fwd * 0.8)
+		ring.scale = Vector3.ONE * 0.4
+		var delay := k * 0.06
+		var tw := ring.create_tween()
+		tw.tween_interval(delay)
+		tw.set_parallel(true)
+		tw.tween_property(ring, "global_position", origin + fwd * rng, GUST_TIME - delay).set_ease(Tween.EASE_OUT)
+		tw.tween_property(ring, "scale", Vector3.ONE * (1.6 + k * 0.4), GUST_TIME - delay)
+		tw.tween_property(ring, "rotation", ring.rotation + Vector3(0, 0, PI), GUST_TIME - delay)
+		tw.chain().tween_callback(ring.queue_free)
+	var p := CPUParticles3D.new()
+	p.one_shot = true
+	p.explosiveness = 0.7
+	p.amount = 36
+	p.lifetime = GUST_TIME
+	p.local_coords = false
+	p.direction = Vector3(0, 0, -1)
+	p.spread = rad_to_deg(atan(1.6 / rng)) * 2.0
+	p.initial_velocity_min = rng / GUST_TIME * 0.8
+	p.initial_velocity_max = rng / GUST_TIME * 1.05
+	p.gravity = Vector3.ZERO
+	p.damping_min = 4.0
+	p.damping_max = 8.0
+	p.scale_amount_min = 0.5
+	p.scale_amount_max = 1.2
+	var q := QuadMesh.new()
+	q.size = Vector2(0.06, 0.5)
+	var pm := mat.duplicate() as StandardMaterial3D
+	pm.billboard_mode = BaseMaterial3D.BILLBOARD_PARTICLES
+	pm.albedo_color = Color(0.9, 1.0, 0.95, 0.5)
+	q.material = pm
+	p.mesh = q
+	root.add_child(p)
+	p.global_transform = Transform3D(basis, origin + fwd * 0.6)
+	p.emitting = true
+	get_tree().create_timer(GUST_TIME + 0.3).timeout.connect(p.queue_free)
 
 
 # ---------------------------------------------------------------- staff / rod aim
@@ -245,8 +328,8 @@ func rpc_pillar(nm: String, at: Vector3) -> void:
 		p.size = s.pillar_size
 		p.rise_time = s.pillar_rise_time
 		p.life = s.pillar_life
+	p.position = at + Vector3.UP * p.height       # set before _ready: it remembers where to rise to
 	_world_root().add_child(p)
-	p.global_position = at + Vector3.UP * p.height
 
 
 # ---------------------------------------------------------------- rod: ice / frost
@@ -269,8 +352,8 @@ func rpc_ice(nm: String, at: Vector3) -> void:
 		ice.size = s.ice_size
 		ice.life = s.ice_life
 		ice.melt_near_fire = s.ice_melt_near_fire
+	ice.position = at + Vector3.UP * 0.05
 	_world_root().add_child(ice)
-	ice.global_position = at + Vector3.UP * 0.05
 
 
 func _frost_blast(s: Resource, at: Vector3) -> void:
@@ -307,6 +390,16 @@ func _place_trap(s: Resource) -> void:
 	_cd = 0.4
 	var w: Resource = _eq.weapon()
 	_eq.consume(w.ammo_item_id, 1)
+	var at := _trap_spot()
+	_seq += 1
+	if _eq._model:
+		_eq._model.play_action(&"Interact", 0.4)
+	rpc_trap.rpc("Trap_%d_%d" % [multiplayer.get_unique_id(), _seq], at, str(_player.display_name))
+	_eq.after_bomb_released()                          # last trap set: hands down
+
+
+## Where a trap would land: just in front of your feet, dropped onto the ground.
+func _trap_spot() -> Vector3:
 	var fwd: Vector3 = -_player.model_root.global_basis.z
 	var at := _player.global_position + fwd * 1.1
 	var space := _player.get_world_3d().direct_space_state
@@ -315,11 +408,50 @@ func _place_trap(s: Resource) -> void:
 	var hit := space.intersect_ray(q)
 	if not hit.is_empty():
 		at = hit.position
-	_seq += 1
-	if _eq._model:
-		_eq._model.play_action(&"Interact", 0.4)
-	rpc_trap.rpc("Trap_%d_%d" % [multiplayer.get_unique_id(), _seq], at, str(_player.display_name))
-	_eq.after_bomb_released()                          # last trap set: hands down
+	return at
+
+
+## Ghost trap + its trigger circle where it would go (owner only, while a trap is drawn).
+var _trap_ghost: Node3D
+var _trap_circle: MeshInstance3D
+
+
+func _update_trap_preview(s: Resource, show: bool) -> void:
+	if not show:
+		if _trap_ghost:
+			_trap_ghost.visible = false
+			_trap_circle.visible = false
+		return
+	if _trap_ghost == null:
+		_trap_ghost = AssetRegistry.instantiate("item.trap.snapjaw")
+		_trap_ghost.top_level = true
+		add_child(_trap_ghost)
+		var gm := StandardMaterial3D.new()
+		gm.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		gm.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		gm.albedo_color = Color(1.0, 0.85, 0.4, 0.4)
+		for g in _trap_ghost.find_children("*", "GeometryInstance3D", true, false):
+			(g as GeometryInstance3D).material_override = gm
+			(g as GeometryInstance3D).cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		_trap_circle = MeshInstance3D.new()
+		_trap_circle.top_level = true
+		var t := TorusMesh.new()
+		t.inner_radius = (s.trap_radius if s else 0.65) - 0.05
+		t.outer_radius = (s.trap_radius if s else 0.65) + 0.03
+		t.rings = 24
+		t.ring_segments = 3
+		var cm := gm.duplicate() as StandardMaterial3D
+		cm.albedo_color = Color(1.0, 0.45, 0.3, 0.7)
+		t.material = cm
+		_trap_circle.mesh = t
+		_trap_circle.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		add_child(_trap_circle)
+	var at := _trap_spot()
+	_trap_ghost.visible = true
+	_trap_circle.visible = true
+	_trap_ghost.global_position = at
+	_trap_ghost.rotation.y = _player.model_root.global_rotation.y
+	_trap_circle.global_position = at + Vector3.UP * 0.04
 
 
 @rpc("any_peer", "call_local", "reliable")
@@ -334,8 +466,8 @@ func rpc_trap(nm: String, at: Vector3, placer: String) -> void:
 		t.damage = s.trap_damage
 		t.root_time = s.trap_root_time
 		t.radius = s.trap_radius
+	t.position = at
 	_world_root().add_child(t)
-	t.global_position = at
 
 
 # ---------------------------------------------------------------- helpers

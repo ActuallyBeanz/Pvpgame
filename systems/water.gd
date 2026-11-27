@@ -17,13 +17,26 @@ func add_body(center_xz: Vector2, radius: float, level: float, kind := "water") 
 	bodies.append({ "center": center_xz, "radius": radius, "level": level, "kind": kind })
 
 
+## Box-shaped water (pools): half_extents in x / z.
+func add_rect_body(center_xz: Vector2, half_extents: Vector2, level: float, kind := "water") -> void:
+	bodies.append({ "center": center_xz, "half": half_extents, "radius": 0.0, "level": level, "kind": kind })
+
+
+func _inside(b: Dictionary, p: Vector2) -> bool:
+	if b.has("half"):
+		var h: Vector2 = b.half
+		var c: Vector2 = b.center
+		return absf(p.x - c.x) <= h.x and absf(p.y - c.y) <= h.y
+	return p.distance_to(b.center) <= b.radius
+
+
 ## Surface height of swimmable water over this spot (-INF = none). Doesn't check the ground:
 ## the caller compares its own feet / the terrain against it.
 func level_at(pos: Vector3) -> float:
 	var lvl := sea_level
 	var p := Vector2(pos.x, pos.z)
 	for b in bodies:
-		if b.kind == "water" and p.distance_to(b.center) <= b.radius:
+		if b.kind == "water" and _inside(b, p):
 			lvl = maxf(lvl, b.level)
 	return lvl
 
@@ -37,6 +50,6 @@ func depth_at(pos: Vector3) -> float:
 func kind_at(pos: Vector3) -> String:
 	var p := Vector2(pos.x, pos.z)
 	for b in bodies:
-		if p.distance_to(b.center) <= b.radius and pos.y <= b.level + 0.5:
+		if _inside(b, p) and pos.y <= b.level + 0.5:
 			return b.kind
 	return "water" if sea_level > -INF and pos.y < sea_level else ""
