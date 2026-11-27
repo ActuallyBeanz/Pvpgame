@@ -1,6 +1,7 @@
 extends CanvasLayer
-## Autoload "BugReporter": press ` (backtick, under Esc) or F9 anywhere in the game to note a
-## problem spot. (Not F8: when you run from the editor, F8 stops the game.)
+## Autoload "BugReporter": press ` (backtick, under Esc) anywhere in the game to note a problem
+## spot. No F-keys: when the game runs from the editor, the editor's shortcuts still fire
+## (F8 = stop, F9 = toggle a breakpoint in the open script, which freezes the game).
 ## Type what's wrong (or leave it empty) and press Enter - it saves, into _reports/ in the
 ## project folder (git-ignored):
 ##   report_<time>.png  what you see (taken without the note box)
@@ -9,7 +10,7 @@ extends CanvasLayer
 ## Esc cancels. While typing, every key goes to the note (the game ignores them).
 ## tools/map/view_report.tscn re-renders a report's spot from several angles.
 
-const KEYS := [KEY_QUOTELEFT, KEY_F9]
+const KEYS := [KEY_QUOTELEFT]
 @export var scan_radius := 12.0
 @export var max_nodes := 120
 

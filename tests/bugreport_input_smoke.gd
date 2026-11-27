@@ -28,8 +28,8 @@ func _ready() -> void:
 		await get_tree().process_frame
 	var after := DirAccess.get_files_at(ProjectSettings.globalize_path("res://_reports")).size()
 	print("[t] closed: ", not BugReporter._open, " input enabled: ", GameConfig.gameplay_input_enabled, " new files: ", after - before)
-	await _key(KEY_F9)
-	print("[t] F9 open: ", BugReporter._open)
+	await _key(KEY_QUOTELEFT, 96)
+	print("[t] reopen: ", BugReporter._open)
 	await _key(KEY_ESCAPE)
 	print("[t] Esc closed: ", not BugReporter._open)
 	get_tree().quit()
