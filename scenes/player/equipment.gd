@@ -257,6 +257,8 @@ func _group_match(token: String, item_id: String) -> bool:
 	match token:
 		"@bow":
 			return it.kind == "weapon" and it.action_tag == "shoot"
+		"@rod":                                    # Rimecaller Rod: changes its orbs' element
+			return it.kind == "weapon" and it.action_tag == "rod"
 		"@sling":                                  # shooters that don't take arrows (slingshot)
 			return it.kind == "weapon" and it.action_tag == "shoot" and it.ammo_item_id != "arrows"
 		"@melee":
@@ -391,6 +393,14 @@ func _infusion(item_id: String) -> Dictionary:
 		infusions.erase(item_id)
 		return {}
 	return inf
+
+
+## Seconds left on the timed infusion of the weapon in hand (0 = none).
+func infusion_time_left() -> float:
+	var inf := _infusion(sync_weapon_id)
+	if inf.is_empty() or float(inf.until) <= 0.0:
+		return 0.0
+	return maxf(0.0, float(inf.until) - Time.get_ticks_msec() / 1000.0)
 
 
 ## Element on the weapon in hand ("" = none). Melee: time based. Bows: use_shot_element().
@@ -917,6 +927,7 @@ func _process(delta: float) -> void:
 			# two-handed weapons (greatsword, hammer) are carried in both hands (their aim_anim pose)
 			_model.set_aiming((sync_aiming or on_chain or two_handed_drawn()) and sync_drawn, w.aim_anim if w else &"", w.shoot_anim if w else &"")
 	hook.update_visuals()
+	tools.update_visuals(delta)
 	_update_infusion_vis()
 	_update_fire_aura(delta)
 

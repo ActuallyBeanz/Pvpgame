@@ -4,8 +4,9 @@ extends Node
 ##           fires); hold Jump while falling = glide (limited, refills on landing)
 ##   "staff" Sandspire Staff: hold LMB = aim (ring shows the spot), release = sand pillar;
 ##           quick tap LMB = pillar right under your feet (rides you up)
-##   "rod"   Rimecaller Rod: hold LMB = aim; release on water = ice platform (bridges),
-##           on land = frost blast (damage + slows players)
+##   "rod"   Rimecaller Rod: LMB = elemental blast in front of you (frost; a Cinderpepper /
+##           Sparkthistle infusion turns it fire / shock for a while); hold LMB on water and
+##           release = ice platform (bridges, frost only). ToolStats.rod_shoots_orb = orb instead.
 ##   "trap"  Snapjaw Trap: LMB = set one at your feet (the item is its own ammo)
 ## The owner decides; the world objects are spawned on every peer by call_local RPCs.
 
@@ -13,6 +14,7 @@ const PillarScript := preload("res://scenes/props/tools/sand_pillar.gd")
 const IceScript := preload("res://scenes/props/tools/ice_platform.gd")
 const TrapScript := preload("res://scenes/props/tools/snap_trap.gd")
 const FX := preload("res://systems/components/element_fx.gd")
+const OrbScript := preload("res://scenes/weapons/magic_orb.gd")
 
 var aiming := false
 var glide_left := 0.0
@@ -121,15 +123,18 @@ func update(delta: float) -> void:
 				aiming = false
 				if can_use and tag == "staff" and _hold_t < 0.2:
 					_pillar_under_feet(s)                   # quick tap: straight up from where you stand
+				elif can_use and tag == "rod":
+					var tr := _aim_point(s, tag)
+					if tr.ok and tr.water and _hold_t >= 0.2 and rod_element() == "frost":
+						_freeze(s, tr.pos)                  # held + aimed at water: ice platform
+					elif s.rod_shoots_orb:
+						_shoot_orb(s)
+					else:
+						_rod_blast(s, tr.pos if tr.ok else _player.global_position - _player.model_root.global_basis.z * 4.0)
 				elif can_use:
 					var t := _aim_point(s, tag)
 					if t.ok:
-						if tag == "staff":
-							_raise_pillar(s, t.pos, t.get("base", ""))
-						elif t.water:
-							_freeze(s, t.pos)
-						else:
-							_frost_blast(s, t.pos)
+						_raise_pillar(s, t.pos, t.get("base", ""))
 					else:
 						Audio.play("ui.error", -6.0)
 			elif not can_use:
@@ -355,6 +360,9 @@ func _update_ring(s: Resource, tag: String) -> void:
 		_ring.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		add_child(_ring)
 	var t2 := _aim_point(s, tag)
+	if tag == "rod" and not (t2.ok and t2.water and rod_element() == "frost"):
+		_ring.visible = false                        # rod: the ring only marks where ice would form
+		return
 	_ring.visible = true
 	if t2.ok:
 		_ring.global_position = t2.pos + Vector3.UP * 0.06
@@ -363,6 +371,75 @@ func _update_ring(s: Resource, tag: String) -> void:
 		var cam: Camera3D = _player.camera_rig.camera
 		_ring.global_position = cam.global_position - cam.global_basis.z * minf(s.max_range, 8.0)
 		_ring_mat.albedo_color = Color(1.0, 0.3, 0.25, 0.6)
+
+
+# ---------------------------------------------------------------- staff: channeling look (every peer)
+## While the Sandspire Staff is aimed (LMB held): sand swirls up around the caster's feet, the
+## staff head glows and pulses brighter the longer you channel. Driven by synced aiming, so
+## everyone sees it.
+var _chan: Node3D
+var _chan_light: OmniLight3D
+var _chan_t := 0.0
+
+
+func update_visuals(delta: float) -> void:
+	var on: bool = _eq.sync_drawn and _eq.sync_aiming and _eq.weapon_type() == "staff" and not _player.sync_dead
+	if not on:
+		_chan_t = 0.0
+		if _chan:
+			_chan.queue_free()
+			_chan = null
+			_chan_light = null
+		return
+	_chan_t += delta
+	if _chan == null:
+		_chan = Node3D.new()
+		_chan.name = "StaffChannel"
+		_player.add_child(_chan)
+		var col := Color(1.0, 0.8, 0.45)
+		_chan.add_child(_sand_swirl(col))
+		_chan_light = OmniLight3D.new()
+		_chan_light.light_color = col
+		_chan_light.omni_range = 3.0
+		_chan.add_child(_chan_light)
+	var head: Vector3 = (_eq._weapon_vis.global_position if is_instance_valid(_eq._weapon_vis) else _player.global_position + Vector3.UP * 1.4) + Vector3.UP * 0.7
+	_chan_light.global_position = head
+	var ramp := clampf(_chan_t / 0.6, 0.0, 1.0)
+	_chan_light.light_energy = ramp * (1.4 + 0.6 * sin(_chan_t * 12.0))
+
+
+func _sand_swirl(col: Color) -> CPUParticles3D:
+	var p := CPUParticles3D.new()
+	p.amount = 40
+	p.lifetime = 0.9
+	p.local_coords = false
+	p.emission_shape = CPUParticles3D.EMISSION_SHAPE_RING
+	p.emission_ring_axis = Vector3.UP
+	p.emission_ring_radius = 0.9
+	p.emission_ring_inner_radius = 0.6
+	p.emission_ring_height = 0.1
+	p.direction = Vector3.UP
+	p.spread = 15.0
+	p.gravity = Vector3(0, 1.2, 0)
+	p.initial_velocity_min = 0.6
+	p.initial_velocity_max = 1.4
+	p.tangential_accel_min = 2.0                 # swirl around the caster
+	p.tangential_accel_max = 3.0
+	p.radial_accel_min = -0.8                    # and draw in toward them
+	p.radial_accel_max = -0.4
+	p.scale_amount_min = 0.5
+	p.scale_amount_max = 1.0
+	var q := QuadMesh.new()
+	q.size = Vector2(0.07, 0.07)
+	var m := StandardMaterial3D.new()
+	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	m.billboard_mode = BaseMaterial3D.BILLBOARD_PARTICLES
+	m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	m.albedo_color = Color(col.r, col.g, col.b, 0.85)
+	q.material = m
+	p.mesh = q
+	p.position = Vector3.UP * 0.1
+	return p
 
 
 # ---------------------------------------------------------------- staff: pillar
@@ -470,20 +547,21 @@ func rpc_ice(nm: String, at: Vector3) -> void:
 	_world_root().add_child(ice)
 
 
-func _frost_blast(s: Resource, at: Vector3) -> void:
+func _rod_blast(s: Resource, at: Vector3) -> void:
 	_cd = s.cooldown
 	if _eq._model:
 		_eq._model.play_action(&"Spellcast_Shoot", 0.4)
+	var element := rod_element()
 	var origin := _player.global_position + Vector3.UP
 	var to := at - origin
 	var dir: Vector3 = Vector3(to.x, 0.0, to.z).normalized() if Vector3(to.x, 0.0, to.z).length() > 0.1 else -_player.model_root.global_basis.z
+	rpc_cast_fx.rpc(origin, dir, element, float(s.frost_range))
 	var space := _player.get_world_3d().direct_space_state
 	var shape := SphereShape3D.new()
 	shape.radius = 2.0
 	var hits := {}
 	for k in 4:
 		var c: Vector3 = origin + dir * (1.5 + k * float(s.frost_range) / 4.0)
-		FX.burst(c, get_tree().current_scene, Color(0.75, 0.95, 1.0), 6, 0.06, 2.5)
 		var q := PhysicsShapeQueryParameters3D.new()
 		q.shape = shape
 		q.transform = Transform3D(Basis(), c)
@@ -495,8 +573,178 @@ func _frost_blast(s: Resource, at: Vector3) -> void:
 				continue
 			if col.has_method("react_to_hit_info") or col.has_method("react_to_hit") or WorldRules.reactive_of(col) != null:
 				hits[col.get_instance_id()] = true
-				WorldRules.deliver_hit(col, WorldRules.make_hit(s.frost_damage, "blunt", "frost", dir), false)
-	Audio.play_at("ice.hit", origin, 2.0, 0.6)
+				WorldRules.deliver_hit(col, WorldRules.make_hit(s.frost_damage, "magic", element, dir), false)
+
+
+## Cast animation for the rod blast (every peer): a flash ring at the rod, then a wave of
+## ice spikes / fire bursts / sparks running out along the ground in front of the caster.
+@rpc("any_peer", "call_local", "unreliable")
+func rpc_cast_fx(origin: Vector3, dir: Vector3, element: String, reach: float) -> void:
+	var scene := get_tree().current_scene
+	var col := WorldRules.element_color(element)
+	var hand: Vector3 = _eq._hand_origin() if is_instance_valid(_eq) else origin
+	_flash_ring(hand, col)
+	FX.burst(hand, scene, col, 10, 0.05, 3.0)
+	Audio.play_at("ice.hit" if element == "frost" else ("fire.ignite" if element == "fire" else "target.hit"), origin, 2.0, 0.6)
+	for k in 4:
+		var c: Vector3 = origin + dir * (1.5 + k * reach / 4.0)
+		get_tree().create_timer(0.06 * k).timeout.connect(func() -> void: _wave_step(c, dir, element, col, k))
+
+
+func _ground(p: Vector3) -> Vector3:
+	var q := PhysicsRayQueryParameters3D.create(p + Vector3.UP * 1.5, p + Vector3.DOWN * 4.0, 1)
+	var hit := _player.get_world_3d().direct_space_state.intersect_ray(q)
+	return hit.position if not hit.is_empty() else p + Vector3.DOWN
+
+
+func _wave_step(c: Vector3, dir: Vector3, element: String, col: Color, k: int) -> void:
+	if not is_inside_tree():
+		return
+	var scene := get_tree().current_scene
+	var g := _ground(c)
+	FX.burst(g + Vector3.UP * 0.3, scene, col, 8, 0.06, 2.5)
+	match element:
+		"fire":
+			var f := FX.flames(0.9, k == 1)
+			scene.add_child(f)
+			f.global_position = g
+			get_tree().create_timer(0.55).timeout.connect(f.queue_free)
+		"shock":
+			var l := OmniLight3D.new()
+			l.light_color = col
+			l.light_energy = 4.0
+			l.omni_range = 4.0
+			scene.add_child(l)
+			l.global_position = g + Vector3.UP * 0.6
+			var tw := l.create_tween()
+			tw.tween_property(l, "light_energy", 0.0, 0.25)
+			tw.tween_callback(l.queue_free)
+			_bolt(g + Vector3.UP * 2.2, g, col)
+		_:
+			var side := dir.cross(Vector3.UP).normalized()
+			for n in 3:
+				var off := side * (float(n) - 1.0) * 0.6 + dir * randf_range(-0.3, 0.3)
+				_ice_spike(g + off, randf_range(0.6, 1.1) * (1.2 if n == 1 else 0.85))
+
+
+## One ice spike: pops out of the ground, holds, sinks away.
+func _ice_spike(at: Vector3, h: float) -> void:
+	var mi := MeshInstance3D.new()
+	var cm := CylinderMesh.new()
+	cm.top_radius = 0.0
+	cm.bottom_radius = 0.18
+	cm.height = h
+	cm.radial_segments = 4
+	cm.rings = 1
+	var m := StandardMaterial3D.new()
+	m.albedo_color = Color(0.75, 0.93, 1.0, 0.85)
+	m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	m.roughness = 0.1
+	m.emission_enabled = true
+	m.emission = Color(0.45, 0.8, 1.0)
+	m.emission_energy_multiplier = 0.6
+	cm.material = m
+	mi.mesh = cm
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	get_tree().current_scene.add_child(mi)
+	mi.global_position = at + Vector3.UP * (h * 0.5 - 0.1)
+	mi.rotation = Vector3(randf_range(-0.25, 0.25), randf() * TAU, randf_range(-0.25, 0.25))
+	mi.scale = Vector3(1, 0.05, 1)
+	var tw := mi.create_tween()
+	tw.tween_property(mi, "scale", Vector3.ONE, 0.08).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tw.tween_interval(0.35)
+	tw.tween_property(mi, "scale", Vector3(0.6, 0.05, 0.6), 0.3).set_ease(Tween.EASE_IN)
+	tw.tween_callback(mi.queue_free)
+
+
+## Shock: a jagged bolt dropping onto the spot.
+func _bolt(from: Vector3, to: Vector3, col: Color) -> void:
+	var im := ImmediateMesh.new()
+	var m := StandardMaterial3D.new()
+	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	m.albedo_color = col
+	im.surface_begin(Mesh.PRIMITIVE_LINE_STRIP, m)
+	for i in 7:
+		var t := float(i) / 6.0
+		var p := from.lerp(to, t)
+		if i > 0 and i < 6:
+			p += Vector3(randf_range(-0.25, 0.25), 0.0, randf_range(-0.25, 0.25))
+		im.surface_add_vertex(p)
+	im.surface_end()
+	var mi := MeshInstance3D.new()
+	mi.mesh = im
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	get_tree().current_scene.add_child(mi)
+	get_tree().create_timer(0.15).timeout.connect(mi.queue_free)
+
+
+## Expanding ring at the rod when it fires.
+func _flash_ring(at: Vector3, col: Color) -> void:
+	var mi := MeshInstance3D.new()
+	var t := TorusMesh.new()
+	t.inner_radius = 0.25
+	t.outer_radius = 0.32
+	t.rings = 16
+	t.ring_segments = 4
+	var m := StandardMaterial3D.new()
+	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	m.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+	m.albedo_color = col
+	t.material = m
+	mi.mesh = t
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	get_tree().current_scene.add_child(mi)
+	mi.global_position = at
+	var fwd := -_player.model_root.global_basis.z
+	mi.look_at(at + fwd, Vector3.UP if absf(fwd.y) < 0.99 else Vector3.FORWARD)
+	mi.rotate_object_local(Vector3.RIGHT, PI / 2.0)     # torus faces forward
+	var tw := mi.create_tween()
+	tw.tween_property(mi, "scale", Vector3.ONE * 3.0, 0.25)
+	tw.parallel().tween_property(m, "albedo_color:a", 0.0, 0.25)
+	tw.tween_callback(mi.queue_free)
+
+
+## Element of the rod's blast / orbs: frost, unless an infusion (Cinderpepper, Sparkthistle...) is on it.
+func rod_element() -> String:
+	var e: String = _eq.weapon_element()
+	return e if e != "" else "frost"
+
+
+func _shoot_orb(s: Resource) -> void:
+	_cd = s.orb_cooldown
+	var origin: Vector3 = _eq._hand_origin() + Vector3.UP * 0.25
+	var aim: Vector3 = _eq._crosshair_point(origin, s.orb_range)
+	var dir := (aim - origin).normalized()
+	if dir.length() < 0.5:
+		dir = -_player.model_root.global_basis.z
+	var vel: Vector3 = dir * s.orb_speed
+	var element := rod_element()
+	if _eq._model:
+		_eq._model.play_action(&"Spellcast_Shoot", 0.35)
+	_make_orb(origin, vel, element, false)
+	rpc_orb.rpc(origin, vel, element)
+
+
+@rpc("authority", "call_remote", "unreliable_ordered")
+func rpc_orb(origin: Vector3, vel: Vector3, element: String) -> void:
+	_make_orb(origin, vel, element, true)
+
+
+func _make_orb(origin: Vector3, vel: Vector3, element: String, cosmetic: bool) -> void:
+	var s := stats()
+	var o := OrbScript.new()
+	o.name = "Orb"
+	o.element = element
+	o.cosmetic = cosmetic
+	o.shooter_rid = _player.get_rid()
+	if s:
+		o.damage = s.orb_damage
+		o.splash_radius = s.orb_splash
+		o.lifetime = s.orb_range / maxf(s.orb_speed, 1.0)
+	_eq._projectiles_root().add_child(o, true)
+	o.launch(origin, vel)
+	Audio.play_at("ice.hit" if element == "frost" else ("fire.ignite" if element == "fire" else "boomerang.throw"), origin, -6.0, 1.7)
 
 
 # ---------------------------------------------------------------- trap

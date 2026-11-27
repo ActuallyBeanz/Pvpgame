@@ -269,9 +269,14 @@ func _weapon_line(w: Resource, kind: String) -> String:
 			var tl: Node = _equipment.tools
 			status = ("gliding %.1fs" % tl.glide_left) if tl.gliding else "LMB gust · hold Space in the air: glide"
 		"staff":
-			status = "hold LMB aim · release: sand pillar"
+			status = "channeling..." if _equipment.sync_aiming else "hold LMB aim · release: sand pillar · tap: under you"
 		"rod":
-			status = "hold LMB aim · water: ice platform · land: frost blast"
+			var el: String = _equipment.tools.rod_element()
+			var left: float = _equipment.infusion_time_left()
+			var tag: String = ("%s orb (%ds)" % [el.capitalize(), ceili(left)]) if left > 0.0 else "%s orb" % el.capitalize()
+			status = "LMB %s · hold on water: ice platform" % tag if el == "frost" else "LMB %s" % tag
+			if not _equipment.tools.stats() or not _equipment.tools.stats().rod_shoots_orb:
+				status = status.replace(" orb", " blast")
 		"trap":
 			status = "x%d · LMB set a trap at your feet" % _equipment.ammo_count()
 		"slash":
