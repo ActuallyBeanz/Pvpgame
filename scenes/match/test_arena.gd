@@ -97,6 +97,7 @@ func _ready() -> void:
 	Water.clear()
 	_build_pool()
 	_build_sand()
+	_build_secret_test()
 	_place_trees()
 	if multiplayer.is_server():
 		Lobby.all_peers_loaded.connect(_spawn_all_players, CONNECT_ONE_SHOT)
@@ -261,6 +262,40 @@ func _build_pool() -> void:
 	water.material_override = wm
 	g.add_child(water)
 	water.position = Vector3(c.x, level, c.z)
+
+
+## Bombable walls to test: a stash hut with a legendary chest, and a lone cracked wall.
+const CrackedWall := preload("res://scenes/props/world/cracked_wall.gd")
+const ChestScript := preload("res://scenes/props/loot/chest.gd")
+@export var stash_test_pos := Vector3(0, 0, -34)
+
+
+func _build_secret_test() -> void:
+	var g := Node3D.new()
+	g.name = "SecretTest"
+	$Course.add_child(g)
+	var c := stash_test_pos
+	var stone := Color(0.55, 0.53, 0.5)
+	_box(g, c + Vector3(0, 1.9, -2.3), Vector3(5.2, 3.8, 0.8), stone)          # back
+	for side in [-1, 1]:
+		_box(g, c + Vector3(side * 2.2, 1.9, 0), Vector3(0.8, 3.8, 4.6), stone)
+	_box(g, c + Vector3(0, 4.15, 0), Vector3(5.8, 0.7, 5.4), stone)            # roof
+	var door := CrackedWall.new()
+	door.name = "TestStashWall"
+	g.add_child(door)
+	door.position = c + Vector3(0, 0, 2.3)
+	var chest := ChestScript.new()
+	chest.name = "TestSecretChest"
+	chest.tier = "legendary"
+	chest.loot_pool = ["skytether", "greatsword_emberfang", "maul_quakeheart", "bomb_blastgourd", "rod_rimecaller"]
+	chest.rolls = Vector2i(2, 3)
+	g.add_child(chest)
+	chest.position = c + Vector3(0, 0, -0.8)
+	var lone := CrackedWall.new()
+	lone.name = "TestCrackedWall"
+	lone.style = "sand"
+	g.add_child(lone)
+	lone.position = c + Vector3(9, 0, 2)
 
 
 ## Sand patch with a few dunes.

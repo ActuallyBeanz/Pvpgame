@@ -153,7 +153,9 @@ func explode() -> void:
 			continue
 		if col.has_method("react_to_hit_info") or col.has_method("react_to_hit") or WorldRules.reactive_of(col) != null:
 			var dmg: float = (stats.blast_damage if stats else 40.0) * lerpf(1.0, 0.4, clampf(d / r, 0.0, 1.0))
-			WorldRules.deliver_hit(col, WorldRules.make_hit(dmg, "blunt", "", dir), false)
+			var hit := WorldRules.make_hit(dmg, "blunt", "", dir)
+			hit["blast"] = true                  # cracked walls only open for explosions
+			WorldRules.deliver_hit(col, hit, false)
 	# chain reaction
 	var chain: float = stats.chain_radius if stats else 3.0
 	for b in get_tree().get_nodes_in_group("bombs"):

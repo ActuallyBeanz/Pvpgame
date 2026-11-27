@@ -350,7 +350,107 @@ func _build_water() -> void:
 
 
 # ---------------------------------------------------------------- landmarks (greybox)
+# ---------------------------------------------------------------- secrets (bombable walls)
+const CrackedWall := preload("res://scenes/props/world/cracked_wall.gd")
+
+@export_group("Secrets")
+## Hidden stash huts: rock outcrops with a cracked wall for a door and a good chest inside.
+## x, z, legendary? (same spots every match so players can learn them; contents change)
+@export var stash_spots: Array[Vector3] = [Vector3(-60, 150, 0), Vector3(-120, 60, 0), Vector3(-140, -110, 1),
+	Vector3(-215, -120, 0), Vector3(170, -130, 1), Vector3(-40, -180, 0), Vector3(190, -60, 0)]
+## Mesa shortcuts: sloped cuts up into these mesas (generator MESA_PASSES), sealed by a wall.
+## x, z, radius, top height (generator MESAS[0, 1, 3])
+@export var mesa_passes: Array[Vector4] = [Vector4(85, 175, 14, 15), Vector4(205, 55, 12, 17), Vector4(55, 70, 10, 14)]
+
+
+func _build_secrets() -> void:
+	var g := _group("Secrets")
+	var n := 0
+	for i in mesa_passes.size():
+		var m: Vector4 = mesa_passes[i]
+		var dir := (center - Vector2(m.x, m.y)).normalized()
+		var at := Vector2(m.x, m.y) + dir * (m.z + 2.2)
+		var wall := CrackedWall.new()
+		wall.name = "MesaWall_%d" % i
+		wall.style = "sand"
+		g.add_child(wall)
+		wall.global_position = Vector3(at.x, ground(at.x, at.y) - 0.15, at.y)
+		wall.rotation.y = atan2(dir.x, dir.y)           # face (+Z) out of the cut
+		_landmark_zones.append(Vector3(m.x, m.y, m.z + 4))
+		var top := Vector2(m.x, m.y) - dir * 2.0        # reward on the mesa top
+		_secret_chest(g, "rare", Vector3(top.x, ground(top.x, top.y), top.y), atan2(dir.x, dir.y), n)
+		n += 1
+	for i in stash_spots.size():
+		var sp: Vector3 = stash_spots[i]
+		_stash_hut(g, i, Vector2(sp.x, sp.y), "legendary" if sp.z > 0.5 else "rare", n)
+		n += 1
+	print("[island] %d secrets" % n)
+
+
+func _secret_chest(parent: Node, tier: String, at: Vector3, yaw: float, idx: int) -> void:
+	var c := ChestScript.new()
+	c.name = "SecretChest_%d" % idx
+	c.tier = tier
+	c.loot_pool = chest_loot.get(tier, [])
+	c.rolls = chest_rolls.get(tier, Vector2i(2, 2))
+	c.position = at - Vector3.UP * 0.05
+	c.rotation.y = yaw
+	parent.add_child(c)
+
+
+## A squat rock outcrop: stone shell, a cracked wall for a door (facing the island centre),
+## a chest inside, a few boulders piled on to sell it as rock.
+func _stash_hut(parent: Node, i: int, c: Vector2, tier: String, idx: int) -> void:
+	var dir := (center - c).normalized()
+	var yaw := atan2(dir.x, dir.y)
+	var fwd := Vector3(dir.x, 0.0, dir.y)
+	var right := Vector3(fwd.z, 0.0, -fwd.x)
+	var biome: String = terrain.biome_at(c.x, c.y)
+	var mat := "icestone" if biome == "snow" else ("basalt" if biome == "ash" else ("sandstone" if biome in ["sand", "mesa", "beach"] else "stone"))
+	var base := INF
+	for o in [Vector2(-3, -3), Vector2(3, -3), Vector2(-3, 3), Vector2(3, 3), Vector2.ZERO]:
+		base = minf(base, ground(c.x + o.x, c.y + o.y))
+	var y := base - 0.6
+	var g := Node3D.new()
+	g.name = "Stash_%d" % i
+	parent.add_child(g)
+	var p0 := Vector3(c.x, y, c.y)
+	var inner_w := 3.6
+	var depth := 3.8
+	var wall_h := 3.8
+	# back + sides + roof (local: +fwd = front / door side)
+	_block(g, p0 - fwd * (depth * 0.5 + 0.4), Vector3(inner_w + 1.6, wall_h, 0.8), mat, yaw)
+	for side in [-1, 1]:
+		_block(g, p0 + right * side * (inner_w * 0.5 + 0.4), Vector3(0.8, wall_h, depth + 0.8), mat, yaw)
+	_block(g, p0 + Vector3.UP * wall_h, Vector3(inner_w + 2.2, 0.7, depth + 1.4), mat, yaw)
+	var door := CrackedWall.new()
+	door.name = "StashWall_%d" % i
+	door.style = "sand" if mat == "sandstone" else "stone"
+	g.add_child(door)
+	door.global_position = p0 + fwd * (depth * 0.5 + 0.4) + Vector3.UP * 0.55
+	door.rotation.y = yaw
+	_secret_chest(g, tier, p0 + Vector3.UP * 0.6 - fwd * 0.6, yaw, idx)
+	var lamp := OmniLight3D.new()                   # a faint glow inside (seen once it's open)
+	lamp.light_color = Color(1.0, 0.85, 0.5)
+	lamp.light_energy = 0.8
+	lamp.omni_range = 4.0
+	g.add_child(lamp)
+	lamp.global_position = p0 + Vector3.UP * 2.6
+	# boulders piled around so it reads as a rock outcrop
+	var rocks := ["rock_boulder_b", "rock_boulder_a", "rock_mossy"] if mat == "stone" else (["rock_snow", "rock_boulder_b"] if mat == "icestone" else (["rock_basalt"] if mat == "basalt" else ["rock_sand"]))
+	var k := 0
+	for o in [Vector3(-1, 1, -0.6), Vector3(1, 1, -0.4), Vector3(-1, 0, 0.2), Vector3(1, 0, 0.1), Vector3(0, 1.3, -0.2)]:
+		var r := _make_rock(str(rocks[k % rocks.size()]), "StashRock_%d_%d" % [i, k])
+		g.add_child(r)
+		r.global_position = p0 + right * o.x * 2.6 + Vector3.UP * (o.y * wall_h * 0.85) + fwd * o.z * depth
+		r.rotation.y = k * 1.7
+		r.scale = Vector3.ONE * (1.6 if o.y > 0.5 else 1.3)
+		k += 1
+	_landmark_zones.append(Vector3(c.x, c.y, 7.0))
+
+
 func _build_landmarks() -> void:
+	_build_secrets()
 	if build_test_islet:
 		_landmark_zones.append(Vector3(test_islet.x, test_islet.y, test_islet.z + 4))
 		_build_test_islet()

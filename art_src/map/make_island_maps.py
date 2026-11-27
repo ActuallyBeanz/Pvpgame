@@ -166,6 +166,20 @@ h = set_plateau(h, 150, 95, 34, 8.0, 3, 3, 63, mode="set")
 MESAS = [(85, 175, 14, 15.0), (205, 55, 12, 17.0), (205, 190, 16, 13.0), (55, 70, 10, 14.0), (235, 120, 9, 18.0)]
 for i, (mx, mz, r, top) in enumerate(MESAS):
     h = set_plateau(h, mx, mz, r, top, 1.5, 3, 70 + i)
+# Secret passes: a sloped cut from the desert floor up to a mesa top, sealed by a bombable wall
+# at the bottom (island.gd places the walls from the same numbers: MESA_PASSES).
+MESA_PASSES = [0, 1, 3]        # indexes into MESAS; the cut faces the island centre
+for mi_ in MESA_PASSES:
+    mx, mz, r, top = MESAS[mi_]
+    dx, dz = 0 - mx, -60 - mz
+    L = math.hypot(dx, dz); dx, dz = dx / L, dz / L
+    u = (X - mx) * -dz + (Z - mz) * dx                 # across the cut
+    v = (X - mx) * dx + (Z - mz) * dz                  # outward from the mesa centre
+    floor_h = 5.5
+    inside = (np.abs(u) < 2.0) & (v < r + 3.0) & (v > 0.0)
+    target = floor_h + np.clip((r + 3.0 - v) / (r + 3.0), 0, 1) * (top - floor_h)
+    h = np.where(inside, np.minimum(h, target), h)
+
 # Thornwood ruin circles (flat clearings)
 h = set_plateau(h, -165, 15, 18, 6.5, 3, 2, 80, mode="set")
 h = set_plateau(h, -150, 150, 22, 7.5, 3, 2, 81, mode="set")
