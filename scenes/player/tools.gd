@@ -2,7 +2,8 @@ extends Node
 ## World tools, driven by Equipment when one is the drawn weapon (ItemDef.action_tag):
 ##   "fan"   Galeleaf Fan (Wind Waker Deku Leaf): LMB = gust (shoves players + bombs, blows out
 ##           fires); hold Jump while falling = glide (limited, refills on landing)
-##   "staff" Sandspire Staff: hold LMB = aim (ring shows the spot), release = sand pillar
+##   "staff" Sandspire Staff: hold LMB = aim (ring shows the spot), release = sand pillar;
+##           quick tap LMB = pillar right under your feet (rides you up)
 ##   "rod"   Rimecaller Rod: hold LMB = aim; release on water = ice platform (bridges),
 ##           on land = frost blast (damage + slows players)
 ##   "trap"  Snapjaw Trap: LMB = set one at your feet (the item is its own ammo)
@@ -19,6 +20,9 @@ var gliding := false
 var _eq: Node
 var _player: CharacterBody3D
 var _cd := 0.0
+var _hold_t := 0.0
+var _ride: Node3D                          ## pillar rising under me: keep my feet on its top
+var _ride_t := 0.0
 var _seq := 0
 var _mine: Dictionary = { "pillar": [], "ice": [] }    ## my spawned node names, oldest first
 var _ring: MeshInstance3D
@@ -109,10 +113,15 @@ func update(delta: float) -> void:
 				_place_trap(s)
 		"staff", "rod":
 			if held and can_use:
+				if not aiming:
+					_hold_t = 0.0
 				aiming = true
+				_hold_t += delta
 			elif aiming and not held:
 				aiming = false
-				if can_use:
+				if can_use and tag == "staff" and _hold_t < 0.2:
+					_pillar_under_feet(s)                   # quick tap: straight up from where you stand
+				elif can_use:
 					var t := _aim_point(s, tag)
 					if t.ok:
 						if tag == "staff":
@@ -357,6 +366,39 @@ func _update_ring(s: Resource, tag: String) -> void:
 
 
 # ---------------------------------------------------------------- staff: pillar
+func _pillar_under_feet(s: Resource) -> void:
+	var space := _player.get_world_3d().direct_space_state
+	var from := _player.global_position + Vector3.UP * 0.5
+	var q := PhysicsRayQueryParameters3D.create(from, from + Vector3.DOWN * 3.0, 1)
+	q.exclude = [_player.get_rid()]
+	var hit := space.intersect_ray(q)
+	if hit.is_empty() or Water.depth_at(hit.position) > 0.0:
+		Audio.play("ui.error", -6.0)
+		return
+	var base := ""
+	var col: Object = hit.collider
+	if col is Node and (col as Node).is_in_group("sand_pillars"):
+		base = str((col as Node).name)
+	_raise_pillar(s, hit.position, base)
+
+
+## Owner: while a pillar rises under me, ride its top (a moving block won't lift a
+## CharacterBody that was standing on the ground beside it).
+func _physics_process(delta: float) -> void:
+	if _ride == null:
+		return
+	_ride_t -= delta
+	if not is_instance_valid(_ride) or _ride_t <= 0.0:
+		_ride = null
+		return
+	var top: float = _ride.global_position.y
+	var p := _player.global_position
+	var half: float = _ride.size * 0.5 + 0.3
+	if absf(p.x - _ride.global_position.x) <= half and absf(p.z - _ride.global_position.z) <= half and p.y < top + 0.05:
+		_player.global_position.y = top + 0.02
+		_player.velocity.y = maxf(_player.velocity.y, 0.0)
+
+
 func _raise_pillar(s: Resource, at: Vector3, base: String) -> void:
 	_cd = s.cooldown
 	_seq += 1
@@ -395,6 +437,13 @@ func rpc_pillar(nm: String, top: Vector3, total: float, rise: float, base: Strin
 		p.life = s.pillar_life
 	p.position = top                              # set before _ready: it remembers where to rise to
 	_world_root().add_child(p)
+	# my own pillar coming up under me: ride it
+	var me_sent := multiplayer.get_remote_sender_id() == 0 or multiplayer.get_remote_sender_id() == multiplayer.get_unique_id()
+	if me_sent and _player.is_local():
+		var pp := _player.global_position
+		if absf(pp.x - top.x) <= p.size * 0.5 + 0.3 and absf(pp.z - top.z) <= p.size * 0.5 + 0.3:
+			_ride = p
+			_ride_t = p.rise_time + 0.3
 
 
 # ---------------------------------------------------------------- rod: ice / frost

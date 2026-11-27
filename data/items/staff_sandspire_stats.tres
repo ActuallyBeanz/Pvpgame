@@ -4,3 +4,4 @@
 
 [resource]
 script = ExtResource("1_tool")
+max_range = 30.0
