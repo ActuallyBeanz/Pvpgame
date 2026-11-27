@@ -1,0 +1,10 @@
+[gd_scene format=3]
+
+[ext_resource type="Terrain3DMaterial" path="res://assets/terrain/island_material.tres" id="1_megqu"]
+[ext_resource type="Terrain3DAssets" path="res://assets/terrain/island_assets.tres" id="2_6tqob"]
+
+[node name="Terrain3D" type="Terrain3D" unique_id=852319714]
+data_directory = "res://assets/terrain/island"
+material = ExtResource("1_megqu")
+assets = ExtResource("2_6tqob")
+displacement_sharpness = 0.5
