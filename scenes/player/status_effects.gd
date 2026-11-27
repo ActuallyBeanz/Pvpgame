@@ -12,6 +12,7 @@ const FX := preload("res://systems/components/element_fx.gd")
 var active: Dictionary = {}                ## owner: id -> { "left": sec, "total": sec, "strength": 0..1 }
 var _player: CharacterBody3D
 var _dot_t := 0.0
+var _fire_t := 0.0
 var _vfx: Dictionary = {}                  ## every peer: id -> Node3D effect
 var _shown := ""                           ## last sync_statuses we built effects for
 var _reveal_mat: StandardMaterial3D
@@ -180,6 +181,7 @@ func tick(delta: float) -> void:
 	# water makes you Wet (and keeps you Wet while you're in it)
 	if _player.motor.in_water() or float(_player.motor.water_depth) > 0.25:   # swimming or wading
 		apply("wet", RULES.wet_from_water)
+	_fire_contact(delta)
 	var expired := []
 	for id: String in active:
 		active[id].left = float(active[id].left) - delta
@@ -198,6 +200,29 @@ func tick(delta: float) -> void:
 			if d and d.dot_per_sec > 0.0:
 				_player.health.take_damage(d.dot_per_sec * 0.5, Vector3.ZERO, "dot_" + d.dot_kind, "")
 	_update_screen()
+
+
+## Flames touching me (any fire zone: burning crates / trees / shacks, braziers, torches, the rod's
+## burning field): contact damage every half second, and I catch fire. Wet steams off first.
+func _fire_contact(delta: float) -> void:
+	_fire_t -= delta
+	if _fire_t > 0.0:
+		return
+	_fire_t = 0.5
+	var w := _player.get_world_3d()
+	var p := _player.global_position
+	var touching := WorldRules.fire_zone_at(w, p + Vector3.UP * 0.3) or WorldRules.fire_zone_at(w, p + Vector3.UP * 1.1) \
+		or WorldRules.fire_zone_at(w, p + Vector3.UP * 1.7)
+	if not touching:
+		return
+	if active.has("wet"):
+		remove("wet")
+		popup.rpc("Sizzle", Color(0.85, 0.85, 0.85))
+		_player.health.take_damage(RULES.fire_contact_dps * 0.25, Vector3.ZERO, "dot_fire", "")
+		return
+	_player.health.take_damage(RULES.fire_contact_dps * 0.5, Vector3.ZERO, "dot_fire", "")
+	if RULES.fire_contact_status != "":
+		apply(RULES.fire_contact_status)
 
 
 func _publish() -> void:

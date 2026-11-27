@@ -9,6 +9,8 @@ extends Resource
 ## element -> seconds (overrides the status's default for that element)
 @export var element_duration: Dictionary[String, float] = {}
 @export var wet_from_water := 6.0          ## seconds of Wet left after you leave water (refreshed while in it)
+@export var fire_contact_dps := 6.0        ## standing in flames (burning props, braziers, burn fields)...
+@export var fire_contact_status := "burning"   ## ...also sets you on fire (Wet dries off first)
 
 var _by_id: Dictionary = {}
 

@@ -227,6 +227,8 @@ func _set_burning_visual(on: bool) -> void:
 		add_child(_flames)
 		_flames.position = Vector3.UP * fire_height
 		_fire_loop = Audio.attach_loop("fire.loop", _flames)
+		if fire_zone_radius <= 0.0:
+			_flames.add_child(_contact_zone(0.6 * fire_size + 0.3))   # touch the flames = you catch fire
 		if not always_burning:
 			Audio.play_at("fire.ignite", center())
 	elif not on and _flames:
@@ -321,6 +323,23 @@ func _tag_bodies(n: Node) -> void:
 	for c in n.get_children():
 		if c != self:
 			_tag_bodies(c)
+
+
+## Fire-zone area (lights arrows flying through, burns players standing in it).
+func _contact_zone(radius: float) -> Area3D:
+	var a := Area3D.new()
+	a.name = "BurnZone"
+	a.collision_layer = WorldRules.FIRE_ZONE_LAYER
+	a.collision_mask = 0
+	a.monitoring = false
+	a.monitorable = true
+	a.set_meta("fire_zone", true)
+	var cs := CollisionShape3D.new()
+	var sph := SphereShape3D.new()
+	sph.radius = radius
+	cs.shape = sph
+	a.add_child(cs)
+	return a
 
 
 func _make_fire_zone() -> void:
