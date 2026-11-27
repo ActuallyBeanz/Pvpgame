@@ -696,7 +696,7 @@ func _flash_ring(at: Vector3, col: Color) -> void:
 	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	get_tree().current_scene.add_child(mi)
 	mi.global_position = at
-	var fwd := -_player.model_root.global_basis.z
+	var fwd: Vector3 = -_player.model_root.global_basis.z
 	mi.look_at(at + fwd, Vector3.UP if absf(fwd.y) < 0.99 else Vector3.FORWARD)
 	mi.rotate_object_local(Vector3.RIGHT, PI / 2.0)     # torus faces forward
 	var tw := mi.create_tween()
