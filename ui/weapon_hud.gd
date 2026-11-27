@@ -27,6 +27,7 @@ var _hotbar: Control
 var inventory: Control                     ## Tab bag panel (ui/inventory_panel.gd)
 var _breath: ProgressBar                   ## air left while your head is underwater
 var _dot: Control                          ## centre dot crosshair (always on while playing)
+var _drop_zone: Control                    ## behind the inventory: drag an item out here to drop it
 
 
 func _ready() -> void:
@@ -47,6 +48,13 @@ func _ready() -> void:
 	inventory.grow_vertical = Control.GROW_DIRECTION_BEGIN
 	inventory.offset_bottom = -96             # sits right above the hotbar
 	_hotbar.slot_hovered.connect(inventory.set_hovered)
+	_drop_zone = Control.new()
+	_drop_zone.name = "DropZone"
+	_drop_zone.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_drop_zone.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_drop_zone.set_drag_forwarding(Callable(), _can_drop_outside, _drop_outside)
+	add_child(_drop_zone)
+	move_child(_drop_zone, 0)
 	_dot = Control.new()
 	_dot.name = "CenterDot"
 	_dot.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -82,6 +90,19 @@ func _ready() -> void:
 		_bars.append(r)
 
 
+## Dropping a dragged slot anywhere outside the inventory / hotbar throws it on the ground.
+func _can_drop_outside(at: Vector2, data: Variant) -> bool:
+	if not (GameConfig.inventory_open and data is Dictionary and data.has("inv_slot")):
+		return false
+	var p := _drop_zone.get_global_transform() * at
+	return not inventory.get_global_rect().has_point(p) and not _hotbar.get_global_rect().has_point(p)
+
+
+func _drop_outside(_at: Vector2, data: Variant) -> void:
+	if is_instance_valid(_equipment) and not _equipment.drop_item(int(data.inv_slot), 0):
+		Audio.play("ui.error")
+
+
 func _process(delta: float) -> void:
 	if not is_instance_valid(_equipment):
 		_player = _find_local_player()
@@ -94,6 +115,7 @@ func _process(delta: float) -> void:
 	visible = true
 	_update_bars(delta)
 	_dot.visible = not GameConfig.inventory_open and GameConfig.gameplay_input_enabled
+	_drop_zone.mouse_filter = Control.MOUSE_FILTER_STOP if GameConfig.inventory_open else Control.MOUSE_FILTER_IGNORE
 	var motor: Variant = _player.get("motor") if _player else null
 	if motor and motor.profile:
 		var full: float = motor.profile.breath_max

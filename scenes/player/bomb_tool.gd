@@ -53,8 +53,7 @@ func update(delta: float) -> void:
 	_eq.sync_aiming = false
 	if pressed and ready and _eq.ammo_count() > 0:
 		var w: Resource = _eq.weapon()
-		_eq.ammo[w.ammo_item_id] = _eq.ammo_count() - 1
-		_eq.changed.emit()
+		_eq.consume(w.ammo_item_id, 1)
 		holding = true
 		fuse_left = s.fuse_time
 		_sparks = BombScript.fuse_sparks()

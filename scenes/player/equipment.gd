@@ -41,7 +41,8 @@ var sync_hook_tip := Vector3.ZERO          ## grapple claw position while it's o
 var weapons: Array[String] = []            ## owned weapon ids, hotbar order (owner only)
 var inventory: Array[String] = []          ## item id per slot, "" = empty (owner only): [0, inventory_size) = hotbar, then bag
 var ui_hover_slot := -1                    ## set by the inventory UI: slot under the mouse (-1 = none)
-var ammo: Dictionary = {}                  ## ammo item id -> count (owner only)
+var ammo: Dictionary = {}                  ## item id -> total count across all its stacks (derived from slot_counts)
+var slot_counts: Array[int] = []           ## stack size per inventory slot (stackables; weapons/shields = 1)
 var charge := 0.0                          ## 0..1 bow draw progress
 var nearest_pickup: Node3D
 
@@ -66,6 +67,7 @@ var melee: Node
 var hook: Node                              ## grapple tool logic (scenes/player/hook_tool.gd)
 var bomb: Node                              ## Blastgourd bombs (scenes/player/bomb_tool.gd)
 const BombTool := preload("res://scenes/player/bomb_tool.gd")
+const PickupDropScene := preload("res://scenes/items/pickup.tscn")
 var _shield_vis: Node3D
 
 
@@ -73,6 +75,8 @@ func _ready() -> void:
 	_player = get_parent()
 	inventory.resize(inventory_size + bag_size)
 	inventory.fill("")
+	slot_counts.resize(inventory.size())
+	slot_counts.fill(0)
 	_boom_aim = BoomerangAim.new()
 	_boom_aim.name = "BoomerangAim"
 	add_child(_boom_aim)
@@ -154,27 +158,67 @@ func receive_item(item_id: String, amount: int) -> void:
 	if it == null:
 		return
 	if it.kind == "weapon":
-		if not inventory.has(item_id):
-			if not _store(item_id):
-				print("[equipment] inventory full, can't carry %s" % item_id)
-				return
-			_add_ammo(it.ammo_item_id, it.starting_ammo)
-			if sync_weapon_id == "" and hotbar_index(item_id) >= 0:
-				_equip(item_id)
-		else:
-			_add_ammo(it.ammo_item_id, it.starting_ammo)  # duplicate weapon -> its ammo
-	elif it.kind == "ammo":
-		_add_ammo(item_id, amount)
-	elif it.kind == "material":
-		if not _store_bag_first(item_id):
+		var fresh := not inventory.has(item_id)
+		if fresh and not _store(item_id):
 			print("[equipment] inventory full, can't carry %s" % item_id)
 			return
-		_add_ammo(item_id, maxi(amount, 1))   # stack count lives in `ammo` like arrows
+		# amount 0 = a world pickup (starting ammo), > 0 = a dropped stack, < 0 = dropped, no bonus
+		var extra: int = it.starting_ammo if amount == 0 else maxi(amount, 0)
+		_add_ammo(it.ammo_item_id, extra)
+		if fresh and sync_weapon_id == "" and hotbar_index(item_id) >= 0:
+			_equip(item_id)
+	elif it.kind == "ammo" or it.kind == "material":
+		var left := _add_ammo(item_id, maxi(amount, 1), it.kind == "material")
+		if left > 0:
+			print("[equipment] inventory full, %d %s left behind" % [left, item_id])
 	elif it.kind == "shield":
 		if _store(item_id):
 			sync_shield_id = item_id
 			_applied = ""
-	print("[equipment] got %s x%d | hotbar %s | ammo %s" % [item_id, amount, inventory, ammo])
+	print("[equipment] got %s x%d | ammo %s" % [item_id, amount, ammo])
+	changed.emit()
+
+
+# ---------------------------------------------------------------- stacks
+## Stackable = counted items (ammo, materials, and weapons that are their own ammo, like bombs).
+func is_stackable(item_id: String) -> bool:
+	var it := ItemDB.get_item(item_id) if item_id != "" else null
+	return it != null and (it.kind == "ammo" or it.kind == "material" or (it.kind == "weapon" and it.ammo_item_id == item_id))
+
+
+func stack_max(item_id: String) -> int:
+	var it := ItemDB.get_item(item_id)
+	return maxi(1, it.max_carry) if it else 1
+
+
+func count_in_slot(slot: int) -> int:
+	if slot < 0 or slot >= inventory.size() or inventory[slot] == "":
+		return 0
+	return slot_counts[slot] if is_stackable(inventory[slot]) else 1
+
+
+func _sync_totals() -> void:
+	ammo.clear()
+	for i in inventory.size():
+		var id := inventory[i]
+		if id != "" and is_stackable(id):
+			ammo[id] = int(ammo.get(id, 0)) + slot_counts[i]
+
+
+## Use up `n` of a stackable item (arrows, bombs...), from the last stacks first. A weapon
+## that is its own ammo (bombs) keeps its slot at 0; other emptied stacks free their slot.
+func consume(item_id: String, n: int) -> void:
+	var i := inventory.size() - 1
+	while i >= 0 and n > 0:
+		if inventory[i] == item_id:
+			var take := mini(n, slot_counts[i])
+			slot_counts[i] -= take
+			n -= take
+			if slot_counts[i] <= 0 and not (ItemDB.get_item(item_id) and ItemDB.get_item(item_id).kind == "weapon"):
+				inventory[i] = ""
+				slot_counts[i] = 0
+		i -= 1
+	_sync_totals()
 	changed.emit()
 
 
@@ -187,6 +231,7 @@ func _store(item_id: String) -> bool:
 	if free < 0:
 		return false
 	inventory[free] = item_id
+	slot_counts[free] = 0 if is_stackable(item_id) else 1
 	_rebuild_weapons()
 	return true
 
@@ -232,17 +277,106 @@ func move_item(from: int, to: int) -> bool:
 	var b := inventory[to]
 	if a == "":
 		return false
+	if a == b and is_stackable(a) and not (ItemDB.get_item(a).kind == "weapon"):
+		# same item: merge the stacks (whatever doesn't fit stays behind)
+		var add := mini(slot_counts[from], stack_max(a) - slot_counts[to])
+		if add <= 0:
+			return false
+		slot_counts[to] += add
+		slot_counts[from] -= add
+		if slot_counts[from] <= 0:
+			inventory[from] = ""
+			slot_counts[from] = 0
+		_sync_totals()
+		changed.emit()
+		return true
 	var leaves_hotbar := (a == sync_weapon_id and not is_hotbar_slot(to)) \
 		or (b == sync_weapon_id and not is_hotbar_slot(from))
 	if sync_weapon_id != "" and leaves_hotbar and _weapon_busy():
 		return false
 	inventory[from] = b
 	inventory[to] = a
+	var ca := slot_counts[from]
+	slot_counts[from] = slot_counts[to]
+	slot_counts[to] = ca
 	_rebuild_weapons()
 	if sync_weapon_id != "" and hotbar_index(sync_weapon_id) < 0:
 		_unequip()
 	changed.emit()
 	return true
+
+
+## Split `n` off a stack into the first empty slot (bag first). Owner only.
+func split_stack(slot: int, n: int) -> bool:
+	var id := inventory[slot] if slot >= 0 and slot < inventory.size() else ""
+	if id == "" or not is_stackable(id) or (ItemDB.get_item(id).kind == "weapon") or n <= 0 or n >= slot_counts[slot]:
+		return false
+	var free := _free_slot(true)
+	if free < 0:
+		return false
+	inventory[free] = id
+	slot_counts[free] = n
+	slot_counts[slot] -= n
+	_sync_totals()
+	changed.emit()
+	return true
+
+
+## Throw `n` of the item in `slot` on the ground in front of you (n <= 0 = the whole stack).
+## Every peer spawns the same named pickup, so anyone can grab it. Owner only.
+var _drop_seq := 0
+func drop_item(slot: int, n: int = 0) -> bool:
+	var id := inventory[slot] if slot >= 0 and slot < inventory.size() else ""
+	if id == "":
+		return false
+	var it := ItemDB.get_item(id)
+	if (id == sync_weapon_id or id == sync_shield_id) and _weapon_busy():
+		return false
+	var amount := 0
+	if is_stackable(id):
+		var have := slot_counts[slot]
+		amount = have if n <= 0 else mini(n, have)
+		if it.kind == "weapon":
+			amount = have                         # bombs: the bag and what's in it go together
+		slot_counts[slot] -= amount
+		if slot_counts[slot] <= 0 or it.kind == "weapon":
+			inventory[slot] = ""
+			slot_counts[slot] = 0
+	else:
+		inventory[slot] = ""
+		slot_counts[slot] = 0
+		amount = -1                              # dropped gear: no starting-ammo bonus on re-pickup
+	if id == sync_weapon_id and not inventory.has(id):
+		_unequip()
+	if id == sync_shield_id and not inventory.has(id):
+		sync_shield_id = ""
+		sync_blocking = false
+		_applied = ""
+	_rebuild_weapons()
+	_sync_totals()
+	changed.emit()
+	var fwd: Vector3 = -_player.model_root.global_basis.z
+	var at: Vector3 = _player.global_position + fwd * 1.3
+	_drop_seq += 1
+	rpc_drop.rpc("Drop_%d_%d" % [multiplayer.get_unique_id(), _drop_seq], id, amount, at)
+	Audio.play("ui.select", -4.0, 0.8)
+	return true
+
+
+@rpc("authority", "call_local", "reliable")
+func rpc_drop(node_name: String, id: String, amount: int, at: Vector3) -> void:
+	var scene := get_tree().current_scene
+	var root := scene.get_node_or_null("Dropped")
+	if root == null:
+		root = Node3D.new()
+		root.name = "Dropped"
+		scene.add_child(root)
+	var pu := PickupDropScene.instantiate()
+	pu.name = node_name
+	pu.item_id = id
+	pu.amount = amount
+	root.add_child(pu)
+	pu.global_position = at
 
 
 func _weapon_busy() -> bool:
@@ -338,12 +472,38 @@ func _unequip() -> void:
 		_player.camera_rig.set_aim(false)
 
 
-func _add_ammo(ammo_id: String, n: int) -> void:
-	if ammo_id == "" or n <= 0 or not _store(ammo_id):
-		return
-	var it := ItemDB.get_item(ammo_id)
-	var cap: int = it.max_carry if it else 99
-	ammo[ammo_id] = mini(int(ammo.get(ammo_id, 0)) + n, cap)
+## Add `n` of a stackable item: tops up existing stacks, then starts new ones (bag first for
+## materials, hotbar first otherwise). Returns how many didn't fit.
+func _add_ammo(ammo_id: String, n: int, bag_first := false) -> int:
+	if ammo_id == "" or n <= 0 or ItemDB.get_item(ammo_id) == null:
+		return 0
+	var cap := stack_max(ammo_id)
+	for i in inventory.size():
+		if n <= 0:
+			break
+		if inventory[i] == ammo_id:
+			var add := mini(n, cap - slot_counts[i])
+			if add > 0:
+				slot_counts[i] += add
+				n -= add
+	while n > 0:
+		var free := _free_slot(bag_first)
+		if free < 0:
+			break
+		inventory[free] = ammo_id
+		slot_counts[free] = mini(n, cap)
+		n -= slot_counts[free]
+	_rebuild_weapons()
+	_sync_totals()
+	return n
+
+
+func _free_slot(bag_first: bool) -> int:
+	if bag_first:
+		for i in range(inventory_size, inventory.size()):
+			if inventory[i] == "":
+				return i
+	return inventory.find("")
 
 
 ## Switch to a weapon you own and draw it.
@@ -608,7 +768,7 @@ func _fire() -> void:
 	dir = _apply_spread(dir, float(s.spread_deg(charge)))
 	var vel: Vector3 = dir * s.launch_speed(charge)
 	var dmg: float = s.damage(charge)
-	ammo[w.ammo_item_id] = ammo_count() - 1
+	consume(w.ammo_item_id, 1)
 	_cooldown = s.fire_cooldown
 	var element := sync_arrow_element
 	sync_arrow_element = ""

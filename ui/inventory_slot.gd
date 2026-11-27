@@ -2,7 +2,9 @@ extends Panel
 ## One inventory slot (hotbar or bag). Shows the item's icon, count and state frame
 ## (gold = equipped weapon, teal = worn shield, soft gold = ammo in use).
 ## While the inventory is open (GameConfig.inventory_open) you can drag its item onto
-## any other slot: Equipment.move_item does the move / swap. No item logic here.
+## any other slot: Equipment.move_item does the move / swap / stack merge.
+## Right-click: menu (equip / split / drop). Drag it outside the inventory: drop it on the ground
+## (the drop zone lives in weapon_hud.gd). No item logic here.
 
 signal hover_changed(slot: int, on: bool)
 
@@ -110,7 +112,7 @@ func refresh() -> void:
 		return
 	_icon.texture = icons.get_icon(id) if icons else null
 	_name.text = "" if _icon.texture else it.display_name
-	_count.text = str(int(equipment.ammo.get(id, 0))) if it.kind in ["ammo", "material"] or (it.kind == "weapon" and it.ammo_item_id == id) else ""
+	_count.text = str(equipment.count_in_slot(slot)) if equipment.is_stackable(id) else ""
 	var cur_w: Resource = equipment.weapon()
 	var border := Color(1, 1, 1, 0.3)
 	var width := 2
@@ -138,6 +140,76 @@ func _dragging_me() -> bool:
 		return false
 	var d: Variant = get_viewport().gui_get_drag_data()
 	return d is Dictionary and d.get("inv_slot", -1) == slot
+
+
+# ---------------------------------------------------------------- right-click menu
+enum Act { EQUIP, UNEQUIP, TO_HOTBAR, SPLIT_HALF, SPLIT_ONE, DROP_ONE, DROP_ALL }
+var _menu: PopupMenu
+
+
+func _gui_input(event: InputEvent) -> void:
+	if not GameConfig.inventory_open or item_id() == "":
+		return
+	var mb := event as InputEventMouseButton
+	if mb and mb.pressed and mb.button_index == MOUSE_BUTTON_RIGHT:
+		_open_menu()
+		accept_event()
+
+
+func _open_menu() -> void:
+	var id := item_id()
+	var it: Resource = ItemDB.get_item(id)
+	if it == null:
+		return
+	if _menu == null:
+		_menu = PopupMenu.new()
+		_menu.id_pressed.connect(_on_menu)
+		add_child(_menu)
+	_menu.clear()
+	var n: int = equipment.count_in_slot(slot)
+	var stack: bool = equipment.is_stackable(id)
+	if it.kind == "weapon":
+		if equipment.is_hotbar_slot(slot):
+			if id == equipment.sync_weapon_id:
+				_menu.add_item("Unequip", Act.UNEQUIP)
+			else:
+				_menu.add_item("Equip", Act.EQUIP)
+		else:
+			_menu.add_item("Move to hotbar", Act.TO_HOTBAR)
+	if stack and it.kind != "weapon" and n > 1:
+		_menu.add_item("Split in half (%d)" % (n / 2), Act.SPLIT_HALF)
+		_menu.add_item("Split off 1", Act.SPLIT_ONE)
+	if stack and it.kind != "weapon" and n > 1:
+		_menu.add_item("Drop 1", Act.DROP_ONE)
+	_menu.add_item("Drop all (%d)" % n if stack and n > 1 else "Drop", Act.DROP_ALL)
+	_menu.reset_size()
+	_menu.position = Vector2i(get_viewport().get_mouse_position())
+	_menu.popup()
+
+
+func _on_menu(act: int) -> void:
+	if not is_instance_valid(equipment):
+		return
+	var id := item_id()
+	var ok := true
+	match act:
+		Act.EQUIP:
+			equipment._equip(id)
+		Act.UNEQUIP:
+			equipment._unequip()
+			equipment.changed.emit()
+		Act.TO_HOTBAR:
+			var free: int = equipment.inventory.find("")
+			ok = free >= 0 and equipment.is_hotbar_slot(free) and equipment.move_item(slot, free)
+		Act.SPLIT_HALF:
+			ok = equipment.split_stack(slot, equipment.count_in_slot(slot) / 2)
+		Act.SPLIT_ONE:
+			ok = equipment.split_stack(slot, 1)
+		Act.DROP_ONE:
+			ok = equipment.drop_item(slot, 1)
+		Act.DROP_ALL:
+			ok = equipment.drop_item(slot, 0)
+	Audio.play("ui.select" if ok else "ui.error")
 
 
 # ---------------------------------------------------------------- drag & drop (Godot GUI)

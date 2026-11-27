@@ -93,7 +93,7 @@ func display_name() -> String:
 
 
 func give_amount() -> int:
-	return amount if amount > 0 else (item.amount if item else 0)
+	return amount if amount != 0 else (item.amount if item else 0)   # dropped gear uses -1 (no ammo bonus)
 
 
 ## Called by the local player's Equipment.
