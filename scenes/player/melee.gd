@@ -126,6 +126,13 @@ func update(delta: float) -> void:
 		if leap or (pressed and air):
 			_jump_attack(s, leap)
 			return
+	if _eq.sync_blocking and s.can_poke and not s.two_handed:
+		# shield is up (F or focus): attacks are pokes from behind it (_update_block), never a
+		# swing / charge that would drop the shield
+		_queued = false
+		_held_from_press = false
+		_stop_charge()
+		return
 	if pressed:
 		_held_from_press = true
 		if swinging:
@@ -377,7 +384,7 @@ func _update_block(delta: float) -> void:
 		_eq._applied = ""   # shield moves to the hand
 	var ss := sword_stats()
 	if _eq.sync_blocking and Input.is_action_just_pressed("attack") and not swinging and ss and _eq.sync_drawn \
-			and ss.can_poke and not ss.two_handed and (not focus_guard or Input.is_action_pressed("block")):
+			and ss.can_poke and not ss.two_handed:
 		# OoT: shield up + B = quick stab from behind the shield (shield stays up)
 		_start(Kind.POKE, ss.poke_anim, ss.poke_duration, ss.poke_damage, ss.poke_reach, 50.0,
 			"pierce", Vector2(0.25, 0.7), false)
