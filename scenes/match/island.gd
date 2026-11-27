@@ -316,37 +316,7 @@ func _build_water() -> void:
 			mi.material_override = water_mat
 			mi.position = Vector3(l.x, l.w, l.y)
 			add_child(mi)
-	# volcano lava pool: glowing plane, a light, and a fire zone (arrows flying over it light up)
-	var floor_y := ground(crater.x, crater.y)
-	var lava_y := floor_y + 0.8
-	Water.add_body(crater, crater_radius, lava_y, "lava")
-	var lava := MeshInstance3D.new()
-	lava.name = "Lava"
-	var lm := PlaneMesh.new()
-	lm.size = Vector2(crater_radius * 2.4, crater_radius * 2.4)
-	lava.mesh = lm
-	lava.material_override = _mats["lava"]
-	lava.position = Vector3(crater.x, lava_y, crater.y)
-	add_child(lava)
-	var light := OmniLight3D.new()
-	light.light_color = Color(1.0, 0.45, 0.15)
-	light.light_energy = 4.0
-	light.omni_range = 40.0
-	light.position = Vector3(crater.x, lava_y + 6.0, crater.y)
-	add_child(light)
-	var fz := Area3D.new()
-	fz.name = "LavaFireZone"
-	fz.collision_layer = WorldRules.FIRE_ZONE_LAYER
-	fz.collision_mask = 0
-	fz.monitoring = false
-	fz.set_meta("fire_zone", true)
-	var fcs := CollisionShape3D.new()
-	var box := BoxShape3D.new()
-	box.size = Vector3(crater_radius * 1.8, 4.0, crater_radius * 1.8)
-	fcs.shape = box
-	fz.add_child(fcs)
-	add_child(fz)
-	fz.position = Vector3(crater.x, lava_y + 1.5, crater.y)
+	# lava: LavaPool / LavaFlow nodes under "Lava" in the scene (editable; see tools/map/build_lava.gd)
 
 
 # ---------------------------------------------------------------- landmarks (greybox)
@@ -425,7 +395,7 @@ func _stash_hut(parent: Node, i: int, c: Vector2, tier: String, idx: int) -> voi
 	_block(g, p0 + Vector3.UP * wall_h, Vector3(inner_w + 2.2, 0.7, depth + 1.4), mat, yaw)
 	var door := CrackedWall.new()
 	door.name = "StashWall_%d" % i
-	door.style = "sand" if mat == "sandstone" else "stone"
+	door.style = {"sandstone": "sand", "basalt": "basalt", "icestone": "snow"}.get(mat, "stone")
 	g.add_child(door)
 	door.global_position = p0 + fwd * (depth * 0.5 + 0.4) + Vector3.UP * 0.55
 	door.rotation.y = yaw
@@ -649,7 +619,12 @@ func _build_test_islet() -> void:
 
 
 # ---------------------------------------------------------------- bridges (found automatically where paths cross water)
+var crossings: Array = []                     ## [a: Vector2, b: Vector2] per auto bridge (the bridge builder reads this)
 func _build_bridges() -> void:
+	var placed := get_node_or_null("Bridges")
+	if placed and placed.get_child_count() > 0:
+		print("[island] %d bridges (placed in the scene)" % placed.get_child_count())
+		return                                    # editable Bridge nodes (tools/map/build_bridges.tscn)
 	var g := _group("Bridges")
 	var count := 0
 	for pts in paths:
@@ -675,6 +650,7 @@ func _build_bridges() -> void:
 				while ib < samples.size() - 1 and ib - i < 16 and _sample_h(samples, ib + 1) >= _sample_h(samples, ib) - 0.05:
 					ib += 1
 				_bridge(g, samples[ia], samples[ib], count)
+				crossings.append([samples[ia], samples[ib]])
 				count += 1
 				wet_start = -1
 	print("[island] %d bridges" % count)

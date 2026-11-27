@@ -6,6 +6,11 @@ const VIEWS := [
 	["overview", Vector3(0, 260, 330), Vector3(0, 0, -20)],
 	["wellspring", Vector3(40, 30, -10), Vector3(0, 6, -60)],
 	["volcano", Vector3(90, 60, -120), Vector3(160, 20, -200)],
+	["lava_close", Vector3(140, 40, -150), Vector3(150, 25, -185)],
+	["lava_sea", Vector3(60, 40, -260), Vector3(110, 5, -230)],
+	["bridge", Vector3(8, 16, 4), Vector3(23, 10, 7)],
+	["bridge_deck", Vector3(21, 13.5, -10), Vector3(25, 11, 12)],
+	["mesa_wall", Vector3(40, 22, 100), Vector3(66, 14, 76)],
 	["forest", Vector3(-120, 25, 40), Vector3(-165, 10, 10)],
 ]
 

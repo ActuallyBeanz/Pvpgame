@@ -12,6 +12,7 @@ signal damaged(amount: float, kind: String)
 
 const FX := preload("res://systems/components/element_fx.gd")
 const Motor := preload("res://scenes/player/movement_motor.gd")
+const LavaZone := preload("res://systems/world/lava/lava_zone.gd")
 
 @export var max_health := 100.0
 @export var hitstun_time := 0.3
@@ -147,7 +148,8 @@ func tick(delta: float) -> void:
 		_air_peak = -INF
 	_was_on_floor = on_floor
 	# lava
-	if Water.kind_at(_player.global_position + Vector3.UP * 0.2) == "lava":
+	if Water.kind_at(_player.global_position + Vector3.UP * 0.2) == "lava" \
+			or LavaZone.lava_at(_player.get_world_3d(), _player.global_position + Vector3.UP * 0.3):
 		_lava_t -= delta
 		if _lava_t <= 0.0:
 			_lava_t = 0.5

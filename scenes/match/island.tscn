@@ -2,29 +2,174 @@
 
 [ext_resource type="Script" path="res://scenes/match/island.gd" id="1_island"]
 [ext_resource type="Script" path="res://systems/world/island_terrain3d.gd" id="2_terrain"]
+[ext_resource type="PackedScene" path="res://ui/match_hud.tscn" id="3_hud"]
+[ext_resource type="Script" path="res://systems/world/lighting_rig.gd" id="3_korcb"]
 [ext_resource type="PackedScene" path="res://scenes/world/island_terrain3d.tscn" id="4_t3d"]
 [ext_resource type="PackedScene" path="res://scenes/world/lighting_rig.tscn" id="5_light"]
-[ext_resource type="PackedScene" path="res://ui/match_hud.tscn" id="3_hud"]
+[ext_resource type="Terrain3DMaterial" path="res://assets/terrain/island_material.tres" id="6_o102a"]
+[ext_resource type="Terrain3DAssets" path="res://assets/terrain/island_assets.tres" id="7_uctxt"]
+[ext_resource type="Script" path="res://ui/match_hud.gd" id="9_q2ule"]
+[ext_resource type="Script" path="res://systems/world/lava/lava_pool.gd" id="10_v2sa5"]
+[ext_resource type="Script" path="res://systems/world/lava/lava_flow.gd" id="11_csutn"]
+[ext_resource type="Script" path="res://systems/world/bridge.gd" id="12_o102a"]
 
-[node name="Island" type="Node3D"]
+[sub_resource type="Curve3D" id="Curve3D_emd0j"]
+_data = {
+"points": PackedVector3Array(0, 0, 0, 0, 0, 0, 153.76462, 0, -203.6, 0, 0, 0, 0, 0, 0, 143.54552, 0, -209.5, 0, 0, 0, 0, 0, 0, 139.51817, 0, -213.52734, 0, 0, 0, 0, 0, 0, 134.40843, 0, -216.47229, 0, 0, 0, 0, 0, 0, 129.73224, 0, -220.06609, 0, 0, 0, 0, 0, 0, 124.62251, 0, -223.01103, 0, 0, 0, 0, 0, 0, 118.927, 0, -224.54176, 0, 0, 0, 0, 0, 0, 113.07925, 0, -225.30713, 0, 0, 0, 0, 0, 0, 107.96952, 0, -228.25208, 0, 0, 0, 0, 0, 0, 103.942184, 0, -232.27942, 0, 0, 0, 0, 0, 0, 100.99724, 0, -237.38916),
+"tilts": PackedFloat32Array(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+}
+point_count = 11
+
+[sub_resource type="Curve3D" id="Curve3D_v3dfe"]
+_data = {
+"points": PackedVector3Array(0, 0, 0, 0, 0, 0, 152.8, 0, -200, 0, 0, 0, 0, 0, 0, 141, 0, -200, 0, 0, 0, 0, 0, 0, 135.89026, 0, -197.05505, 0, 0, 0, 0, 0, 0, 129.89026, 0, -197.05505, 0, 0, 0, 0, 0, 0, 123.89026, 0, -197.05505, 0, 0, 0, 0, 0, 0, 117.89026, 0, -197.05505, 0, 0, 0, 0, 0, 0, 111.89026, 0, -197.05505, 0, 0, 0, 0, 0, 0, 106.62829, 0, -194.87547, 0, 0, 0, 0, 0, 0, 101.51856, 0, -191.93053, 0, 0, 0, 0, 0, 0, 95.975296, 0, -189.63443, 0, 0, 0, 0, 0, 0, 89.975296, 0, -189.63443, 0, 0, 0, 0, 0, 0, 83.975296, 0, -189.63443, 0, 0, 0, 0, 0, 0, 78.12754, 0, -188.86906, 0, 0, 0, 0, 0, 0, 73.017815, 0, -185.92412),
+"tilts": PackedFloat32Array(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+}
+point_count = 14
+
+[sub_resource type="Curve3D" id="Curve3D_v0jra"]
+_data = {
+"points": PackedVector3Array(0, 0, 0, 0, 0, 0, 156.4, 0, -193.76462, 0, 0, 0, 0, 0, 0, 150.5, 0, -183.54552, 0, 0, 0, 0, 0, 0, 148.96927, 0, -177.84999, 0, 0, 0, 0, 0, 0, 148.96927, 0, -171.84999, 0, 0, 0, 0, 0, 0, 148.96927, 0, -165.84999, 0, 0, 0, 0, 0, 0, 148.96927, 0, -159.84999, 0, 0, 0, 0, 0, 0, 148.96927, 0, -153.84999, 0, 0, 0, 0, 0, 0, 148.96927, 0, -147.84999, 0, 0, 0, 0, 0, 0, 148.96927, 0, -141.84999, 0, 0, 0, 0, 0, 0, 148.96927, 0, -135.84999, 0, 0, 0, 0, 0, 0, 149.73463, 0, -130.00223, 0, 0, 0, 0, 0, 0, 152.03073, 0, -124.458954, 0, 0, 0, 0, 0, 0, 154.32683, 0, -118.91569, 0, 0, 0, 0, 0, 0, 158.35417, 0, -114.88835, 0, 0, 0, 0, 0, 0, 164.0497, 0, -113.35762, 0, 0, 0, 0, 0, 0, 169.89746, 0, -114.122986, 0, 0, 0, 0, 0, 0, 174.72589, 0, -116.951416),
+"tilts": PackedFloat32Array(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+}
+point_count = 17
+
+[node name="Island" type="Node3D" unique_id=1147651624]
 script = ExtResource("1_island")
+lake_kinds = PackedStringArray("frozen", "water", "water")
 
-[node name="Lighting" parent="." instance=ExtResource("5_light")]
+[node name="Lighting" type="Node3D" parent="." unique_id=1688824514 instance=ExtResource("5_light")]
+script = ExtResource("3_korcb")
 
-
-[node name="Terrain" type="Node3D" parent="."]
+[node name="Terrain" type="Node3D" parent="." unique_id=1869591623]
 script = ExtResource("2_terrain")
 
-[node name="Terrain3D" parent="Terrain" instance=ExtResource("4_t3d")]
+[node name="Terrain3D" type="Terrain3D" parent="Terrain" unique_id=80503279 instance=ExtResource("4_t3d")]
+data_directory = "res://assets/terrain/island"
+material = ExtResource("6_o102a")
+assets = ExtResource("7_uctxt")
+collision_mode = 3
+displacement_sharpness = 0.5
+top_level = true
+metadata/_edit_lock_ = true
 
-[node name="Players" type="Node3D" parent="."]
+[node name="Players" type="Node3D" parent="." unique_id=1110338595]
 
-[node name="PlayerSpawner" type="MultiplayerSpawner" parent="."]
+[node name="PlayerSpawner" type="MultiplayerSpawner" parent="." unique_id=447088570]
 spawn_path = NodePath("../Players")
 
-[node name="OverviewCamera" type="Camera3D" parent="."]
+[node name="OverviewCamera" type="Camera3D" parent="." unique_id=935265050]
+transform = Transform3D(1, 0, 0, 0, 0.7327935, 0.6804511, 0, -0.6804511, 0.7327935, 0, 260, 260)
 current = true
 fov = 60.0
 far = 2000.0
 
-[node name="MatchHud" parent="." instance=ExtResource("3_hud")]
+[node name="MatchHud" type="CanvasLayer" parent="." unique_id=598453275 instance=ExtResource("3_hud")]
+script = ExtResource("9_q2ule")
+
+[node name="Lava" type="Node3D" parent="." unique_id=1858275890]
+
+[node name="CraterPool" type="Node3D" parent="Lava" unique_id=743442167]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 160, 39.708374, -200)
+script = ExtResource("10_v2sa5")
+radius = 12.0
+light_energy = 7.0
+
+[node name="LavaFlow_0" type="Path3D" parent="Lava" unique_id=429397412]
+curve = SubResource("Curve3D_emd0j")
+script = ExtResource("11_csutn")
+width = 3.5
+
+[node name="LavaFlow_1" type="Path3D" parent="Lava" unique_id=2037050836]
+curve = SubResource("Curve3D_v3dfe")
+script = ExtResource("11_csutn")
+width = 4.2
+
+[node name="FlowPool_1" type="Node3D" parent="Lava" unique_id=91974953]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 73.017815, 11.566863, -185.92412)
+script = ExtResource("10_v2sa5")
+radius = 6.0
+
+[node name="LavaFlow_2" type="Path3D" parent="Lava" unique_id=354212278]
+curve = SubResource("Curve3D_v0jra")
+script = ExtResource("11_csutn")
+width = 4.9
+
+[node name="FlowPool_2" type="Node3D" parent="Lava" unique_id=40865277]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 174.72589, 5.7078285, -116.951416)
+script = ExtResource("10_v2sa5")
+radius = 7.0
+
+[node name="Bridges" type="Node3D" parent="." unique_id=1377040307]
+
+[node name="Bridge_0" type="Node3D" parent="Bridges" unique_id=384474831]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 19.430056, 10.21548, -13.905753)
+script = ExtResource("12_o102a")
+
+[node name="A" type="Marker3D" parent="Bridges/Bridge_0" unique_id=233851135]
+
+[node name="B" type="Marker3D" parent="Bridges/Bridge_0" unique_id=69286432]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8.088608, 1.8814259, 42.888428)
+
+[node name="Bridge_1" type="Node3D" parent="Bridges" unique_id=722976837]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -37.02406, 10.154727, -93.98699)
+script = ExtResource("12_o102a")
+
+[node name="A" type="Marker3D" parent="Bridges/Bridge_1" unique_id=495536859]
+
+[node name="B" type="Marker3D" parent="Bridges/Bridge_1" unique_id=399763887]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -36.85729, -0.6321764, -19.758202)
+
+[node name="Bridge_2" type="Node3D" parent="Bridges" unique_id=67757513]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 37.047123, 10.175132, -93.94628)
+script = ExtResource("12_o102a")
+
+[node name="A" type="Marker3D" parent="Bridges/Bridge_2" unique_id=1473234291]
+
+[node name="B" type="Marker3D" parent="Bridges/Bridge_2" unique_id=62577476]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 38.917545, -2.806611, -23.26902)
+
+[node name="Bridge_3" type="Node3D" parent="Bridges" unique_id=23674417]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -51.9018, 10.069519, -33.939316)
+script = ExtResource("12_o102a")
+
+[node name="A" type="Marker3D" parent="Bridges/Bridge_3" unique_id=989964882]
+
+[node name="B" type="Marker3D" parent="Bridges/Bridge_3" unique_id=1008430633]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -26.175083, -7.1226172, 10.010824)
+
+[node name="Bridge_4" type="Node3D" parent="Bridges" unique_id=1704026518]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 44.67698, 10.12524, -37.26734)
+script = ExtResource("12_o102a")
+
+[node name="A" type="Marker3D" parent="Bridges/Bridge_4" unique_id=554395213]
+
+[node name="B" type="Marker3D" parent="Bridges/Bridge_4" unique_id=620624855]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 37.317688, 0.36924744, 3.8705063)
+
+[node name="Bridge_5" type="Node3D" parent="Bridges" unique_id=1369988737]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -13.96949, 9.684083, -110.739075)
+script = ExtResource("12_o102a")
+
+[node name="A" type="Marker3D" parent="Bridges/Bridge_5" unique_id=257990998]
+
+[node name="B" type="Marker3D" parent="Bridges/Bridge_5" unique_id=394181123]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8.58053, -2.5927653, -33.22917)
+
+[node name="Bridge_6" type="Node3D" parent="Bridges" unique_id=1989806540]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8.642177, 6.1232347, 164.32109)
+script = ExtResource("12_o102a")
+
+[node name="A" type="Marker3D" parent="Bridges/Bridge_6" unique_id=1155194048]
+
+[node name="B" type="Marker3D" parent="Bridges/Bridge_6" unique_id=1592309778]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 40.52759, 1.0819826, -20.26381)
+
+[node name="Bridge_7" type="Node3D" parent="Bridges" unique_id=1194199804]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -11.7611, 2.6773114, -198.55533)
+script = ExtResource("12_o102a")
+
+[node name="A" type="Marker3D" parent="Bridges/Bridge_7" unique_id=1419556717]
+
+[node name="B" type="Marker3D" parent="Bridges/Bridge_7" unique_id=1998627026]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 35.987614, 5.9406657, 9.684769)
