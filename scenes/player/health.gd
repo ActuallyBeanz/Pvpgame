@@ -60,36 +60,34 @@ func receive_hit(hit: Dictionary, cosmetic: bool) -> void:
 		return
 	var by := multiplayer.get_unique_id()
 	if _player.is_local():
-		_apply_hit(float(hit.get("damage", 0.0)), hit.get("dir", Vector3.ZERO), str(hit.get("element", "")), by)
+		_apply_hit(float(hit.get("damage", 0.0)), hit.get("dir", Vector3.ZERO), str(hit.get("element", "")), by, str(hit.get("action", "")))
 	else:
-		rpc_hit.rpc_id(_player.get_multiplayer_authority(), float(hit.get("damage", 0.0)), hit.get("dir", Vector3.ZERO), str(hit.get("element", "")))
+		rpc_hit.rpc_id(_player.get_multiplayer_authority(), float(hit.get("damage", 0.0)), hit.get("dir", Vector3.ZERO), str(hit.get("element", "")), str(hit.get("action", "")))
 
 
 @rpc("any_peer", "call_remote", "reliable")
-func rpc_hit(damage: float, dir: Vector3, element: String) -> void:
+func rpc_hit(damage: float, dir: Vector3, element: String, action: String) -> void:
 	if _player.is_local():
-		_apply_hit(damage, dir, element, multiplayer.get_remote_sender_id())
+		_apply_hit(damage, dir, element, multiplayer.get_remote_sender_id(), action)
 
 
-func _apply_hit(damage: float, dir: Vector3, element: String, by_peer: int) -> void:
+func _apply_hit(damage: float, dir: Vector3, element: String, by_peer: int, action := "") -> void:
 	if dead or _player.is_invulnerable():
 		return
 	var attacker := _name_of(by_peer)
 	if by_peer != multiplayer.get_unique_id():
 		_last_attacker = attacker
-	take_damage(damage, dir, "fire" if element == "fire" else "hit", attacker)
-	if element == "shock":
-		hitstun = maxf(hitstun, 0.8)                 # zapped: stunned a little longer
-	if element == "frost":
-		slow_left = maxf(slow_left, 2.5)
-		FX.burst(_player.global_position + Vector3.UP, get_tree().current_scene, Color(0.75, 0.95, 1.0), 10, 0.06, 2.5)
+	# statuses: Wet + shock = bonus damage, gives Burning / Chilled / Wet... (data/status/)
+	damage = _player.status.on_hit(element, action, damage, dir)
+	if damage > 0.0:
+		take_damage(damage, dir, "fire" if element == "fire" else "hit", attacker)
 
 
 ## Owner only: lose health, get knocked back / stunned, maybe die.
 func take_damage(amount: float, dir: Vector3, kind: String, source: String) -> void:
 	if dead or amount <= 0.0 or not _player.is_local():
 		return
-	if (kind == "fire" or kind == "lava") and _player.equipment.shield_resists("fire"):
+	if (kind == "fire" or kind == "lava" or kind == "dot_fire") and _player.equipment.shield_resists("fire"):
 		amount *= 0.25                                # Cinderpepper on the shield
 	health = maxf(0.0, health - amount)
 	_player.sync_health = health

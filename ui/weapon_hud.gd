@@ -131,6 +131,26 @@ func _draw_hearts() -> void:
 			_heart(c, 11.0, Color(0.95, 0.15, 0.18), fill, 0.0)
 		if fill > 0.0 and fill < 1.0:
 			_heart_dividers(c, 11.0)
+	_draw_statuses(Vector2(2, 14 + ceili(hearts / 10.0) * 28 + 4))
+
+
+## Status pills under the hearts: coloured name + a bar for the time left.
+func _draw_statuses(at: Vector2) -> void:
+	var st: Variant = _player.get("status")
+	if st == null:
+		return
+	var font := ThemeDB.fallback_font
+	var x := at.x
+	for e: Dictionary in st.list():
+		var label: String = e.name
+		var w := font.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, 14).x + 16.0
+		var col: Color = e.color
+		var r := Rect2(Vector2(x, at.y), Vector2(w, 22))
+		_hearts.draw_rect(r, Color(0, 0, 0, 0.55))
+		_hearts.draw_rect(Rect2(r.position + Vector2(0, 19), Vector2(w * clampf(float(e.left) / maxf(float(e.total), 0.01), 0.0, 1.0), 3)), col)
+		_hearts.draw_rect(r, col, false, 1.5)
+		_hearts.draw_string(font, r.position + Vector2(8, 15), label, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, col.lightened(0.3))
+		x += w + 6.0
 
 
 func _heart(c: Vector2, r: float, col: Color, fill: float, grow: float) -> void:

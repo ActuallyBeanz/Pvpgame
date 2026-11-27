@@ -792,8 +792,11 @@ func _place_cover() -> void:
 				_block(g, _on_ground(p.x, p.y, 0.4), Vector3(2.4, 1.5, 1.4), "sandstone", rot)
 			_:
 				var prop: Node3D
-				if rng.randf() < 0.45:
+				var roll := rng.randf()
+				if roll < 0.3:
 					prop = AssetRegistry.instantiate("prop.crate.wood")      # burnable soft cover
+				elif roll < 0.45:
+					prop = AssetRegistry.instantiate("prop.barrel.wood")
 				else:
 					prop = _make_rock(["rock_boulder_a", "rock_boulder_b", "rock_mossy"][i % 3], "Cover_%d" % i)
 				prop.name = "Cover_%d" % i                                     # fixed names (Reactive sync)

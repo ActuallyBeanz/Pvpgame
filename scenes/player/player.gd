@@ -11,6 +11,7 @@ extends CharacterBody3D
 ## into a ledge to grab it (forward = pull up, back = drop).
 
 const HealthScript := preload("res://scenes/player/health.gd")
+const StatusScript := preload("res://scenes/player/status_effects.gd")
 const CameraRig := preload("res://scenes/player/camera_rig.gd")
 const Motor := preload("res://scenes/player/movement_motor.gd")
 const FocusTargeting := preload("res://scenes/player/focus_targeting.gd")
@@ -46,6 +47,8 @@ var sync_strafe := Vector2.ZERO     ## local velocity (x right, y forward) for s
 var sync_focus := false
 var sync_health := 100.0            ## owner-authoritative (Health component)
 var sync_dead := false
+var sync_statuses := ""              ## owner -> everyone: active status ids ("burning,wet")
+var status: Node                    ## scenes/player/status_effects.gd
 var health: Node                    ## scenes/player/health.gd
 
 ## Move action codes (sync_action). Rolls use Motor.RollDir (0-3).
@@ -78,6 +81,9 @@ func _ready() -> void:
 	health = HealthScript.new()
 	health.name = "Health"
 	add_child(health)
+	status = StatusScript.new()
+	status.name = "Status"
+	add_child(status)
 	var sfx := PlayerAudio.new()
 	sfx.name = "Audio"
 	add_child(sfx)
@@ -102,14 +108,17 @@ func _physics_process(delta: float) -> void:
 
 func _simulate(delta: float) -> void:
 	health.tick(delta)
+	status.tick(delta)
 	if sync_dead:
 		velocity = Vector3.ZERO
 		sync_position = global_position
 		return
-	var can_act: bool = GameConfig.gameplay_input_enabled and health.hitstun <= 0.0
+	var can_act: bool = GameConfig.gameplay_input_enabled and health.hitstun <= 0.0 and not status.stunned()
 	# Raw stick (no action deadzone): the motor applies OoT's own stick curve.
 	var stick := Input.get_vector("move_left", "move_right", "move_forward", "move_back", 0.05) \
 		if can_act else Vector2.ZERO
+	if status.controls_inverted():
+		stick = -stick                   # Confused: everything's backwards
 	focus.update(GameConfig.combat_input_enabled(), equipment.lock_on_range())
 	var aiming: bool = equipment.is_aiming()
 	var roll_pressed := can_act and Input.is_action_just_pressed("roll")
@@ -130,14 +139,12 @@ func _simulate(delta: float) -> void:
 	it.glide = equipment.tools.wants_glide(delta)
 	it.glide_fall = equipment.tools.glide_fall()
 	it.glide_speed = equipment.tools.glide_speed()
-	if health.root_left > 0.0:          # snared by a trap: can't move or jump
+	if health.root_left > 0.0 or status.rooted():   # trap / Frozen: can't move or jump
 		wish = Vector3.ZERO
 		it.jump_pressed = false
-	if health.slow_left > 0.0:          # frost: half speed
-		it.speed_mult *= 0.5
 	it.camera_yaw = camera_rig.get_yaw()
 	it.sprint = can_act and Input.is_action_pressed("sprint") and not aiming
-	it.speed_mult = equipment.move_speed_mult()
+	it.speed_mult = equipment.move_speed_mult() * maxf(status.move_mult(), 0.0)   # Chilled etc.
 	if camera_rig.first_person or aiming:
 		# Bow aim / first person: face the crosshair and strafe at full speed.
 		it.focus = true

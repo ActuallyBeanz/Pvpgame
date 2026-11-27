@@ -10,4 +10,6 @@ extends Resource
 @export var element_colors: Dictionary[String, Color] = {
 	"fire": Color(1.0, 0.55, 0.15), "frost": Color(0.55, 0.85, 1.0), "shock": Color(1.0, 0.95, 0.4),
 	"blast": Color(1.0, 0.38, 0.12),
+	"water": Color(0.35, 0.6, 1.0), "smoke": Color(0.6, 0.6, 0.64), "flash": Color(1.0, 1.0, 0.85),
+	"muddle": Color(0.75, 0.45, 1.0), "light": Color(1.0, 0.92, 0.55),
 }

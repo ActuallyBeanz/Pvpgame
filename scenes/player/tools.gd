@@ -16,6 +16,7 @@ const TrapScript := preload("res://scenes/props/tools/snap_trap.gd")
 const FX := preload("res://systems/components/element_fx.gd")
 const OrbScript := preload("res://scenes/weapons/magic_orb.gd")
 const BombScript := preload("res://scenes/weapons/bomb_projectile.gd")
+const Impacts := preload("res://systems/element_impacts.gd")
 
 var aiming := false
 var glide_left := 0.0
@@ -577,7 +578,9 @@ func _rod_blast(s: Resource, at: Vector3) -> void:
 		var ticks := int(float(s.burn_time) / float(s.burn_tick))
 		for i in ticks:
 			get_tree().create_timer(float(s.burn_tick) * float(i + 1)).timeout.connect(
-				func() -> void: _area_hit(at, radius * 0.9, float(s.burn_damage), "fire", dir))
+				func() -> void:
+					if _burn_field_near(at):             # a Dewbloom splash can put it out early
+						_area_hit(at, radius * 0.9, float(s.burn_damage), "fire", dir))
 		return
 	rpc_cast_fx.rpc(at, element, radius, 0.0)
 	_area_hit(at, radius, float(s.frost_damage), element, dir)
@@ -668,6 +671,7 @@ func _erupt(at: Vector3, element: String, col: Color, radius: float, linger: flo
 	var lt := l.create_tween()
 	lt.tween_property(l, "light_energy", 0.0, 0.4)
 	lt.tween_callback(l.queue_free)
+	Impacts.impact(get_tree(), element, at, radius / 3.0, _eq.is_local())   # smoke / flash / splash...
 	_spot(at, element, col, true)
 	var n := 8
 	for k in n:
@@ -703,6 +707,7 @@ func _burn_field(at: Vector3, col: Color, radius: float, linger: float) -> void:
 	_shockwave(at, col, radius * 0.6)
 	var field := Node3D.new()
 	field.name = "BurnField"
+	field.add_to_group("burn_fields")
 	scene.add_child(field)
 	field.global_position = _ground(at)
 	var spots: Array[Vector3] = [Vector3.ZERO]
@@ -734,6 +739,13 @@ func _burn_field(at: Vector3, col: Color, radius: float, linger: float) -> void:
 	tw.tween_callback(func() -> void:
 		FX.smoke_puff(field.global_position + Vector3.UP * 0.4, scene, radius * 0.6)
 		field.queue_free())
+
+
+func _burn_field_near(at: Vector3) -> bool:
+	for f in get_tree().get_nodes_in_group("burn_fields"):
+		if (f as Node3D).global_position.distance_to(_ground(at)) < 1.0:
+			return true
+	return false
 
 
 ## Expanding ground ring out to the blast's edge.
@@ -777,7 +789,7 @@ func _spot(c: Vector3, element: String, col: Color, center: bool) -> void:
 		"shock":
 			if center or randf() < 0.5:
 				_bolt(g + Vector3.UP * 2.6, g, col)
-		_:
+		"frost":
 			if center:
 				for k in 3:
 					var a := randf() * TAU

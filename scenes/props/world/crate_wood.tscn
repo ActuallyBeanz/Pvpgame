@@ -1,12 +1,21 @@
 [gd_scene format=3]
 
-[ext_resource type="PackedScene" path="res://assets/placeholders/crate_wood.tscn" id="1_model"]
+[ext_resource type="PackedScene" path="res://assets/models/props/crate_wood.glb" id="1_model"]
 [ext_resource type="Script" path="res://systems/components/reactive.gd" id="2_reactive"]
+
+[sub_resource type="BoxShape3D" id="s0"]
+size = Vector3(1, 1, 1)
 
 [node name="CrateWood" type="Node3D"]
 metadata/material = "wood"
 
 [node name="Model" parent="." instance=ExtResource("1_model")]
+
+[node name="Collision" type="StaticBody3D" parent="."]
+
+[node name="Shape0" type="CollisionShape3D" parent="Collision"]
+transform = Transform3D(1, 0, 0, -0, 1, 0, 0, 0, 1, 0, 0.5, 0)
+shape = SubResource("s0")
 
 [node name="Reactive" type="Node3D" parent="."]
 script = ExtResource("2_reactive")

@@ -1,0 +1,15 @@
+[gd_resource type="Resource" format=3]
+
+[ext_resource type="Script" path="res://data/status/status_def.gd" id="1_s"]
+
+[resource]
+script = ExtResource("1_s")
+id = "burning"
+display_name = "Burning"
+color = Color(1, 0.5, 0.15, 1)
+duration = 3.0
+dot_per_sec = 4.0
+dot_kind = "fire"
+removes = PackedStringArray("chilled", "frozen")
+blocked_by = PackedStringArray("wet")
+vfx = "flames"

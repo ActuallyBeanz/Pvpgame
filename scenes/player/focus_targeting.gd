@@ -103,6 +103,8 @@ func _still_valid(n: Node3D, lock_range: float) -> bool:
 
 
 func _visible(n: Node3D, p: Vector3) -> bool:
+	if preload("res://systems/element_impacts.gd").smoke_blocks(get_tree(), _eye(), p):
+		return false                                  # can't lock on through Smolderpuff smoke
 	var q := PhysicsRayQueryParameters3D.create(_eye(), p, 1)
 	q.exclude = [_player.get_rid()]
 	var hit := _player.get_world_3d().direct_space_state.intersect_ray(q)

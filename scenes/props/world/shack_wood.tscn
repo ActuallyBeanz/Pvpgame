@@ -1,0 +1,102 @@
+[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://assets/models/props/shack_wood.glb" id="1_model"]
+[ext_resource type="Script" path="res://systems/components/reactive.gd" id="2_reactive"]
+
+[sub_resource type="BoxShape3D" id="s0"]
+size = Vector3(4.2, 0.1, 4.2)
+
+[sub_resource type="BoxShape3D" id="s1"]
+size = Vector3(4, 2.6, 0.15)
+
+[sub_resource type="BoxShape3D" id="s2"]
+size = Vector3(0.15, 2.6, 4)
+
+[sub_resource type="BoxShape3D" id="s3"]
+size = Vector3(0.15, 1.1, 4)
+
+[sub_resource type="BoxShape3D" id="s4"]
+size = Vector3(0.15, 0.7, 4)
+
+[sub_resource type="BoxShape3D" id="s5"]
+size = Vector3(0.15, 0.8, 1.4)
+
+[sub_resource type="BoxShape3D" id="s6"]
+size = Vector3(0.15, 0.8, 1.4)
+
+[sub_resource type="BoxShape3D" id="s7"]
+size = Vector3(1.35, 2.6, 0.15)
+
+[sub_resource type="BoxShape3D" id="s8"]
+size = Vector3(1.35, 2.6, 0.15)
+
+[sub_resource type="BoxShape3D" id="s9"]
+size = Vector3(1.3, 0.5, 0.15)
+
+[sub_resource type="BoxShape3D" id="s10"]
+size = Vector3(2.681987369470632, 0.14, 4.7)
+
+[sub_resource type="BoxShape3D" id="s11"]
+size = Vector3(2.681987369470632, 0.14, 4.7)
+
+[node name="ShackWood" type="Node3D"]
+metadata/material = "wood"
+
+[node name="Model" parent="." instance=ExtResource("1_model")]
+
+[node name="Collision" type="StaticBody3D" parent="."]
+
+[node name="Shape0" type="CollisionShape3D" parent="Collision"]
+transform = Transform3D(1, 0, 0, -0, 1, 0, 0, 0, 1, 0, 0.05, 0)
+shape = SubResource("s0")
+
+[node name="Shape1" type="CollisionShape3D" parent="Collision"]
+transform = Transform3D(1, 0, 0, -0, 1, 0, 0, 0, 1, 0, 1.4, -1.925)
+shape = SubResource("s1")
+
+[node name="Shape2" type="CollisionShape3D" parent="Collision"]
+transform = Transform3D(1, 0, 0, -0, 1, 0, 0, 0, 1, 1.925, 1.4, 0)
+shape = SubResource("s2")
+
+[node name="Shape3" type="CollisionShape3D" parent="Collision"]
+transform = Transform3D(1, 0, 0, -0, 1, 0, 0, 0, 1, -1.925, 0.65, 0)
+shape = SubResource("s3")
+
+[node name="Shape4" type="CollisionShape3D" parent="Collision"]
+transform = Transform3D(1, 0, 0, -0, 1, 0, 0, 0, 1, -1.925, 2.35, 0)
+shape = SubResource("s4")
+
+[node name="Shape5" type="CollisionShape3D" parent="Collision"]
+transform = Transform3D(1, 0, 0, -0, 1, 0, 0, 0, 1, -1.925, 1.6, -1.3)
+shape = SubResource("s5")
+
+[node name="Shape6" type="CollisionShape3D" parent="Collision"]
+transform = Transform3D(1, 0, 0, -0, 1, 0, 0, 0, 1, -1.925, 1.6, 1.3)
+shape = SubResource("s6")
+
+[node name="Shape7" type="CollisionShape3D" parent="Collision"]
+transform = Transform3D(1, 0, 0, -0, 1, 0, 0, 0, 1, -1.325, 1.4, 1.925)
+shape = SubResource("s7")
+
+[node name="Shape8" type="CollisionShape3D" parent="Collision"]
+transform = Transform3D(1, 0, 0, -0, 1, 0, 0, 0, 1, 1.325, 1.4, 1.925)
+shape = SubResource("s8")
+
+[node name="Shape9" type="CollisionShape3D" parent="Collision"]
+transform = Transform3D(1, 0, 0, -0, 1, 0, 0, 0, 1, 0, 2.45, 1.925)
+shape = SubResource("s9")
+
+[node name="Shape10" type="CollisionShape3D" parent="Collision"]
+transform = Transform3D(0.876216, -0.481919, 0, 0.481919, 0.876216, 0, 0, 0, 1, 1.175, 3.23375, 0)
+shape = SubResource("s10")
+
+[node name="Shape11" type="CollisionShape3D" parent="Collision"]
+transform = Transform3D(0.876216, 0.481919, 0, -0.481919, 0.876216, 0, 0, 0, 1, -1.175, 3.23375, 0)
+shape = SubResource("s11")
+
+[node name="Reactive" type="Node3D" parent="."]
+script = ExtResource("2_reactive")
+material_id = "wood"
+max_hp_override = 220.0
+fire_height = 1.8
+fire_size = 3.0

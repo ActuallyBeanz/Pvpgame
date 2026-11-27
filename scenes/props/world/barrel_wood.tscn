@@ -1,0 +1,26 @@
+[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://assets/models/props/barrel_wood.glb" id="1_model"]
+[ext_resource type="Script" path="res://systems/components/reactive.gd" id="2_reactive"]
+
+[sub_resource type="CylinderShape3D" id="s0"]
+radius = 0.42
+height = 1.05
+
+[node name="BarrelWood" type="Node3D"]
+metadata/material = "wood"
+
+[node name="Model" parent="." instance=ExtResource("1_model")]
+
+[node name="Collision" type="StaticBody3D" parent="."]
+
+[node name="Shape0" type="CollisionShape3D" parent="Collision"]
+transform = Transform3D(1, 0, 0, -0, 1, 0, 0, 0, 1, 0, 0.525, 0)
+shape = SubResource("s0")
+
+[node name="Reactive" type="Node3D" parent="."]
+script = ExtResource("2_reactive")
+material_id = "wood"
+max_hp_override = 30.0
+fire_height = 0.6
+fire_size = 1.1

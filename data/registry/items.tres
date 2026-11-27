@@ -42,10 +42,20 @@
 [ext_resource type="Resource" path="res://data/items/frost_arrows.tres" id="k_frost_arrows"]
 [ext_resource type="Resource" path="res://data/items/shock_arrows.tres" id="k_shock_arrows"]
 [ext_resource type="Resource" path="res://data/items/bomb_arrows.tres" id="k_bomb_arrows"]
+[ext_resource type="Resource" path="res://data/items/water_arrows.tres" id="k_water_arrows"]
+[ext_resource type="Resource" path="res://data/items/smoke_arrows.tres" id="k_smoke_arrows"]
+[ext_resource type="Resource" path="res://data/items/flash_arrows.tres" id="k_flash_arrows"]
+[ext_resource type="Resource" path="res://data/items/muddle_arrows.tres" id="k_muddle_arrows"]
+[ext_resource type="Resource" path="res://data/items/light_arrows.tres" id="k_light_arrows"]
 
 [resource]
 script = ExtResource("3_f3wow")
 items = Dictionary[String, Resource]({
+"water_arrows": ExtResource("k_water_arrows"),
+"smoke_arrows": ExtResource("k_smoke_arrows"),
+"flash_arrows": ExtResource("k_flash_arrows"),
+"muddle_arrows": ExtResource("k_muddle_arrows"),
+"light_arrows": ExtResource("k_light_arrows"),
 "fire_arrows": ExtResource("k_fire_arrows"),
 "frost_arrows": ExtResource("k_frost_arrows"),
 "shock_arrows": ExtResource("k_shock_arrows"),

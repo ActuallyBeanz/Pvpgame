@@ -65,10 +65,24 @@
 [ext_resource type="PackedScene" path="res://assets/models/weapons/arrow_frost.glb" id="ar_frost"]
 [ext_resource type="PackedScene" path="res://assets/models/weapons/arrow_shock.glb" id="ar_shock"]
 [ext_resource type="PackedScene" path="res://assets/models/weapons/arrow_bomb.glb" id="ar_bomb"]
+[ext_resource type="PackedScene" path="res://assets/models/weapons/arrow_water.glb" id="ar_water"]
+[ext_resource type="PackedScene" path="res://assets/models/weapons/arrow_smoke.glb" id="ar_smoke"]
+[ext_resource type="PackedScene" path="res://assets/models/weapons/arrow_flash.glb" id="ar_flash"]
+[ext_resource type="PackedScene" path="res://assets/models/weapons/arrow_muddle.glb" id="ar_muddle"]
+[ext_resource type="PackedScene" path="res://assets/models/weapons/arrow_light.glb" id="ar_light"]
+[ext_resource type="PackedScene" path="res://scenes/props/world/barrel_wood.tscn" id="pw_barrel"]
+[ext_resource type="PackedScene" path="res://scenes/props/world/shack_wood.tscn" id="pw_shack"]
 
 [resource]
 script = ExtResource("12_ckosp")
 models = Dictionary[String, PackedScene]({
+"prop.barrel.wood": ExtResource("pw_barrel"),
+"prop.shack.wood": ExtResource("pw_shack"),
+"weapon.arrow.water": ExtResource("ar_water"),
+"weapon.arrow.smoke": ExtResource("ar_smoke"),
+"weapon.arrow.flash": ExtResource("ar_flash"),
+"weapon.arrow.muddle": ExtResource("ar_muddle"),
+"weapon.arrow.light": ExtResource("ar_light"),
 "weapon.arrow.fire": ExtResource("ar_fire"),
 "weapon.arrow.frost": ExtResource("ar_frost"),
 "weapon.arrow.shock": ExtResource("ar_shock"),

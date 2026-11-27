@@ -20,6 +20,9 @@ var allow_respawn := true                 ## test area: you come back a few seco
 	{ "id": "prop.crate.wood", "pos": Vector3(19.2, 0, 7.0) },
 	{ "id": "prop.ice.block", "pos": Vector3(19.0, 0, 9.4), "respawn": 5.0 },
 	{ "id": "prop.ice.block", "pos": Vector3(13.5, 0, 11.5), "respawn": 5.0 },
+	{ "id": "prop.barrel.wood", "pos": Vector3(21.0, 0, 7.4), "respawn": 15.0 },
+	{ "id": "prop.barrel.wood", "pos": Vector3(21.9, 0, 8.5), "respawn": 15.0 },
+	{ "id": "prop.shack.wood", "pos": Vector3(25.0, 0, 12.5), "respawn": 25.0 },
 ]
 
 @export_group("Weapon lane")

@@ -82,6 +82,9 @@ properties/21/replication_mode = 2
 properties/22/path = NodePath("Equipment:sync_ammo_id")
 properties/22/spawn = false
 properties/22/replication_mode = 2
+properties/23/path = NodePath(".:sync_statuses")
+properties/23/spawn = true
+properties/23/replication_mode = 2
 
 [node name="Player" type="CharacterBody3D"]
 collision_layer = 2

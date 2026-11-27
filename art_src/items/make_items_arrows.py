@@ -26,6 +26,17 @@ M("feather_soot", [(62,58,60),(48,44,46),(84,80,80),(170,70,40)], seed=804, stri
 K.glow_mat("g_ember", (255, 120, 40), 3.0)
 K.glow_mat("g_frost", (140, 230, 255), 2.8)
 K.glow_mat("g_spark", (255, 230, 120), 4.0)
+K.glow_mat("g_water", (90, 170, 255), 2.2)
+K.glow_mat("g_flash", (255, 255, 220), 5.0)
+K.glow_mat("g_muddle", (190, 110, 255), 2.6)
+K.glow_mat("g_light", (255, 230, 140), 4.0)
+M("feather_blue", [(70,120,210),(54,100,186),(100,150,230),(30,60,130)], seed=805, stripes=lambda x, y, r: y % 4 == 0)
+M("feather_grey", [(140,140,146),(118,118,124),(170,170,176),(80,80,86)], seed=806, stripes=lambda x, y, r: y % 4 == 0)
+M("feather_white", [(240,240,232),(220,220,210),(255,255,248),(200,190,120)], seed=807, stripes=lambda x, y, r: y % 4 == 0)
+M("feather_violet", [(130,80,180),(110,64,160),(160,110,206),(70,40,110)], seed=808, stripes=lambda x, y, r: y % 4 == 0)
+M("feather_amber", [(230,180,90),(206,156,66),(250,210,130),(150,100,40)], seed=809, stripes=lambda x, y, r: y % 4 == 0)
+M("moss", [(96,120,60),(78,100,48),(120,146,76),(150,90,180)], seed=810)
+M("puff", [(150,146,140),(128,124,120),(176,172,166),(96,92,90)], seed=811)
 D = math.radians
 L = 0.78
 
@@ -94,7 +105,60 @@ def arrow_bomb():
     return [b.build("Body", {"wood": 0.08, "gourd": 0.06})]
 
 
-ITEMS = {"arrow_fire": arrow_fire, "arrow_frost": arrow_frost, "arrow_shock": arrow_shock, "arrow_bomb": arrow_bomb}
+def arrow_water():
+    b = Builder()
+    shaft(b); fletch(b, "feather_blue")
+    b.lathe("ice", [(-0.13, 0.0), (-0.1, 0.04), (-0.05, 0.035), (0.0, 0.0)], 8)          # dew drop head
+    b.octa("g_water", (0, 0, -0.07), 0.016, 0.03)
+    b.lathe("leafgreen", [(-0.17, 0.014), (-0.13, 0.024)], 6)                          # leaf cup
+    return [b.build("Body", {"wood": 0.08})]
+
+
+def arrow_smoke():
+    b = Builder()
+    shaft(b); fletch(b, "feather_grey")
+    b.lathe("darkiron", [(-0.06, 0.0), (-0.055, 0.025), (0.0, 0.0)], 4, sy=0.5)
+    b.blob("puff", (0, 0, -0.12), 0.045, (1, 1, 1.3), 1, 0.2, 41)                       # puffball
+    b.blob("puff", (0.025, 0.01, -0.09), 0.025, (1, 1, 1), 0, 0.2, 42)
+    b.lathe("rope", [(-0.18, 0.015), (-0.16, 0.015)], 5)
+    return [b.build("Body", {"wood": 0.08, "puff": 0.05})]
+
+
+def arrow_flash():
+    b = Builder()
+    shaft(b); fletch(b, "feather_white")
+    b.lathe("brass", [(-0.1, 0.0), (-0.09, 0.03), (0.0, 0.0)], 4, sy=0.6)
+    for k in range(5):                                                                 # petal star
+        a = k / 5 * math.tau
+        d = Vector((math.cos(a), math.sin(a), -0.4)).normalized()
+        b.leaf("g_flash", (0, 0, -0.12), d, 0.06, 0.035, 0.004)
+    b.octa("g_flash", (0, 0, -0.12), 0.018)
+    return [b.build("Body", {"wood": 0.08})]
+
+
+def arrow_muddle():
+    b = Builder()
+    shaft(b); fletch(b, "feather_violet")
+    b.lathe("darkiron", [(-0.07, 0.0), (-0.065, 0.025), (0.0, 0.0)], 4, sy=0.5)
+    b.blob("moss", (0, 0, -0.13), 0.04, (1, 1, 1.4), 1, 0.25, 43)                      # moss clump
+    for k in range(3):
+        a = k / 3 * math.tau
+        b.octa("g_muddle", (math.cos(a) * 0.04, math.sin(a) * 0.04, -0.13), 0.01)       # spores
+    return [b.build("Body", {"wood": 0.08, "moss": 0.05})]
+
+
+def arrow_light():
+    b = Builder()
+    shaft(b); fletch(b, "feather_amber")
+    b.lathe("brass", [(-0.04, 0.012), (-0.02, 0.012), (0.0, 0.0)], 6)
+    b.lathe("brass", [(-0.16, 0.0), (-0.15, 0.04), (-0.08, 0.035), (-0.04, 0.012)], 8)   # little bell
+    b.octa("g_light", (0, 0, -0.12), 0.022, 0.035)                                      # glowing clapper
+    return [b.build("Body", {"wood": 0.08})]
+
+
+ITEMS = {"arrow_water": arrow_water, "arrow_smoke": arrow_smoke, "arrow_flash": arrow_flash,
+         "arrow_muddle": arrow_muddle, "arrow_light": arrow_light,
+         "arrow_fire": arrow_fire, "arrow_frost": arrow_frost, "arrow_shock": arrow_shock, "arrow_bomb": arrow_bomb}
 TURN = Matrix.Rotation(D(-90), 4, 'X')            # +Z (built) -> +Y (Blender) = Godot -Z
 groups = []
 for name, fn in ITEMS.items():
@@ -104,4 +168,4 @@ for name, fn in ITEMS.items():
     K.export(obs, os.path.join(OUT, name + ".glb"))
     groups.append(obs)
 print("DONE arrows")
-K.preview(groups, os.path.join(TEX, "preview_arrows.png"), cols=4)
+K.preview(groups, os.path.join(TEX, "preview_arrows.png"), cols=5)

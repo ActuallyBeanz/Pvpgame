@@ -4,6 +4,7 @@ extends Node3D
 ## the element. The shooter's copy deals damage; other peers run a cosmetic copy (rpc from tools.gd).
 
 const FX := preload("res://systems/components/element_fx.gd")
+const Impacts := preload("res://systems/element_impacts.gd")
 
 var velocity := Vector3.ZERO
 var element := "frost"
@@ -127,6 +128,7 @@ func _burst(at: Vector3, direct: Object, dir: Vector3, splash := true) -> void:
 	FX.burst(at, scene, col, 18, 0.07, 4.0)
 	if element == "fire":
 		FX.smoke_puff(at, scene, 0.5)
+	Impacts.impact(get_tree(), element, at, 1.0, not cosmetic)
 	Audio.play_at("ice.hit" if element == "frost" else ("fire.ignite" if element == "fire" else "target.hit"), at, 0.0, 1.2)
 	if not cosmetic:
 		var hit_ids := {}

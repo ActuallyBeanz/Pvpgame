@@ -1,0 +1,13 @@
+[gd_resource type="Resource" format=3]
+
+[ext_resource type="Script" path="res://data/status/status_def.gd" id="1_s"]
+
+[resource]
+script = ExtResource("1_s")
+id = "chilled"
+display_name = "Chilled"
+color = Color(0.6, 0.88, 1, 1)
+duration = 2.5
+move_mult = 0.55
+removes = PackedStringArray("burning")
+vfx = "frost"

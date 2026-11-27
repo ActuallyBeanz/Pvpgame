@@ -1,4 +1,4 @@
-[gd_resource type="Resource" load_steps=18 format=3]
+[gd_resource type="Resource" load_steps=19 format=3]
 
 [ext_resource type="Script" path="res://data/world/world_rules_def.gd" id="1_rules"]
 [ext_resource type="Script" path="res://data/world/material_def.gd" id="2_mat"]
@@ -80,8 +80,14 @@ material = "ice"
 tag = "frost"
 damage_mult = 0.0
 
+[sub_resource type="Resource" id="rx_any_water"]
+script = ExtResource("3_rx")
+material = "*"
+tag = "water"
+effect = "extinguish"
+
 [resource]
 script = ExtResource("1_rules")
 materials = Array[Resource]([SubResource("mat_wood"), SubResource("mat_ice"), SubResource("mat_stone")])
-reactions = Array[Resource]([SubResource("rx_wood_pierce"), SubResource("rx_wood_slash"), SubResource("rx_wood_frost"), SubResource("rx_ice_pierce"), SubResource("rx_ice_blunt"), SubResource("rx_ice_fire"), SubResource("rx_ice_frost")])
+reactions = Array[Resource]([SubResource("rx_wood_pierce"), SubResource("rx_wood_slash"), SubResource("rx_wood_frost"), SubResource("rx_ice_pierce"), SubResource("rx_ice_blunt"), SubResource("rx_ice_fire"), SubResource("rx_ice_frost"), SubResource("rx_any_water")])
 fire_hit_heat = 30.0

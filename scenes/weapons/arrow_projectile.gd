@@ -29,6 +29,7 @@ var _stuck := false
 
 const FX := preload("res://systems/components/element_fx.gd")
 const BombScript := preload("res://scenes/weapons/bomb_projectile.gd")
+const Impacts := preload("res://systems/element_impacts.gd")
 
 var _flames: Node3D
 
@@ -60,7 +61,7 @@ func _show_element() -> void:
 		_flames = FX.flames(0.35, true)
 		add_child(_flames)
 		_flames.position = Vector3(0, 0, 0.05)
-	elif element == "frost" or element == "shock":
+	elif element != "":
 		_flames = _sparkle(WorldRules.element_color(element))
 		add_child(_flames)
 		_flames.position = Vector3(0, 0, 0.08)
@@ -169,6 +170,7 @@ func _stick(res: Dictionary) -> void:
 	if col and col.has_method("hit_zone"):
 		zone = str(col.hit_zone(res.position))
 	var dmg := maxf(damage, 8.0) * (headshot_mult if zone == "head" else 1.0)
+	Impacts.impact(get_tree(), element, res.position, 1.0, not cosmetic)   # smoke / flash / splash...
 	var hit_info := WorldRules.make_hit(dmg, hit_action, element, dir)
 	hit_info["zone"] = zone
 	if zone == "head" and not cosmetic:

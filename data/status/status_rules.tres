@@ -1,0 +1,89 @@
+[gd_resource type="Resource" format=3]
+
+[ext_resource type="Script" path="res://data/status/status_rules.gd" id="1_rules"]
+[ext_resource type="Script" path="res://data/status/status_reaction.gd" id="2_rx"]
+[ext_resource type="Resource" path="res://data/status/wet.tres" id="s_wet"]
+[ext_resource type="Resource" path="res://data/status/burning.tres" id="s_burning"]
+[ext_resource type="Resource" path="res://data/status/chilled.tres" id="s_chilled"]
+[ext_resource type="Resource" path="res://data/status/frozen.tres" id="s_frozen"]
+[ext_resource type="Resource" path="res://data/status/shocked.tres" id="s_shocked"]
+[ext_resource type="Resource" path="res://data/status/dazzled.tres" id="s_dazzled"]
+[ext_resource type="Resource" path="res://data/status/confused.tres" id="s_confused"]
+[ext_resource type="Resource" path="res://data/status/revealed.tres" id="s_revealed"]
+
+[sub_resource type="Resource" id="rx_wet_shock"]
+script = ExtResource("2_rx")
+status = "wet"
+element = "shock"
+damage_mult = 1.75
+consume_status = true
+popup = "ELECTROCUTED!"
+popup_color = Color(1, 0.95, 0.4, 1)
+
+[sub_resource type="Resource" id="rx_wet_fire"]
+script = ExtResource("2_rx")
+status = "wet"
+element = "fire"
+damage_mult = 0.6
+consume_status = true
+block_element_status = true
+popup = "Sizzle"
+popup_color = Color(0.8, 0.8, 0.8, 1)
+
+[sub_resource type="Resource" id="rx_wet_frost"]
+script = ExtResource("2_rx")
+status = "wet"
+element = "frost"
+consume_status = true
+apply_status = "frozen"
+block_element_status = true
+popup = "FROZEN!"
+popup_color = Color(0.75, 0.95, 1, 1)
+
+[sub_resource type="Resource" id="rx_burning_water"]
+script = ExtResource("2_rx")
+status = "burning"
+element = "water"
+consume_status = true
+popup = "Doused"
+popup_color = Color(0.6, 0.8, 1, 1)
+
+[sub_resource type="Resource" id="rx_burning_frost"]
+script = ExtResource("2_rx")
+status = "burning"
+element = "frost"
+consume_status = true
+block_element_status = true
+popup = "Steam"
+popup_color = Color(0.85, 0.85, 0.85, 1)
+
+[sub_resource type="Resource" id="rx_chilled_fire"]
+script = ExtResource("2_rx")
+status = "chilled"
+element = "fire"
+consume_status = true
+
+[sub_resource type="Resource" id="rx_frozen_blunt"]
+script = ExtResource("2_rx")
+status = "frozen"
+element = "blunt"
+damage_mult = 1.5
+consume_status = true
+popup = "SHATTER!"
+popup_color = Color(0.75, 0.95, 1, 1)
+
+[resource]
+script = ExtResource("1_rules")
+statuses = Array[Resource]([ExtResource("s_wet"), ExtResource("s_burning"), ExtResource("s_chilled"), ExtResource("s_frozen"), ExtResource("s_shocked"), ExtResource("s_dazzled"), ExtResource("s_confused"), ExtResource("s_revealed")])
+reactions = Array[Resource]([SubResource("rx_wet_shock"), SubResource("rx_wet_fire"), SubResource("rx_wet_frost"), SubResource("rx_burning_water"), SubResource("rx_burning_frost"), SubResource("rx_chilled_fire"), SubResource("rx_frozen_blunt")])
+element_status = Dictionary[String, String]({
+"fire": "burning",
+"frost": "chilled",
+"shock": "shocked",
+"water": "wet",
+"flash": "dazzled",
+"muddle": "confused",
+"light": "revealed"
+})
+element_duration = Dictionary[String, float]({})
+wet_from_water = 6.0

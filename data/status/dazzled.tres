@@ -1,0 +1,11 @@
+[gd_resource type="Resource" format=3]
+
+[ext_resource type="Script" path="res://data/status/status_def.gd" id="1_s"]
+
+[resource]
+script = ExtResource("1_s")
+id = "dazzled"
+display_name = "Dazzled"
+color = Color(1, 1, 0.85, 1)
+duration = 1.6
+screen_flash = true
