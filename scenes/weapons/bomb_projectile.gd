@@ -148,8 +148,7 @@ func explode() -> void:
 		# knock back the local player (each peer's own copy pushes its own player)
 		if col is CharacterBody3D and "motor" in col and col.is_multiplayer_authority():
 			var push := (Vector3(dir.x, 0, dir.z).normalized() * 7.0 + Vector3.UP * 6.0) * clampf(1.0 - d / r, 0.3, 1.0)
-			col.motor.reset(col.motor.facing)
-			col.velocity = push
+			col.motor.knock(col, push)
 		if cosmetic:
 			continue
 		if col.has_method("react_to_hit_info") or col.has_method("react_to_hit") or WorldRules.reactive_of(col) != null:

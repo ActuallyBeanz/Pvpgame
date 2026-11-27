@@ -18,6 +18,7 @@ extends Resource
 @export var gust_range := 10.0
 @export var gust_angle_deg := 45.0
 @export var gust_push := 11.0               ## m/s shove on players / bombs
+@export var gust_recoil := 3.0             ## m/s the swing pushes YOU back
 @export var glide_fall_speed := 1.6         ## Deku Leaf: slow fall
 @export var glide_speed := 6.0
 @export var glide_time := 6.0               ## seconds of glide per landing (refills on the ground)

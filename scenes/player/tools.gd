@@ -30,9 +30,44 @@ func setup(equipment: Node, player: CharacterBody3D) -> void:
 	_player = player
 
 
+## Deku Leaf canopy: while gliding the leaf leaves the hand and opens flat over your head.
+var _canopy: Node3D
+var _canopy_open := false
+
+
+func _update_canopy() -> void:
+	var glide: bool = _eq.sync_aiming and _eq.sync_drawn and _eq.weapon_type() == "fan" and not _player.sync_on_floor
+	if glide == _canopy_open:
+		return
+	_canopy_open = glide
+	var hand: Node3D = _eq._weapon_vis
+	if glide:
+		if _canopy == null:
+			_canopy = AssetRegistry.instantiate("tool.fan.galeleaf")
+			_canopy.name = "LeafCanopy"
+			_player.model_root.add_child(_canopy)
+		# shaft points forward, leaf flat above the head (front tipped up a little)
+		_canopy.position = Vector3(0, 2.05, 0.5)
+		_canopy.rotation = Vector3(deg_to_rad(-80.0), 0, 0)
+		_canopy.scale = Vector3.ONE * 0.3
+		_canopy.visible = true
+		_canopy.create_tween().tween_property(_canopy, "scale", Vector3.ONE * 1.35, 0.15).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+		if hand:
+			hand.visible = false
+		Audio.play_at("boomerang.catch", _player.global_position + Vector3.UP * 2.0, -6.0, 1.3)
+	else:
+		if _canopy:
+			_canopy.visible = false
+		if is_instance_valid(hand):
+			hand.visible = true
+
+
 ## Hide previews / aim rings as soon as the tool isn't the drawn weapon any more.
 func _process(_delta: float) -> void:
-	if _eq == null or not _eq.is_local():
+	if _eq == null:
+		return
+	_update_canopy()
+	if not _eq.is_local():
 		return
 	var tag: String = _eq.weapon_type()
 	if not _eq.sync_drawn or not (tag in ["staff", "rod", "trap"]):
@@ -67,7 +102,7 @@ func update(delta: float) -> void:
 	var can_use: bool = _eq.sync_drawn and _eq._swap_timer < 0.0 and _cd <= 0.0 and not _player.motor.action_locked()
 	match tag:
 		"fan":
-			if pressed and can_use:
+			if pressed and can_use and not gliding:      # no gusting while the leaf is open overhead
 				_gust(s)
 		"trap":
 			if pressed and can_use and _eq.ammo_count() > 0:
@@ -81,7 +116,7 @@ func update(delta: float) -> void:
 					var t := _aim_point(s, tag)
 					if t.ok:
 						if tag == "staff":
-							_raise_pillar(s, t.pos)
+							_raise_pillar(s, t.pos, t.get("base", ""))
 						elif t.water:
 							_freeze(s, t.pos)
 						else:
@@ -135,6 +170,9 @@ func _gust(s: Resource) -> void:
 	if _eq._model:
 		_eq._model.play_action(&"1H_Melee_Attack_Slice_Horizontal", GUST_TIME)
 	rpc_gust.rpc(_player.global_position + Vector3.UP, fwd)
+	# the swing pushes you back a little
+	if not _player.motor.in_water():
+		_player.motor.knock(_player, -fwd * s.gust_recoil + Vector3.UP * 1.5)
 
 
 @rpc("any_peer", "call_local", "reliable")
@@ -161,11 +199,18 @@ func rpc_gust(origin: Vector3, fwd: Vector3) -> void:
 		if not b.exploded and in_cone.call((b as Node3D).global_position):
 			b.velocity += fwd * push * 0.8 + Vector3.UP * 3.0
 			b._rest = false
+	# dummies / targets sway in the wind (visual, every peer)
+	for t in get_tree().get_nodes_in_group("lock_targets"):
+		if t is CharacterBody3D or not t.has_method("react_to_hit"):
+			continue
+		var tp: Vector3 = (t as Node3D).global_position + Vector3.UP
+		if in_cone.call(tp):
+			var near := 1.0 - clampf(origin.distance_to(tp) / rng, 0.0, 1.0)
+			t.react_to_hit(lerpf(4.0, 14.0, near), fwd, true)
 	# my own player (each machine moves only itself)
 	var me := get_tree().current_scene.get_node_or_null("Players/%d" % multiplayer.get_unique_id()) as CharacterBody3D
 	if me and me != _player and not me.get("sync_dead") and in_cone.call(me.global_position + Vector3.UP):
-		me.motor.reset(me.motor.facing)
-		me.velocity = fwd * push + Vector3.UP * 3.5
+		me.motor.knock(me, fwd * push + Vector3.UP * 3.5)
 	# blow out burning things (the gust's owner reports it once)
 	if mine:
 		for r in get_tree().get_nodes_in_group("reactive"):
@@ -272,7 +317,11 @@ func _aim_point(s: Resource, tag: String) -> Dictionary:
 	var n: Vector3 = hit.normal
 	if n.y < 0.6:
 		return out                                   # walls / steep slopes
-	return { "ok": true, "pos": ground_pos, "water": false }
+	var base := ""
+	var col: Object = hit.collider
+	if col is Node and (col as Node).is_in_group("sand_pillars"):
+		base = str((col as Node).name)               # raised on top of another pillar
+	return { "ok": true, "pos": ground_pos, "water": false, "base": base }
 
 
 func _update_ring(s: Resource, tag: String) -> void:
@@ -308,27 +357,43 @@ func _update_ring(s: Resource, tag: String) -> void:
 
 
 # ---------------------------------------------------------------- staff: pillar
-func _raise_pillar(s: Resource, at: Vector3) -> void:
+func _raise_pillar(s: Resource, at: Vector3, base: String) -> void:
 	_cd = s.cooldown
 	_seq += 1
 	var nm := "Pillar_%d_%d" % [multiplayer.get_unique_id(), _seq]
 	_track("pillar", nm, s.max_pillars)
 	if _eq._model:
 		_eq._model.play_action(&"Spellcast_Shoot", 0.5)
-	rpc_pillar.rpc(nm, at)
+	# On a ledge the footprint hangs over the drop: run the column down to the lowest ground
+	# under its corners instead, so it reads as a pillar rising out of the cliff face.
+	var half: float = s.pillar_size * 0.5
+	var low := at.y
+	var space := _player.get_world_3d().direct_space_state
+	for off in [Vector2(-half, -half), Vector2(half, -half), Vector2(-half, half), Vector2(half, half), Vector2.ZERO]:
+		var o: Vector2 = off
+		var from := Vector3(at.x + o.x, at.y + 1.5, at.z + o.y)
+		var q := PhysicsRayQueryParameters3D.create(from, from + Vector3.DOWN * 14.0, 1)
+		q.exclude = [_player.get_rid()]
+		var hit := space.intersect_ray(q)
+		low = minf(low, (hit.position as Vector3).y if not hit.is_empty() else at.y - 12.0)
+	low = maxf(low, at.y - 12.0)
+	var top: float = at.y + s.pillar_height
+	rpc_pillar.rpc(nm, Vector3(at.x, top, at.z), top - low, s.pillar_height, base)
 
 
 @rpc("any_peer", "call_local", "reliable")
-func rpc_pillar(nm: String, at: Vector3) -> void:
+func rpc_pillar(nm: String, top: Vector3, total: float, rise: float, base: String) -> void:
 	var s := stats()
 	var p := PillarScript.new()
 	p.name = nm
+	p.height = total
+	p.rise = rise
+	p.rests_on = base
 	if s:
-		p.height = s.pillar_height
 		p.size = s.pillar_size
 		p.rise_time = s.pillar_rise_time
 		p.life = s.pillar_life
-	p.position = at + Vector3.UP * p.height       # set before _ready: it remembers where to rise to
+	p.position = top                              # set before _ready: it remembers where to rise to
 	_world_root().add_child(p)
 
 

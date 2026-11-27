@@ -4,7 +4,9 @@ extends AnimatableBody3D
 
 const FX := preload("res://systems/components/element_fx.gd")
 
-var height := 4.0
+var height := 4.0                          ## full column height (reaches down to the lowest ground under it)
+var rise := 4.0                            ## how far it slides up out of the ground
+var rests_on := ""                         ## name of the pillar this one was raised on top of
 var size := 1.8
 var rise_time := 0.45
 var life := 14.0
@@ -42,7 +44,7 @@ func _ready() -> void:
 	cs.position.y = -height * 0.5
 	add_child(cs)
 	_base = global_position
-	global_position = _base - Vector3.UP * height          # starts buried, top flush with the ground
+	global_position = _base - Vector3.UP * rise            # starts buried, top flush with the ground
 	var tw := create_tween()
 	tw.tween_property(self, "global_position", _base, rise_time).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	FX.burst(_base, get_tree().current_scene, Color(0.9, 0.78, 0.5), 18, 0.12, 4.0)
@@ -54,6 +56,10 @@ func crumble() -> void:
 	if _crumbling or not is_inside_tree():
 		return
 	_crumbling = true
+	# anything stacked on me comes down with me (no floating pillars)
+	for p in get_tree().get_nodes_in_group("sand_pillars"):
+		if p != self and p.rests_on == name:
+			p.crumble()
 	FX.burst(global_position + Vector3.DOWN * height * 0.5, get_tree().current_scene, Color(0.86, 0.72, 0.48), 26, 0.14, 3.0)
 	FX.smoke_puff(global_position, get_tree().current_scene, 1.4)
 	var tw := create_tween()

@@ -95,8 +95,7 @@ func take_damage(amount: float, dir: Vector3, kind: String, source: String) -> v
 		hitstun = hitstun_time
 		var push := Vector3(dir.x, 0.0, dir.z)
 		if push.length() > 0.05 and not _player.motor.in_water():
-			_player.motor.reset(_player.motor.facing)
-			_player.velocity = push.normalized() * knockback + Vector3.UP * 2.5
+			_player.motor.knock(_player, push.normalized() * knockback + Vector3.UP * 2.5)
 		if _player.model_root.get_child_count() > 0 and _player.model_root.get_child(0).has_method("play_action"):
 			_player.model_root.get_child(0).play_action(&"Hit_A", 0.3)
 	Audio.play("target.hit", 0.0, 0.8)

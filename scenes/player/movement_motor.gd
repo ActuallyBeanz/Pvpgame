@@ -61,6 +61,7 @@ var breath := 8.0       ## seconds of air left (refills out of the water)
 var water_depth := 0.0  ## how deep the water is over your feet this tick (0 = dry)
 var _drown_t := 0.0
 var _swim_block := 0.0        ## after hopping out of the water
+var _knock_t := 0.0           ## knocked back: keep facing the same way for a moment
 
 var _timer := 0.0
 var _coyote := 0.0
@@ -129,6 +130,23 @@ func reset(yaw: float) -> void:
 
 func is_busy() -> bool:
 	return state == State.CLIMB or state == State.HANG
+
+
+## Knockback / shove (hits, bombs, gusts): launches you along `v` without turning you around.
+## Setting body.velocity directly doesn't work - the motor rebuilds it from heading + speed.
+func knock(body: CharacterBody3D, v: Vector3) -> void:
+	if state == State.CLIMB or state == State.HANG:
+		return
+	hop = Hop.NONE
+	var flat := Vector3(v.x, 0.0, v.z)
+	if flat.length() > 0.05:
+		heading = yaw_of(flat)
+		speed = flat.length()
+	body.velocity = Vector3(flat.x, maxf(v.y, 1.5), flat.z)
+	if state != State.SWIM and state != State.DIVE:
+		_set_state(State.AIR)
+	_air_cap = maxf(speed, profile.air_drift_max_speed)
+	_knock_t = 0.45
 
 
 func in_water() -> bool:
@@ -248,6 +266,9 @@ func step(body: CharacterBody3D, wish: Vector3, delta: float, intent: Intent) ->
 
 func _update_facing(intent: Intent, delta: float) -> void:
 	var p := profile
+	if _knock_t > 0.0:
+		_knock_t -= delta
+		return
 	if state == State.BONK or state == State.CLIMB or state == State.HANG or state == State.ROLL:
 		return
 	if intent.focus:
