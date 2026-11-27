@@ -176,10 +176,10 @@ func _open_menu() -> void:
 				_menu.add_item("Equip", Act.EQUIP)
 		else:
 			_menu.add_item("Move to hotbar", Act.TO_HOTBAR)
-	if stack and it.kind != "weapon" and n > 1:
+	if stack and n > 1:
 		_menu.add_item("Split...", Act.SPLIT_CHOOSE)
 		_menu.add_item("Split in half (%d)" % (n / 2), Act.SPLIT_HALF)
-	if stack and it.kind != "weapon" and n > 1:
+	if stack and n > 1:
 		_menu.add_item("Drop 1", Act.DROP_ONE)
 	_menu.add_item("Drop all (%d)" % n if stack and n > 1 else "Drop", Act.DROP_ALL)
 	_menu.reset_size()

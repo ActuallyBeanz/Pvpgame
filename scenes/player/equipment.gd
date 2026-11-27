@@ -199,6 +199,17 @@ func count_in_slot(slot: int) -> int:
 
 func _sync_totals() -> void:
 	ammo.clear()
+	# a stack that hits 0 is gone (bombs included)
+	var removed := false
+	for i in inventory.size():
+		if inventory[i] != "" and is_stackable(inventory[i]) and slot_counts[i] <= 0:
+			inventory[i] = ""
+			slot_counts[i] = 0
+			removed = true
+	if removed:
+		_rebuild_weapons()
+		if sync_weapon_id != "" and not inventory.has(sync_weapon_id) and not _weapon_busy():
+			_unequip()
 	for i in inventory.size():
 		var id := inventory[i]
 		if id != "" and is_stackable(id):
@@ -206,7 +217,8 @@ func _sync_totals() -> void:
 
 
 ## Use up `n` of a stackable item (arrows, bombs...), from the last stacks first. A weapon
-## that is its own ammo (bombs) keeps its slot at 0; other emptied stacks free their slot.
+## Emptied stacks free their slot (a used-up bomb stack disappears; if it was in your hand
+## you put your hands down once the last one has been thrown).
 func consume(item_id: String, n: int) -> void:
 	var i := inventory.size() - 1
 	while i >= 0 and n > 0:
@@ -214,7 +226,7 @@ func consume(item_id: String, n: int) -> void:
 			var take := mini(n, slot_counts[i])
 			slot_counts[i] -= take
 			n -= take
-			if slot_counts[i] <= 0 and not (ItemDB.get_item(item_id) and ItemDB.get_item(item_id).kind == "weapon"):
+			if slot_counts[i] <= 0:
 				inventory[i] = ""
 				slot_counts[i] = 0
 		i -= 1
@@ -277,7 +289,7 @@ func move_item(from: int, to: int) -> bool:
 	var b := inventory[to]
 	if a == "":
 		return false
-	if a == b and is_stackable(a) and not (ItemDB.get_item(a).kind == "weapon"):
+	if a == b and is_stackable(a):
 		# same item: merge the stacks (whatever doesn't fit stays behind)
 		var add := mini(slot_counts[from], stack_max(a) - slot_counts[to])
 		if add <= 0:
@@ -309,7 +321,7 @@ func move_item(from: int, to: int) -> bool:
 ## Split `n` off a stack into the first empty slot (bag first). Owner only.
 func split_stack(slot: int, n: int) -> bool:
 	var id := inventory[slot] if slot >= 0 and slot < inventory.size() else ""
-	if id == "" or not is_stackable(id) or (ItemDB.get_item(id).kind == "weapon") or n <= 0 or n >= slot_counts[slot]:
+	if id == "" or not is_stackable(id) or n <= 0 or n >= slot_counts[slot]:
 		return false
 	var free := _free_slot(true)
 	if free < 0:
@@ -336,10 +348,8 @@ func drop_item(slot: int, n: int = 0, scatter := false) -> bool:
 	if is_stackable(id):
 		var have := slot_counts[slot]
 		amount = have if n <= 0 else mini(n, have)
-		if it.kind == "weapon":
-			amount = have                         # bombs: the bag and what's in it go together
 		slot_counts[slot] -= amount
-		if slot_counts[slot] <= 0 or it.kind == "weapon":
+		if slot_counts[slot] <= 0:
 			inventory[slot] = ""
 			slot_counts[slot] = 0
 	else:
@@ -380,6 +390,13 @@ func rpc_drop(node_name: String, id: String, amount: int, at: Vector3) -> void:
 	pu.amount = amount
 	root.add_child(pu)
 	pu.global_position = at
+
+
+## Bomb thrown / set down: if that was the last one, put your hands down.
+func after_bomb_released() -> void:
+	if sync_weapon_id != "" and not inventory.has(sync_weapon_id):
+		_unequip()
+		changed.emit()
 
 
 func _weapon_busy() -> bool:

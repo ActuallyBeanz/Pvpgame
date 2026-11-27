@@ -57,8 +57,8 @@ func update(delta: float) -> void:
 	_update_arc()
 	if pressed and can_use and _eq.ammo_count() > 0:
 		var w: Resource = _eq.weapon()
+		holding = true                              # first: so using up the last one doesn't unequip mid-pull
 		_eq.consume(w.ammo_item_id, 1)
-		holding = true
 		fuse_left = s.fuse_time
 		_sparks = BombScript.fuse_sparks()
 		var vis: Node3D = _eq._weapon_vis
@@ -203,6 +203,7 @@ func _stop_holding() -> void:
 	if is_instance_valid(_sparks):
 		_sparks.queue_free()
 	_sparks = null
+	_eq.after_bomb_released()
 
 
 func _spawn(origin: Vector3, vel: Vector3, fuse: float) -> void:
