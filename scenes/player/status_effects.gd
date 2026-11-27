@@ -178,7 +178,7 @@ func tick(delta: float) -> void:
 			clear()
 		return
 	# water makes you Wet (and keeps you Wet while you're in it)
-	if _player.motor.in_water():
+	if _player.motor.in_water() or float(_player.motor.water_depth) > 0.25:   # swimming or wading
 		apply("wet", RULES.wet_from_water)
 	var expired := []
 	for id: String in active:
