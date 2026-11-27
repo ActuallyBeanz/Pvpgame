@@ -1,5 +1,6 @@
 extends CanvasLayer
-## Autoload "BugReporter": press F8 anywhere in the game to note a problem spot.
+## Autoload "BugReporter": press ` (backtick, under Esc) or F9 anywhere in the game to note a
+## problem spot. (Not F8: when you run from the editor, F8 stops the game.)
 ## Type what's wrong (or leave it empty) and press Enter - it saves, into _reports/ in the
 ## project folder (git-ignored):
 ##   report_<time>.png  what you see (taken without the note box)
@@ -7,7 +8,7 @@ extends CanvasLayer
 ##                      object within `scan_radius` m (path, type, position, size, collision)
 ## Esc cancels. tools/map/view_report.tscn re-renders a report's spot from several angles.
 
-const KEY := KEY_F8
+const KEYS := [KEY_QUOTELEFT, KEY_F9]
 @export var scan_radius := 12.0
 @export var max_nodes := 120
 
@@ -30,7 +31,7 @@ func _ready() -> void:
 	var v := VBoxContainer.new()
 	_box.add_child(v)
 	var t := Label.new()
-	t.text = "Bug report (F8) - what's wrong here?  Enter = save, Esc = cancel"
+	t.text = "Bug report - what's wrong here?  Enter = save, Esc = cancel"
 	v.add_child(t)
 	_edit = LineEdit.new()
 	_edit.placeholder_text = "e.g. wall floats, rock clips through bridge, can't walk up here..."
@@ -53,7 +54,7 @@ func _input(event: InputEvent) -> void:
 	var k := event as InputEventKey
 	if k == null or not k.pressed or k.echo:
 		return
-	if k.physical_keycode == KEY and not _open:
+	if (k.physical_keycode in KEYS or k.keycode in KEYS) and not _open:
 		_open_box()
 		get_viewport().set_input_as_handled()
 	elif _open and k.physical_keycode == KEY_ESCAPE:
@@ -70,6 +71,8 @@ func _open_box() -> void:
 	_edit.text = ""
 	_box.visible = true
 	_edit.grab_focus()
+	await get_tree().process_frame
+	_edit.text = ""                              # the ` key itself must not land in the note
 
 
 func _close_box() -> void:
