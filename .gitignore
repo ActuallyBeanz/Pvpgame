@@ -31,3 +31,9 @@ export_credentials.cfg
 # Personal notes
 LLM Prompt.txt
 __pycache__/
+
+# Terrain3D: keep only the desktop builds in the repo
+addons/terrain_3d/bin/*android*
+addons/terrain_3d/bin/*ios*
+addons/terrain_3d/bin/*macos*
+addons/terrain_3d/bin/*arm64*
