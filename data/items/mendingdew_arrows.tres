@@ -1,0 +1,21 @@
+[gd_resource type="Resource" format=3]
+
+[ext_resource type="Script" path="res://data/items/item_def.gd" id="1_def"]
+
+[resource]
+script = ExtResource("1_def")
+id = "mendingdew_arrows"
+display_name = "Mendingdew Arrows"
+kind = "ammo"
+model_id = "weapon.arrow.mendingdew"
+pickup_scale = 1.6
+amount = 5
+action_tag = "ammo"
+icon_model_id = "weapon.arrow.mendingdew"
+icon_rotation_deg = Vector3(0, -90, 0)
+icon_roll_deg = 45.0
+ammo_family = "arrows"
+element = "mendingdew"
+category = "ammo"
+max_carry = 20
+damage_mult = 0.3

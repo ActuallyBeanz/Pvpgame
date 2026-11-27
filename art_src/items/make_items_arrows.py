@@ -156,9 +156,35 @@ def arrow_light():
     return [b.build("Body", {"wood": 0.08})]
 
 
+BREWS = {
+    "emberfog": (255, 115, 60), "muddlehaze": (180, 128, 240), "rimemist": (150, 228, 255),
+    "stormdrop": (190, 215, 255), "chainspark": (255, 240, 120), "steamburst": (235, 235, 242),
+    "sunburst": (255, 242, 180), "mendingdew": (115, 255, 150),
+}
+
+
+def brew_arrow(name, col):
+    """A little brew flask lashed behind a brass tip, fletching dyed to match."""
+    def make():
+        K.glow_mat("liq_" + name, col, 2.0)
+        fm = "fl_" + name
+        M(fm, [col, tuple(int(c * 0.8) for c in col), tuple(min(255, int(c * 1.1)) for c in col),
+               tuple(int(c * 0.5) for c in col)], seed=sum(map(ord, name)), stripes=lambda x, y, r: y % 4 == 0)
+        b = Builder()
+        shaft(b); fletch(b, fm)
+        b.lathe("brass", [(-0.05, 0.022), (-0.03, 0.022), (0.0, 0.0)], 6)
+        b.lathe("liq_" + name, [(-0.17, 0.012), (-0.15, 0.04), (-0.1, 0.042), (-0.06, 0.022)], 8)
+        b.lathe("ice", [(-0.06, 0.02), (-0.045, 0.02)], 6)
+        b.lathe("rope", [(-0.19, 0.015), (-0.165, 0.015)], 5)
+        return [b.build("Body", {"wood": 0.08})]
+    return make
+
+
 ITEMS = {"arrow_water": arrow_water, "arrow_smoke": arrow_smoke, "arrow_flash": arrow_flash,
          "arrow_muddle": arrow_muddle, "arrow_light": arrow_light,
          "arrow_fire": arrow_fire, "arrow_frost": arrow_frost, "arrow_shock": arrow_shock, "arrow_bomb": arrow_bomb}
+for _n, _c in BREWS.items():
+    ITEMS["arrow_" + _n] = brew_arrow(_n, _c)
 TURN = Matrix.Rotation(D(-90), 4, 'X')            # +Z (built) -> +Y (Blender) = Godot -Z
 groups = []
 for name, fn in ITEMS.items():
@@ -168,4 +194,4 @@ for name, fn in ITEMS.items():
     K.export(obs, os.path.join(OUT, name + ".glb"))
     groups.append(obs)
 print("DONE arrows")
-K.preview(groups, os.path.join(TEX, "preview_arrows.png"), cols=5)
+K.preview(groups, os.path.join(TEX, "preview_arrows.png"), cols=6)

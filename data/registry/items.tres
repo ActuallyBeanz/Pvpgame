@@ -55,10 +55,26 @@
 [ext_resource type="Resource" path="res://data/items/vial_steamburst.tres" id="v_steamburst"]
 [ext_resource type="Resource" path="res://data/items/vial_sunburst.tres" id="v_sunburst"]
 [ext_resource type="Resource" path="res://data/items/vial_mendingdew.tres" id="v_mendingdew"]
+[ext_resource type="Resource" path="res://data/items/emberfog_arrows.tres" id="ba_emberfog"]
+[ext_resource type="Resource" path="res://data/items/muddlehaze_arrows.tres" id="ba_muddlehaze"]
+[ext_resource type="Resource" path="res://data/items/rimemist_arrows.tres" id="ba_rimemist"]
+[ext_resource type="Resource" path="res://data/items/stormdrop_arrows.tres" id="ba_stormdrop"]
+[ext_resource type="Resource" path="res://data/items/chainspark_arrows.tres" id="ba_chainspark"]
+[ext_resource type="Resource" path="res://data/items/steamburst_arrows.tres" id="ba_steamburst"]
+[ext_resource type="Resource" path="res://data/items/sunburst_arrows.tres" id="ba_sunburst"]
+[ext_resource type="Resource" path="res://data/items/mendingdew_arrows.tres" id="ba_mendingdew"]
 
 [resource]
 script = ExtResource("3_f3wow")
 items = Dictionary[String, Resource]({
+"emberfog_arrows": ExtResource("ba_emberfog"),
+"muddlehaze_arrows": ExtResource("ba_muddlehaze"),
+"rimemist_arrows": ExtResource("ba_rimemist"),
+"stormdrop_arrows": ExtResource("ba_stormdrop"),
+"chainspark_arrows": ExtResource("ba_chainspark"),
+"steamburst_arrows": ExtResource("ba_steamburst"),
+"sunburst_arrows": ExtResource("ba_sunburst"),
+"mendingdew_arrows": ExtResource("ba_mendingdew"),
 "vial_emberfog": ExtResource("v_emberfog"),
 "vial_muddlehaze": ExtResource("v_muddlehaze"),
 "vial_rimemist": ExtResource("v_rimemist"),
