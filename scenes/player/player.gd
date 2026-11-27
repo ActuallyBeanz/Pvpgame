@@ -106,7 +106,7 @@ func _simulate(delta: float) -> void:
 		velocity = Vector3.ZERO
 		sync_position = global_position
 		return
-	var can_act := GameConfig.gameplay_input_enabled and health.hitstun <= 0.0
+	var can_act: bool = GameConfig.gameplay_input_enabled and health.hitstun <= 0.0
 	# Raw stick (no action deadzone): the motor applies OoT's own stick curve.
 	var stick := Input.get_vector("move_left", "move_right", "move_forward", "move_back", 0.05) \
 		if can_act else Vector2.ZERO
