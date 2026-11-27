@@ -81,10 +81,13 @@ func _release(speed: float, up: float) -> void:
 	if target and is_instance_valid(target) and speed > 2.0:
 		var to: Vector3 = target.get_lock_point() - _hand()
 		fwd = Vector3(to.x, 0, to.z).normalized()
-	elif _player.camera_rig and speed > 2.0:
-		fwd = -_player.camera_rig.yaw_basis().z
+	var aim := fwd
+	if _player.camera_rig and speed > 2.0 and not (target and is_instance_valid(target)):
+		aim = -_player.camera_rig.camera.global_basis.z     # camera pitch sets the lob angle
+		fwd = Vector3(aim.x, 0, aim.z).normalized()
 	var carry := Vector3(_player.velocity.x, 0, _player.velocity.z) * 0.5
-	_spawn(_hand() + fwd * 0.35, fwd * speed + Vector3.UP * up + carry, fuse_left)
+	var launch: Vector3 = aim * speed + Vector3.UP * up * clampf(0.6 - aim.y, 0.15, 1.0) + carry
+	_spawn(_hand() + fwd * 0.35, launch, fuse_left)
 	if speed > 2.0 and _eq._model:
 		_eq._model.play_action(&"Throw", 0.4)
 		Audio.play_at("boomerang.throw", _hand(), 0.0, 0.8)

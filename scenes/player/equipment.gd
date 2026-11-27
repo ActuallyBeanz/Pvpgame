@@ -254,7 +254,7 @@ func _weapon_busy() -> bool:
 @export var punch_reach := 1.1
 @export var punch_damage := 3.0
 @export var punches_per_wood := 2          ## punch a tree this many times for 1 Wood
-@export var wood_per_tree := 6
+@export var punch_damage_tree := 1.0        ## trees break eventually (they have ~40 hp)
 var _punch_cd := 0.0
 
 
@@ -280,7 +280,7 @@ func _update_punch(delta: float) -> void:
 		if col == null or not (col is Node3D):
 			continue
 		var node := col as Node3D
-		if node.is_in_group("hook_targets") and str(node.get_meta("material", "")) == "wood":
+		if is_tree(node):
 			_punch_tree(node, centre)
 			return
 		if col.has_method("react_to_hit_info") or col.has_method("react_to_hit") or WorldRules.reactive_of(col) != null:
@@ -290,22 +290,29 @@ func _update_punch(delta: float) -> void:
 	Audio.play_at("sword.swing", centre, -8.0, 1.6)
 
 
-## Trees: every few punches shake loose a piece of Wood (limited per tree). Per-tree counts
-## live on the tree node; wood goes straight into your bag.
-func _punch_tree(tree: Node3D, at: Vector3) -> void:
-	var left: int = int(tree.get_meta("wood_left", wood_per_tree))
-	var hits: int = int(tree.get_meta("punches", 0)) + 1
-	tree.set_meta("punches", hits)
-	Audio.play_at("wood.hit", at, 0.0, randf_range(0.9, 1.1))
-	FX.burst(at, get_tree().current_scene, Color(0.4, 0.62, 0.25), 6, 0.05, 2.5)
-	if tree.has_method("react_to_hit"):
-		tree.react_to_hit(1.0, -_player.model_root.global_basis.z, false)
-	if left <= 0:
+## Is this a tree? (grapple-able wooden body: the island trees and the oak scene)
+static func is_tree(n: Object) -> bool:
+	return n is Node3D and (n as Node3D).is_in_group("hook_targets") and str((n as Node3D).get_meta("material", "")) == "wood"
+
+
+## Hitting a tree knocks loose Wood: every `hits_per_wood` hits gives 1 (punches: 2, any weapon: 1).
+## Counts live on the tree; the tree itself takes the hit's damage and breaks when it runs out.
+func harvest_tree(n: Object, at: Vector3, hits_per_wood: int) -> void:
+	if not is_local() or not is_tree(n):
 		return
-	if hits % punches_per_wood == 0:
-		tree.set_meta("wood_left", left - 1)
+	var tree := n as Node3D
+	var hits: int = int(tree.get_meta("wood_hits", 0)) + 1
+	tree.set_meta("wood_hits", hits)
+	FX.burst(at, get_tree().current_scene, Color(0.4, 0.62, 0.25), 6, 0.05, 2.5)
+	if hits % maxi(1, hits_per_wood) == 0:
 		receive_item("wood", 1)
-		Audio.play("item.get", -4.0, 1.2)
+		Audio.play("item.get", -6.0, 1.25)
+
+
+func _punch_tree(tree: Node3D, at: Vector3) -> void:
+	Audio.play_at("wood.hit", at, 0.0, randf_range(0.9, 1.1))
+	WorldRules.deliver_hit(tree, WorldRules.make_hit(punch_damage_tree, "blunt", "", -_player.model_root.global_basis.z), false)
+	harvest_tree(tree, at, punches_per_wood)
 
 
 @rpc("authority", "call_remote", "unreliable")
@@ -374,7 +381,8 @@ func _process(delta: float) -> void:
 			_model.set_aiming(true, sh.stats.block_anim, &"")
 		else:
 			# grapple: the arm stays pointed out while the chain is out
-			_model.set_aiming((sync_aiming or on_chain) and sync_drawn, w.aim_anim if w else &"", w.shoot_anim if w else &"")
+			# two-handed weapons (greatsword, hammer) are carried in both hands (their aim_anim pose)
+			_model.set_aiming((sync_aiming or on_chain or two_handed_drawn()) and sync_drawn, w.aim_anim if w else &"", w.shoot_anim if w else &"")
 	hook.update_visuals()
 
 

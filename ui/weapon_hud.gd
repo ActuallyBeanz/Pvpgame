@@ -26,6 +26,7 @@ const InventoryPanel := preload("res://ui/inventory_panel.gd")
 var _hotbar: Control
 var inventory: Control                     ## Tab bag panel (ui/inventory_panel.gd)
 var _breath: ProgressBar                   ## air left while your head is underwater
+var _dot: Control                          ## centre dot crosshair (always on while playing)
 
 
 func _ready() -> void:
@@ -46,6 +47,14 @@ func _ready() -> void:
 	inventory.grow_vertical = Control.GROW_DIRECTION_BEGIN
 	inventory.offset_bottom = -96             # sits right above the hotbar
 	_hotbar.slot_hovered.connect(inventory.set_hovered)
+	_dot = Control.new()
+	_dot.name = "CenterDot"
+	_dot.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_dot.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
+	_dot.draw.connect(func() -> void:
+		_dot.draw_circle(Vector2.ZERO, 3.5, Color(0, 0, 0, 0.55))
+		_dot.draw_circle(Vector2.ZERO, 2.2, Color(1, 1, 1, 0.95)))
+	add_child(_dot)
 	_breath = ProgressBar.new()
 	_breath.name = "BreathBar"
 	_breath.show_percentage = false
@@ -84,6 +93,7 @@ func _process(delta: float) -> void:
 			return
 	visible = true
 	_update_bars(delta)
+	_dot.visible = not GameConfig.inventory_open and GameConfig.gameplay_input_enabled
 	var motor: Variant = _player.get("motor") if _player else null
 	if motor and motor.profile:
 		var full: float = motor.profile.breath_max

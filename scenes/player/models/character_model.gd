@@ -57,6 +57,7 @@ extends Node3D
 @export var dodge_duration := 0.8         ## matches the motor's roll_duration
 @export var focus_blend_speed := 10.0
 @export var upper_blend_speed := 12.0
+@export var sword_arm_bones: PackedStringArray = ["upperarm.r", "lowerarm.r", "wrist.r", "hand.r", "handslot.r", "elbowIK.r", "handIK.r"]
 @export var upper_body_bones: PackedStringArray = [
 	"spine", "chest", "head",
 	"upperarm.l", "lowerarm.l", "wrist.l", "hand.l", "handslot.l",
@@ -72,6 +73,7 @@ var _aim_node: AnimationNodeAnimation
 var _shoot_node: AnimationNodeAnimation
 var _action_node: AnimationNodeAnimation
 var _full_node: AnimationNodeAnimation
+var _arm_node: AnimationNodeAnimation
 var _aiming := false
 var _upper := 0.0
 var _action_left := 0.0
@@ -160,6 +162,16 @@ func play_action(anim_name: StringName, duration: float = 0.0) -> void:
 	tree.set("parameters/action_speed/scale", length / duration if duration > 0.0 else 1.0)
 	tree.set("parameters/action/request", AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
 	_action_left = duration * 0.95 if duration > 0.0 else length * 0.8
+
+
+## Sword-arm-only one-shot (shield poke): the other arm keeps its pose (shield stays up).
+func play_arm_action(anim_name: StringName, duration: float = 0.0) -> void:
+	if tree == null or not anim.has_animation(anim_name):
+		return
+	_arm_node.animation = anim_name
+	var length := anim.get_animation(anim_name).length
+	tree.set("parameters/arm_speed/scale", length / duration if duration > 0.0 else 1.0)
+	tree.set("parameters/arm/request", AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
 
 
 ## Full-body one-shot (dodge roll, bonk), scaled to last `duration` seconds.
@@ -386,7 +398,20 @@ func _build_tree() -> void:
 	bt.connect_node("full_speed", 0, "full_anim")
 	bt.connect_node("full", 0, "upper")
 	bt.connect_node("full", 1, "full_speed")
-	bt.connect_node("output", 0, "full")
+	_arm_node = _clip(&"1H_Melee_Attack_Stab")
+	bt.add_node("arm_anim", _arm_node)
+	bt.add_node("arm_speed", AnimationNodeTimeScale.new())
+	var arm := AnimationNodeOneShot.new()
+	arm.fadein_time = 0.04
+	arm.fadeout_time = 0.1
+	arm.filter_enabled = true
+	for b in sword_arm_bones:
+		arm.set_filter_path(NodePath("%s:%s" % [skel_path, b]), true)
+	bt.add_node("arm", arm)
+	bt.connect_node("arm_speed", 0, "arm_anim")
+	bt.connect_node("arm", 0, "full")
+	bt.connect_node("arm", 1, "arm_speed")
+	bt.connect_node("output", 0, "arm")
 
 	tree = AnimationTree.new()
 	tree.name = "AnimationTree"

@@ -22,6 +22,18 @@ func _ready() -> void:
 	address_edit.text = GameConfig.settings.default_address
 	address_edit.placeholder_text = "host IP  (or IP:port)"
 	host_button.pressed.connect(_on_host_pressed)
+	var settings := preload("res://ui/settings_panel.gd").new()
+	settings.hide()
+	var center := CenterContainer.new()
+	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(center)
+	center.add_child(settings)
+	var sbtn := Button.new()
+	sbtn.text = "Settings"
+	sbtn.custom_minimum_size = Vector2(0, 36)
+	host_button.get_parent().add_child(sbtn)
+	sbtn.pressed.connect(func() -> void: settings.visible = not settings.visible)
 	%HostTestButton.pressed.connect(_on_host_test_pressed)
 	join_button.pressed.connect(_on_join_pressed)
 	address_edit.text_submitted.connect(func(_t: String) -> void: _on_join_pressed())

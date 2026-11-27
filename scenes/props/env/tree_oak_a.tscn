@@ -19,6 +19,6 @@ shape = SubResource("CylinderShape3D_x4p4m")
 [node name="Reactive" type="Node3D" parent="."]
 script = ExtResource("2_reactive")
 material_id = "wood"
-max_hp_override = 120.0
+max_hp_override = 40.0
 fire_height = 1.8
 fire_size = 1.8

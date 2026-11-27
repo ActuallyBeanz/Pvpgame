@@ -129,8 +129,10 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif event is InputEventMouseMotion:
 		var m := event as InputEventMouseMotion
 		_note_look(absf(m.relative.x) + absf(m.relative.y))
-		_yaw -= m.relative.x * mouse_sensitivity
-		_pitch -= m.relative.y * mouse_sensitivity * (-1.0 if invert_y else 1.0)
+		var sens := mouse_sensitivity * UserSettings.mouse_mult
+		var inv := invert_y != UserSettings.invert_y
+		_yaw -= m.relative.x * sens
+		_pitch -= m.relative.y * sens * (-1.0 if inv else 1.0)
 	elif event is InputEventMouseButton and event.pressed and not first_person:
 		var b := event as InputEventMouseButton
 		if b.button_index == MOUSE_BUTTON_WHEEL_UP:
@@ -148,7 +150,7 @@ func _process(delta: float) -> void:
 		if stick.length() > 0.3:
 			_note_look(focus_look_cancel_px)
 		_yaw -= stick.x * stick_sensitivity * delta
-		_pitch -= stick.y * stick_sensitivity * delta * (-1.0 if invert_y else 1.0)
+		_pitch -= stick.y * stick_sensitivity * delta * (-1.0 if invert_y != UserSettings.invert_y else 1.0)
 
 	_update_focus(delta)
 	var goal := 1.0 if first_person else 0.0

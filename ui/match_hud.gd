@@ -9,6 +9,7 @@ extends CanvasLayer
 
 
 const WeaponHud := preload("res://ui/weapon_hud.tscn")
+const SettingsPanel := preload("res://ui/settings_panel.gd")
 
 
 func _ready() -> void:
@@ -19,6 +20,24 @@ func _ready() -> void:
 	GameConfig.gameplay_input_enabled = true
 	resume_button.pressed.connect(_resume)
 	leave_button.pressed.connect(func() -> void: NetworkManager.leave("You left the match."))
+	var settings := SettingsPanel.new()
+	settings.name = "Settings"
+	settings.hide()
+	var center := CenterContainer.new()
+	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	pause_panel.add_child(center)
+	center.add_child(settings)
+	var vbox := resume_button.get_parent()
+	var sbtn := Button.new()
+	sbtn.text = "Settings"
+	sbtn.custom_minimum_size = resume_button.custom_minimum_size
+	vbox.add_child(sbtn)
+	vbox.move_child(sbtn, leave_button.get_index())
+	sbtn.pressed.connect(func() -> void:
+		vbox.get_parent().hide()
+		settings.show())
+	settings.closed.connect(func() -> void: vbox.get_parent().show())
 
 
 func _exit_tree() -> void:

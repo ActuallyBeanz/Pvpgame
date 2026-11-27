@@ -807,7 +807,7 @@ func _make_tree(id: String, nm: String) -> Node3D:
 	var r := ReactiveScript.new()
 	r.name = "Reactive"
 	r.material_id = "wood"
-	r.max_hp_override = 120.0
+	r.max_hp_override = 40.0                     # punches (1 dmg) fell it eventually, blades in a few hits
 	r.fire_height = h * 0.55
 	r.fire_size = clampf(h * 0.3, 1.0, 2.2)
 	body.add_child(r)

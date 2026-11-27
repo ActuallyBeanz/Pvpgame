@@ -157,7 +157,9 @@ func update(delta: float) -> void:
 
 
 func _next_attack(s: Resource) -> void:
-	if _player.focus.target != null:
+	var fwd_push: bool = Input.get_vector("move_left", "move_right", "move_forward", "move_back").y < -0.5
+	var focused: bool = _player.focus.active
+	if _player.focus.target != null or (focused and s.style == "greatsword") or (focused and fwd_push and s.style == "sword"):
 		_start(Kind.STAB, s.stab_anim, s.stab_duration, s.stab_damage, s.stab_reach, s.stab_arc_deg,
 			s.stab_action, s.hit_window, false)
 		return
@@ -211,7 +213,9 @@ func _start(kind: int, anim_name: StringName, dur: float, dmg: float, reach: flo
 func _play(kind: int, anim_name: StringName, dur: float, full_body: bool) -> void:
 	var model: Node = _eq._model
 	if model:
-		if full_body:
+		if kind == Kind.POKE and model.has_method("play_arm_action"):
+			model.play_arm_action(anim_name, dur)
+		elif full_body:
 			model.play_full(anim_name, dur)
 		else:
 			model.play_action(anim_name, dur)
@@ -299,6 +303,7 @@ func _do_hits() -> void:
 		var action := "blunt" if _kind == Kind.BASH else _action
 		var hit_info := WorldRules.make_hit(_dmg, action, "", dir)
 		WorldRules.deliver_hit(col, hit_info, false)
+		_eq.harvest_tree(col, (col as Node3D).global_position + Vector3.UP, 1)   # chopping a tree drops wood
 		Audio.play_at("sword.hit", (col as Node3D).global_position + Vector3.UP, -2.0, randf_range(0.9, 1.1))
 		print("[sword] hit %s for %.0f" % [(col as Node).name, hit_info.damage])
 
@@ -321,6 +326,7 @@ func _shockwave(s: Resource) -> void:
 		var dir: Vector3 = ((col as Node3D).global_position - at)
 		dir.y = 0.0
 		WorldRules.deliver_hit(col, WorldRules.make_hit(s.shockwave_damage, "blunt", "", dir.normalized() if dir.length() > 0.05 else _forward()), false)
+		_eq.harvest_tree(col, (col as Node3D).global_position + Vector3.UP, 1)
 	_shock_fx(at)
 	rpc_shock.rpc(at)
 
