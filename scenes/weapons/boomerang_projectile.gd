@@ -205,7 +205,7 @@ func _strike_collider(col: Object, point: Vector3) -> void:
 		Audio.play_at("arrow.hit", point, -3.0, 1.3)
 	if not cosmetic:
 		hit.emit(col, point, hit_info.damage)
-		print("[boomerang] hit %s (%s dmg %.0f)" % [(col as Node).name if col is Node else "?",
+		print("[boomerang] hit %s (%s dmg %.0f)" % [str((col as Node).name) if col is Node else "?",
 			element if element != "" else "plain", hit_info.damage])
 
 

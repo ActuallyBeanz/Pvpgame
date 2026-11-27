@@ -40,7 +40,7 @@ func update(delta: float) -> void:
 		_update_arc()
 		return
 	var pressed := Input.is_action_just_pressed("attack")
-	var ready: bool = _eq.sync_drawn and _eq._swap_timer < 0.0 and not _player.motor.action_locked()
+	var can_use: bool = _eq.sync_drawn and _eq._swap_timer < 0.0 and not _player.motor.action_locked()
 	if holding:
 		fuse_left -= delta
 		_eq.sync_aiming = true                          # hold pose
@@ -55,7 +55,7 @@ func update(delta: float) -> void:
 		return
 	_eq.sync_aiming = false
 	_update_arc()
-	if pressed and ready and _eq.ammo_count() > 0:
+	if pressed and can_use and _eq.ammo_count() > 0:
 		var w: Resource = _eq.weapon()
 		_eq.consume(w.ammo_item_id, 1)
 		holding = true

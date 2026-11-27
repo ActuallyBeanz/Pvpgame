@@ -65,7 +65,7 @@ static func apply() -> void:
 		InputMap.add_action(action, 0.2)
 		for key: int in KEYS.get(action, []):
 			var ev := InputEventKey.new()
-			ev.physical_keycode = key  # layout-independent (WASD stays WASD on AZERTY)
+			ev.physical_keycode = key as Key  # layout-independent (WASD stays WASD on AZERTY)
 			InputMap.action_add_event(action, ev)
 		if MOUSE.has(action):
 			var mb := InputEventMouseButton.new()

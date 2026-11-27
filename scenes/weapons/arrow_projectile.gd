@@ -140,7 +140,7 @@ func _stick(res: Dictionary) -> void:
 	if not cosmetic:
 		hit.emit(col, res.position, damage)
 		print("[arrow] hit %s at %.1fm from origin, dmg %.0f" % [
-			(col as Node).name if col is Node else "?", res.position.length(), damage])
+			str((col as Node).name) if col is Node else "?", res.position.length(), damage])
 
 
 func _headshot_popup(at: Vector3) -> void:

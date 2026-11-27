@@ -83,19 +83,19 @@ func update(delta: float) -> void:
 	var holding := Input.is_action_pressed("attack")
 	var pressed := Input.is_action_just_pressed("attack")
 	var rolling: bool = _player.motor.action_locked()   # roll / backflip / sidehop: no firing
-	var ready: bool = _eq.sync_drawn and phase == Phase.IDLE and _cooldown <= 0.0 \
+	var can_use: bool = _eq.sync_drawn and phase == Phase.IDLE and _cooldown <= 0.0 \
 		and _eq._swap_timer < 0.0 and not rolling
 	var lock: Node3D = _player.focus.target if _player.focus.active and s.homes_on_lock else null
-	if ready and pressed and lock and is_instance_valid(lock):
+	if can_use and pressed and lock and is_instance_valid(lock):
 		stop_aim()
 		_fire(lock.get_lock_point(), s)
-	elif ready and holding:
+	elif can_use and holding:
 		aiming = true
 	elif aiming and not holding:
 		stop_aim()
-		if ready:
+		if can_use:
 			_fire(_aim_query(s).point, s)
-	elif not ready:
+	elif not can_use:
 		stop_aim()
 	_eq.sync_aiming = aiming
 	_player.camera_rig.set_aim(aiming, s)

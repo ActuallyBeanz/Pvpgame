@@ -107,10 +107,10 @@ func update(delta: float) -> void:
 		_tick_swing(delta)
 	_update_block(delta)
 	var s := sword_stats()
-	var ready: bool = s != null and _eq.sync_drawn and _eq._swap_timer < 0.0 \
+	var can_use: bool = s != null and _eq.sync_drawn and _eq._swap_timer < 0.0 \
 		and (not _eq.sync_blocking or focus_guard)
 	var rolling: bool = _player.motor.state == Motor.State.ROLL
-	if not ready or rolling:
+	if not can_use or rolling:
 		_stop_charge()
 		if s == null or not _eq.sync_drawn:
 			_queued = _queued and s != null  # keep a draw-slash queued while drawing
