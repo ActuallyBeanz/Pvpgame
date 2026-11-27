@@ -123,6 +123,8 @@ func tick(delta: float) -> void:
 	var motor = _player.motor
 	if motor.in_water() or motor.is_busy() or _player.equipment.hook.pulling():
 		_air_peak = -INF                     # water / ledges / grapple: no fall damage
+	elif _player.equipment.tools.gliding:
+		_air_peak = y                        # leaf open: the fall only counts from where you close it
 	elif not on_floor:
 		_air_peak = maxf(_air_peak, y)
 	if on_floor and not _was_on_floor and _air_peak > -INF:
