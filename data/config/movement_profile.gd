@@ -153,6 +153,7 @@ extends Resource
 @export var climb_out_height := 2.8         ## swim into a bank this low (above the water) to climb out
 @export var climb_out_up := 6.5
 @export var climb_out_push := 3.0
+@export var lava_wade_mult := 0.5          ## move speed while wading in lava (thick liquid)
 @export var climb_out_reach := 3.2          ## how far ahead (m) a swimmer looks for flat ground to pull up onto
 @export var climb_out_max_slope_deg := 42.0 ## ground steeper than this isn't a place to climb out onto
 @export var climb_out_push_time := 0.15     ## swim into the bank this long before pulling up

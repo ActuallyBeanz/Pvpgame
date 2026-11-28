@@ -25,6 +25,7 @@ signal bonked
 signal jumped(auto: bool)
 signal landed
 signal entered_water(pos: Vector3)
+const LavaZone := preload("res://systems/world/lava/lava_zone.gd")
 signal drowning               ## breath ran out (once per second): damage hooks in here later
 
 enum State { GROUND, AIR, ROLL, BONK, CLIMB, HANG, SWIM, DIVE }
@@ -60,6 +61,7 @@ var hop := Hop.NONE     ## current airborne focus hop
 var breath := 8.0       ## seconds of air left (refills out of the water)
 var water_depth := 0.0  ## how deep the water is over your feet this tick (0 = dry)
 var _drown_t := 0.0
+var _lava_push := Vector3.ZERO     ## downstream drag from a lava flow this tick
 var _swim_block := 0.0        ## after hopping out of the water
 var _knock_t := 0.0           ## knocked back: keep facing the same way for a moment
 
@@ -199,6 +201,12 @@ func step(body: CharacterBody3D, wish: Vector3, delta: float, intent: Intent) ->
 	if water_depth > p.shallow_slow_start:
 		var wade := clampf((water_depth - p.shallow_slow_start) / maxf(0.01, p.swim_enter_depth - p.shallow_slow_start), 0.0, 1.0)
 		target_speed *= lerpf(1.0, p.shallow_min_mult, wade)
+	# Lava is a thick liquid: wading drags you down to a crawl, flows push you downhill.
+	var lava := LavaZone.flow_at(body.get_world_3d(), body.global_position + Vector3.UP * 0.25)
+	_lava_push = Vector3.ZERO
+	if lava["in"]:
+		target_speed *= p.lava_wade_mult
+		_lava_push = lava["flow"]
 
 	_coyote = p.coyote_time if was_on_floor else _coyote - delta
 	_jump_buffer = p.jump_buffer_time if intent.jump_pressed else _jump_buffer - delta
@@ -254,7 +262,7 @@ func step(body: CharacterBody3D, wish: Vector3, delta: float, intent: Intent) ->
 			if has_input:
 				heading = rotate_toward(heading, target_yaw, deg_to_rad(160.0) * delta)
 
-	var horiz := dir_of(heading) * speed
+	var horiz := dir_of(heading) * speed + _lava_push
 	body.velocity.x = horiz.x
 	body.velocity.z = horiz.z
 	body.move_and_slide()

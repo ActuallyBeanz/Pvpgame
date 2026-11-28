@@ -1,8 +1,9 @@
 @tool
 extends Node3D
-## A pool of lava: an irregular glowing disc at this node's height, a hurt-zone, a big warm light,
-## bubbling embers. Move it, set the radius; it rebuilds itself. Sink the node a little into the
-## ground (or carve a hollow with the Terrain3D tools) so the edges sit inside the terrain.
+## A pool of lava: a liquid surface at this node's height, a hurt-zone, a big warm light, bubbling
+## embers. Move it, set the radius; it rebuilds itself. The surface reaches past `radius` (x1.35)
+## so its edge always hides under the shore: the TERRAIN shapes the pool (carve a hollow with the
+## Terrain3D tools, or run tools/map/fix_map_reports_2.tscn which digs one for every pool).
 
 const LavaZone := preload("res://systems/world/lava/lava_zone.gd")
 const LAVA_SHADER := preload("res://assets/shaders/lava.gdshader")
@@ -36,19 +37,26 @@ func _rebuild() -> void:
 	add_child(_built)
 	var st := SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
-	var n := maxi(16, int(radius * 3.0))
+	var n := maxi(24, int(radius * 4.0))
+	var reach := radius * 1.35
 	var rng := RandomNumberGenerator.new()
 	rng.seed = int(radius * 100.0)
 	var ring: Array[Vector3] = []
 	for k in n:
 		var a := TAU * float(k) / float(n)
-		var r := radius * (1.0 + rng.randf_range(-edge_wobble, edge_wobble))
-		ring.append(Vector3(cos(a) * r, 0.0, sin(a) * r))
+		var r := reach * (1.0 + rng.randf_range(-edge_wobble, edge_wobble) * 0.3)
+		ring.append(Vector3(cos(a), 0.0, sin(a)) * r)
+	var rings := 5                                          # rings so the surface can swell (vertex waves)
 	for k in n:
-		for v in [Vector3.ZERO, ring[(k + 1) % n], ring[k]]:
-			st.set_normal(Vector3.UP)
-			st.set_uv(Vector2(v.x, v.z))
-			st.add_vertex(v)
+		for j in rings:
+			var a0: Vector3 = ring[k] * float(j) / rings
+			var a1: Vector3 = ring[(k + 1) % n] * float(j) / rings
+			var b0: Vector3 = ring[k] * float(j + 1) / rings
+			var b1: Vector3 = ring[(k + 1) % n] * float(j + 1) / rings
+			for v in ([a0, b1, b0] if j == 0 else [a0, b1, b0, a0, a1, b1]):
+				st.set_normal(Vector3.UP)
+				st.set_uv(Vector2(v.x, v.z))
+				st.add_vertex(v)
 	var mi := MeshInstance3D.new()
 	mi.mesh = st.commit()
 	var mat := ShaderMaterial.new()

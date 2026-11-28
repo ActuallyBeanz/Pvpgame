@@ -86,6 +86,10 @@ func activate(owner_body: CollisionObject3D) -> void:
 	physics_interpolation_mode = Node.PHYSICS_INTERPOLATION_MODE_OFF
 	arm.add_excluded_object(owner_body.get_rid())
 	camera.make_current()
+	var uw := preload("res://scenes/player/underwater_fx.gd").new()
+	uw.name = "UnderwaterFX"
+	uw.camera = camera
+	add_child(uw)
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 	set_first_person(start_first_person)
 	_fp = 1.0 if first_person else 0.0

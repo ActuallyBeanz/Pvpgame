@@ -302,9 +302,28 @@ func _build_water() -> void:
 		var kind: String = lake_kinds[i] if i < lake_kinds.size() else "water"
 		Water.add_body(Vector2(l.x, l.y), l.z, l.w, kind)
 		if kind == "frozen":
-			# walkable ice sheet (melting comes with the element pass)
-			var ice := _block(self, Vector3(l.x, l.w - 0.6, l.y), Vector3(l.z * 2.0, 0.6, l.z * 2.0), "ice", 0.0, "ice")
+			# walkable round ice sheet, its top at the lake level (ground flattened just under it)
+			var ice := StaticBody3D.new()
 			ice.name = "FrozenLake_%d" % i
+			ice.set_meta("material", "ice")
+			var mi := MeshInstance3D.new()
+			var cm := CylinderMesh.new()
+			cm.top_radius = l.z
+			cm.bottom_radius = l.z - 0.4
+			cm.height = 0.6
+			cm.radial_segments = 48
+			cm.rings = 1
+			mi.mesh = cm
+			mi.material_override = _mats["ice"]
+			ice.add_child(mi)
+			var cs := CollisionShape3D.new()
+			var cy := CylinderShape3D.new()
+			cy.radius = l.z
+			cy.height = 0.6
+			cs.shape = cy
+			ice.add_child(cs)
+			add_child(ice)
+			ice.position = Vector3(l.x, l.w - 0.3, l.y)
 		else:
 			var mi := MeshInstance3D.new()
 			mi.name = "Lake_%d" % i
@@ -910,9 +929,9 @@ var tree_sets := {
 var tree_density := { "forest": 0.85, "grass": 0.12, "snow": 0.22, "ash": 0.1, "sand": 0.08, "mesa": 0.05, "beach": 0.12 }
 var rock_sets := {
 	"forest": ["rock_mossy", "rock_boulder_a", "rock_cluster", "rock_mossy"],
-	"grass": ["rock_boulder_a", "rock_boulder_b", "rock_slab", "rock_cluster", "rock_spire"],
-	"snow": ["rock_snow", "rock_snow", "rock_boulder_b", "rock_spire"],
-	"ash": ["rock_basalt", "rock_basalt", "rock_spire"],
+	"grass": ["rock_boulder_a", "rock_boulder_b", "rock_slab", "rock_cluster"],
+	"snow": ["rock_snow", "rock_snow", "rock_boulder_b"],
+	"ash": ["rock_basalt", "rock_basalt", "rock_cluster"],
 	"sand": ["rock_sand", "rock_slab", "rock_sand"], "mesa": ["rock_sand"], "beach": ["rock_slab", "rock_boulder_a"],
 	"plaza": ["rock_slab"], "path": ["rock_cluster"],
 }
@@ -1090,7 +1109,7 @@ func _place_trees_and_rocks() -> void:
 		tries += 1
 		var p := Vector2(rng.randf_range(-hw, hw), rng.randf_range(-hw, hw))
 		var b: String = terrain.biome_at(p.x, p.y)
-		if not rock_sets.has(b) or not _dry_flat(p, 38.0) or _in_landmark(p, 2.0) or _dist_to_paths(p) < 3.0:
+		if not rock_sets.has(b) or not _dry_flat(p, 24.0) or _in_landmark(p, 2.0) or _dist_to_paths(p) < 3.0:
 			continue
 		var sc := rng.randf_range(0.6, 1.7)
 		if not _clear_of(p, 1.2 * sc + 0.6):
@@ -1098,9 +1117,10 @@ func _place_trees_and_rocks() -> void:
 		var list: Array = rock_sets[b]
 		var rock := _make_rock(str(list[rng.randi() % list.size()]), "Rock_%d" % rocks)
 		g.add_child(rock)
-		rock.position = _on_ground(p.x, p.y, 0.25)
-		rock.rotation.y = rng.randf() * TAU
-		rock.scale = Vector3.ONE * sc
+		# sink by how much the slope lifts the downhill side, tilt with the ground: no floating edges
+		var slope := deg_to_rad(terrain.slope_deg(p.x, p.y))
+		rock.position = _on_ground(p.x, p.y, 0.25 + tan(slope) * 0.9 * sc)
+		rock.basis = _ground_basis(p, rng.randf() * TAU, 18.0).scaled(Vector3.ONE * sc)
 		_claim(p, 1.1 * sc)
 		rocks += 1
 	print("[island] %d trees, %d rocks" % [trees, rocks])

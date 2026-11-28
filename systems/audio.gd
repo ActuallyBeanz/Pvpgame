@@ -259,3 +259,41 @@ func _hook_button(b: BaseButton) -> void:
 	if b is OptionButton:
 		(b as OptionButton).item_selected.connect(func(_i: int) -> void: play("ui.select"))
 	b.pressed.connect(func() -> void: play("ui.back" if back else "ui.select"))
+
+
+# ---------------------------------------------------------------- underwater
+## Muffle the world while the camera is under water: low-pass + a little room on SFX / Ambience /
+## Music (UI stays clear). Effects are added once, then just switched on and off.
+@export var underwater_cutoff_hz := 650.0
+var _underwater := false
+var _uw_fx := {}             # bus name -> [effect indices]
+
+
+func set_underwater(on: bool) -> void:
+	if on == _underwater:
+		return
+	_underwater = on
+	for b: StringName in [&"SFX", &"Ambience", &"Music"]:
+		var bi := AudioServer.get_bus_index(b)
+		if bi < 0:
+			continue
+		if not _uw_fx.has(b):
+			var lp := AudioEffectLowPassFilter.new()
+			lp.cutoff_hz = underwater_cutoff_hz
+			lp.resonance = 0.6
+			AudioServer.add_bus_effect(bi, lp)
+			var rv := AudioEffectReverb.new()
+			rv.room_size = 0.5
+			rv.damping = 0.8
+			rv.wet = 0.25
+			rv.dry = 0.9
+			AudioServer.add_bus_effect(bi, rv)
+			var n := AudioServer.get_bus_effect_count(bi)
+			_uw_fx[b] = [n - 2, n - 1]
+		for ei: int in _uw_fx[b]:
+			AudioServer.set_bus_effect_enabled(bi, ei, on)
+		AudioServer.set_bus_volume_db(bi, AudioServer.get_bus_volume_db(bi) + (-4.0 if on else 4.0))
+
+
+func is_underwater() -> bool:
+	return _underwater

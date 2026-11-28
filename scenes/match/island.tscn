@@ -12,7 +12,7 @@
 [ext_resource type="Script" path="res://systems/world/lava/lava_pool.gd" id="10_v2sa5"]
 [ext_resource type="Script" path="res://systems/world/lava/lava_flow.gd" id="11_csutn"]
 [ext_resource type="Script" path="res://systems/world/bridge.gd" id="12_o102a"]
-[ext_resource type="Script" path="res://scenes/props/world/cave.gd" id="13_q2ule"]
+[ext_resource type="Script" path="res://scenes/props/world/hidden_cave.gd" id="14_csutn"]
 [ext_resource type="Script" path="res://scenes/props/world/plateau.gd" id="14_v2sa5"]
 [ext_resource type="Script" path="res://scenes/props/world/grapple_post.gd" id="15_v2sa5"]
 
@@ -39,6 +39,7 @@ point_count = 17
 
 [node name="Island" type="Node3D" unique_id=1147651624]
 script = ExtResource("1_island")
+lakes = Array[Vector4]([Vector4(-75, -150, 26, 10.5), Vector4(105, 140, 12, 6), Vector4(-200, 90, 11, 5)])
 lake_kinds = PackedStringArray("frozen", "water", "water")
 
 [node name="Lighting" type="Node3D" parent="." unique_id=1688824514 instance=ExtResource("5_light")]
@@ -179,39 +180,6 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 35.987614, 5.9406657, 9.68476
 
 [node name="SecretSpots" type="Node3D" parent="." unique_id=725530932]
 
-[node name="Cave_0" type="Node3D" parent="SecretSpots" unique_id=1658476205]
-transform = Transform3D(-0.70710677, 0, -0.70710677, 0, 1, 0, 0.70710677, 0, -0.70710677, -60, 5.2849607, 150)
-script = ExtResource("13_q2ule")
-
-[node name="Cave_1" type="Node3D" parent="SecretSpots" unique_id=2107427599]
-transform = Transform3D(-0.9238795, 0, 0.3826835, 0, 1, 0, -0.3826835, 0, -0.9238795, -120, 7.3172874, 60)
-script = ExtResource("13_q2ule")
-
-[node name="Cave_2" type="Node3D" parent="SecretSpots" unique_id=860282566]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -140, 14.52711, -110)
-script = ExtResource("13_q2ule")
-style = "snow"
-tier = "legendary"
-
-[node name="Cave_3" type="Node3D" parent="SecretSpots" unique_id=618340733]
-transform = Transform3D(-0.3826834, 0, 0.92387956, 0, 1, 0, -0.92387956, 0, -0.3826834, -215, 13.473687, -120)
-script = ExtResource("13_q2ule")
-style = "snow"
-
-[node name="Cave_4" type="Node3D" parent="SecretSpots" unique_id=367853209]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 170, 11.368825, -130)
-script = ExtResource("13_q2ule")
-style = "basalt"
-tier = "legendary"
-
-[node name="Cave_5" type="Node3D" parent="SecretSpots" unique_id=806990531]
-transform = Transform3D(-0.9238795, 0, -0.3826835, 0, 1, 0, 0.3826835, 0, -0.9238795, -40, 6.7195, -180)
-script = ExtResource("13_q2ule")
-
-[node name="Cave_6" type="Node3D" parent="SecretSpots" unique_id=1669833274]
-transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, 190, 11.380832, -60)
-script = ExtResource("13_q2ule")
-
 [node name="Plateau_0" type="Node3D" parent="SecretSpots" unique_id=1135978478]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 132.93771, 18.578878, 29.934834)
 script = ExtResource("14_v2sa5")
@@ -273,6 +241,38 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -130.08824, 3.8690977, 216.65
 script = ExtResource("14_v2sa5")
 radius = 9.304852983362556
 
+[node name="HiddenCave_0" type="Node3D" parent="SecretSpots" unique_id=1878684096]
+transform = Transform3D(-0.70710677, 0, 0.70710677, 0, 1, 0, -0.70710677, 0, -0.70710677, 195.1302, 5.204686, -210.1302)
+script = ExtResource("14_csutn")
+tier = "legendary"
+
+[node name="HiddenCave_1" type="Node3D" parent="SecretSpots" unique_id=1602424234]
+transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, -198.3, 4.6618304, -200.8)
+script = ExtResource("14_csutn")
+style = "snow"
+
+[node name="HiddenCave_2" type="Node3D" parent="SecretSpots" unique_id=1487630231]
+transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, -9.05, 0.45, 115)
+script = ExtResource("14_csutn")
+door = "open"
+
+[node name="HiddenCave_3" type="Node3D" parent="SecretSpots" unique_id=700534425]
+transform = Transform3D(-0.70710677, 0, -0.70710677, 0, 1, 0, 0.70710677, 0, -0.70710677, 1.924443, 0.45, -121.0756)
+script = ExtResource("14_csutn")
+door = "open"
+tier = "uncommon"
+
+[node name="HiddenCave_4" type="Node3D" parent="SecretSpots" unique_id=767919560]
+transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, 157, 0.45, -83.2)
+script = ExtResource("14_csutn")
+door = "open"
+
+[node name="HiddenCave_5" type="Node3D" parent="SecretSpots" unique_id=872557369]
+transform = Transform3D(-0.70710677, 0, -0.70710677, 0, 1, 0, 0.70710677, 0, -0.70710677, 55.92444, 0.45, -1.075557)
+script = ExtResource("14_csutn")
+door = "open"
+tier = "uncommon"
+
 [node name="GrapplePoints" type="Node3D" parent="." unique_id=1383661008]
 
 [node name="GorgePost_0" type="StaticBody3D" parent="GrapplePoints" unique_id=1237218159]
@@ -282,5 +282,15 @@ metadata/material = "wood"
 
 [node name="GorgePost_1" type="StaticBody3D" parent="GrapplePoints" unique_id=946344852]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -104, 13.427428, -108.5)
+script = ExtResource("15_v2sa5")
+metadata/material = "wood"
+
+[node name="EastRiverPost_0" type="StaticBody3D" parent="GrapplePoints" unique_id=1876779757]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 175, 8.848098, -82.5)
+script = ExtResource("15_v2sa5")
+metadata/material = "wood"
+
+[node name="EastRiverPost_1" type="StaticBody3D" parent="GrapplePoints" unique_id=1819955872]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 174, 8.780514, -103.5)
 script = ExtResource("15_v2sa5")
 metadata/material = "wood"

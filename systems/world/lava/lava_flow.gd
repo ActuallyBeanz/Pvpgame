@@ -20,6 +20,7 @@ const LAVA_SHADER := preload("res://assets/shaders/lava.gdshader")
 	set(v):
 		flow_speed = v
 		_dirty = true
+@export var current := 1.6                 ## m/s the flow drags anyone wading in it downhill
 @export var light_every := 18.0            ## a warm OmniLight this many metres apart (0 = none)
 @export var embers := true
 @export var terrain_path: NodePath = ^"../../Terrain"   ## the island_terrain3d node (height queries)
@@ -127,6 +128,7 @@ func _rebuild() -> void:
 	var mat := ShaderMaterial.new()
 	mat.shader = LAVA_SHADER
 	mat.set_shader_parameter("flow_speed", flow_speed)
+	mat.set_shader_parameter("shore_crust", 0.12)        # a ribbon is thin: crust from the UV banks
 	mi.material_override = mat
 	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	_built.add_child(mi)
@@ -139,7 +141,8 @@ func _rebuild() -> void:
 		if along.length() < 0.05:
 			continue
 		var xf := Transform3D(Basis.looking_at(along.normalized(), Vector3.UP), c + Vector3.UP * 0.4)
-		LavaZone.make_box(_built, xf, Vector3(w2 * 0.85, 1.2, along.length() + 0.4))
+		var push := Vector3(along.x, 0.0, along.z).normalized() * current
+		LavaZone.make_box(_built, xf, Vector3(w2 * 0.85, 1.2, along.length() + 0.4), push)
 		since_light += 2.0
 		if light_every > 0.0 and since_light >= light_every:
 			since_light = 0.0

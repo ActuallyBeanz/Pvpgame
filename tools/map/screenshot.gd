@@ -29,6 +29,20 @@ const FIX_VIEWS := [
 	["fix_canyonW", Vector3(-179, 5, -82), Vector3(-179, 3, -104)],
 ]
 
+## `-- fixes2`: batch 2 spots (+ every HiddenCave from outside and inside, + an underwater view)
+const FIX2_VIEWS := [
+	["f2_frozen", Vector3(-100, 18, -122), Vector3(-75, 10, -150)],
+	["f2_crater", Vector3(145, 52, -178), Vector3(160, 39, -200)],
+	["f2_lavaend", Vector3(186, 13, -104), Vector3(175, 5.5, -117)],
+	["f2_lavaflow", Vector3(166, 30, -132), Vector3(155, 19, -145)],
+	["f2_eastposts", Vector3(190, 20, -70), Vector3(175, 9, -93)],
+	["f2_eastshore", Vector3(216, 6, -192), Vector3(203, 2, -205)],
+	["f2_pondW", Vector3(-200, 11, 100), Vector3(-200, 5, 80)],
+	["f2_bridge1", Vector3(-62, 17, -108), Vector3(-73, 9.5, -114)],
+	["f2_ashrocks", Vector3(146, 32, -150), Vector3(155, 27, -165)],
+	["f2_underwater", Vector3(-200, 3.6, 92), Vector3(-200, 3.4, 80)],
+]
+
 
 func _ready() -> void:
 	var island: Node = load("res://scenes/match/island.tscn").instantiate()
@@ -40,9 +54,21 @@ func _ready() -> void:
 	cam.current = true
 	var dir := ProjectSettings.globalize_path("res://_shots")
 	DirAccess.make_dir_recursive_absolute(dir)
-	var fixes := "fixes" in OS.get_cmdline_user_args()
-	var views := (FIX_VIEWS if fixes else VIEWS).duplicate()
+	var args := OS.get_cmdline_user_args()
+	var fixes := "fixes" in args or "fixes2" in args
+	var views := (FIX2_VIEWS if "fixes2" in args else FIX_VIEWS if fixes else VIEWS).duplicate()
+	if "fixes2" in args:
+		var uw := preload("res://scenes/player/underwater_fx.gd").new()
+		uw.camera = cam
+		add_child(uw)
 	await get_tree().process_frame
+	if "fixes2" in args:
+		for c in island.get_node("SecretSpots").get_children():
+			if c.name.begins_with("HiddenCave"):
+				var n3 := c as Node3D
+				var outv := n3.global_basis.z
+				views.append([c.name + "_out", n3.global_position + outv * 11.0 + Vector3.UP * 3.5, n3.global_position + Vector3.UP * 1.5])
+				views.append([c.name + "_in", n3.global_position - outv * 3.0 + Vector3.UP * 1.7, n3.global_position - outv * 15.0 + Vector3.UP * 0.8])
 	var spots := island.get_node_or_null("SecretSpots")
 	if spots and not fixes:
 		for c in spots.get_children():
